@@ -10,6 +10,7 @@ public class HDBBlock {
     private String      noiseRiskLevel;
     private boolean     futureRiskFlag;
     private double      globalMatchIndex;
+    private Coordinates coordinates;
 
     // ── Constructors ─────────────────────────────────────────────────────────
 
@@ -44,6 +45,7 @@ public class HDBBlock {
     public String  getNoiseRiskLevel()      { return noiseRiskLevel; }
     public boolean isFutureRiskFlag()       { return futureRiskFlag; }
     public double  getGlobalMatchIndex()    { return globalMatchIndex; }
+    public Coordinates getCoordinates()     { return coordinates; }
 
     // ── Setters ───────────────────────────────────────────────────────────────
 
@@ -56,6 +58,7 @@ public class HDBBlock {
     public void setNoiseRiskLevel(String noiseRiskLevel)        { this.noiseRiskLevel      = noiseRiskLevel; }
     public void setFutureRiskFlag(boolean futureRiskFlag)       { this.futureRiskFlag      = futureRiskFlag; }
     public void setGlobalMatchIndex(double globalMatchIndex)    { this.globalMatchIndex    = globalMatchIndex; }
+    public void setCoordinates(Coordinates coordinates)         { this.coordinates         = coordinates; }
 
     @Override
     public String toString() {

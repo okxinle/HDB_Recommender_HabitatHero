@@ -4,6 +4,7 @@ import java.util.List;
 import control.RecommendationEngine;
 import entity.HDBBlock;
 import entity.UserProfile;
+import exception.ZeroMatchesException;
 
 public class RecommendationController {
 
@@ -19,8 +20,12 @@ public class RecommendationController {
 	 * @param profile
 	 */
 	public void run(UserProfile profile) {
-		List<HDBBlock> recommendedBlocks = engine.generateRecommendations(profile);
-		//dashboard.displayResults(recommendedBlocks);
+		try {
+			List<HDBBlock> recommendedBlocks = engine.generateRecommendations(profile);
+			dashboard.displayResults(recommendedBlocks);
+		} catch (ZeroMatchesException e) {
+			dashboard.displayError(e.getMessage());
+		}
 	}
 
 }

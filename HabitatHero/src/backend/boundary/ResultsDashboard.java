@@ -19,6 +19,15 @@ public class ResultsDashboard {
 		throw new UnsupportedOperationException();
 	}
 
+	/**
+	 *
+	 * @param message error message to display to the user
+	 */
+	public void displayError(String message) {
+		// TODO - implement ResultsDashboard.displayError
+		throw new UnsupportedOperationException();
+	}
+
 	public void displayCommuteWarning() {
 		// TODO - implement ResultsDashboard.displayCommuteWarning
 		throw new UnsupportedOperationException();
