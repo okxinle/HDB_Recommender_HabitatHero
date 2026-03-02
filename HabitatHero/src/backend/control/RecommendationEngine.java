@@ -1,4 +1,5 @@
 package control;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -24,9 +25,44 @@ public class RecommendationEngine {
     // ── Public entry point ────────────────────────────────────────────────
 
     public List<HDBBlock> generateRecommendations(UserProfile profile) {
+        // Step 1 & 2: fetch all blocks and apply hard filters
         List<HDBBlock> allBlocks      = dbRepository.getAllBlocks();
         List<HDBBlock> filteredBlocks = applyHardFilters(allBlocks, profile.getStructuralConstraints());
-        // TODO: soft scoring (calculateLivabilityScore, calculateCommuteScore)
+
+        List<WeightedPreference> softConstraints = profile.getSoftConstraints();
+
+        // Pre-compute the maximum possible livability score (sum of all priority weights)
+        // so we can normalise it to the range [0.0, 1.0] before combining with commuteScore.
+        double totalWeight = softConstraints.stream()
+                .mapToDouble(WeightedPreference::getPriorityWeight)
+                .sum();
+
+        // Step 3: score every block that passed the hard filters
+        for (HDBBlock block : filteredBlocks) {
+
+            // Step 4 & 5: compute both sub-scores
+            double livabilityScore = calculateLivabilityScore(block, softConstraints);
+            float  commuteScore    = calculateCommuteScore(block, profile.getCommuterProfile());
+
+            // Normalise livability to [0.0, 1.0]
+            double normalisedLivability = (totalWeight > 0) ? livabilityScore / totalWeight : 0.0;
+
+            // Step 6: combine scores
+            double combinedScore;
+            if (commuteScore == -1.0f || commuteScore == 0.0f) {
+                // Commute is disabled or the routing API returned an error —
+                // fall back to livability alone.
+                combinedScore = normalisedLivability;
+            } else {
+                // Both signals are valid: blend them with equal weight (50 / 50).
+                combinedScore = (normalisedLivability + commuteScore) / 2.0;
+            }
+
+            // Step 7: scale to a percentage [0.0, 100.0] and persist on the block
+            block.setGlobalMatchIndex(combinedScore * 100.0);
+        }
+
+        // Step 8 & 9: sort descending and return
         sortBlocksByMatchIndex(filteredBlocks);
         return filteredBlocks;
     }
@@ -76,17 +112,25 @@ public class RecommendationEngine {
     }
 
     private float calculateCommuteScore(HDBBlock block, CommuterProfile commuteProfile) {
-        // TODO - implement RecommendationEngine.calculateCommuteScore
-        throw new UnsupportedOperationException();
+        if (!commuteProfile.isEnabled()) {
+            return 0.0f;
+        }
+
+        int timeA = routingService.getTravelTime(block.getCoordinates(), commuteProfile.getDestinationA());
+        int timeB = routingService.getTravelTime(block.getCoordinates(), commuteProfile.getDestinationB());
+
+        return calculateFairnessIndex(timeA, timeB);
     }
 
     private float calculateFairnessIndex(int timeA, int timeB) {
-        // TODO - implement RecommendationEngine.calculateFairnessIndex
-        throw new UnsupportedOperationException();
+        // Return -1.0f to signal invalid data (e.g. API timeout or error)
+        if (timeA < 0 || timeB < 0) {
+            return -1.0f;
+        }
+        return 1.0f - ((float) Math.abs(timeA - timeB) / (timeA + timeB + 1));
     }
 
     private void sortBlocksByMatchIndex(List<HDBBlock> blocks) {
-        // TODO - implement RecommendationEngine.sortBlocksByMatchIndex
-        // e.g. blocks.sort(Comparator.comparingDouble(HDBBlock::getGlobalMatchIndex).reversed());
+        blocks.sort(Comparator.comparingDouble(HDBBlock::getGlobalMatchIndex).reversed());
     }
 }
