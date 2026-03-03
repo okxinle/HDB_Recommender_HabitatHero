@@ -1,5 +1,5 @@
 import "../styles/HomePage.css";
-import HDBBackground from "../assets/hdb.png";
+import HDBHome from "../assets/hdb_home.png";
 import RatingCard from "../components/RatingCard";
 import FeatureCard from "../components/FeatureCard";
 
@@ -35,7 +35,7 @@ function HomePage() {
         </div>
 
         <div className="cover-right">
-          <img src={HDBBackground} alt="HDB Background" className="cover-image" />
+          <img src={HDBHome} alt="HDB Background" className="cover-image" />
         </div>
       </section>
 
