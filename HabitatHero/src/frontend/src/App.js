@@ -24,37 +24,14 @@
 
 // export default App;
 
-import "./App.css";
-import Logo from "./assets/logo.svg";
+import "./styles/App.css";
+import Navbar from "./components/Navbar";
 import HDBBackground from "./assets/hdb.png";
 
 function App() {
   return (
     <div className="app">
-
-      <nav className="navbar">
-        <div className="logo"><img src={Logo} alt="HabitatHero logo" className="logo-icon" />HabitatHero</div>
-        <div className="nav-links">
-          <a href="#">Your Results</a>
-          <a href="#">Resources</a>
-          <a href="#">New Projects</a>
-           <button className="search-btn" aria-label="Search">
-              <svg
-                className="search-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="11" cy="11" r="7" />
-                <line x1="16.65" y1="16.65" x2="21" y2="21" />
-              </svg>
-            </button>
-          <button className="login-btn">Login / Sign Up</button>
-        </div>
-      </nav>
+      <Navbar/>
 
       <section className="cover">
         <div className="cover-left">
