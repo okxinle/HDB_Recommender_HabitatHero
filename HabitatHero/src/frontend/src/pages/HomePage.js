@@ -2,6 +2,7 @@ import "../styles/HomePage.css";
 import HDBHome from "../assets/hdb_home.png";
 import RatingCard from "../components/RatingCard";
 import FeatureCard from "../components/FeatureCard";
+import { Link } from "react-router-dom"; // Add this line
 
 function HomePage() {
   const ratings = ["Usefulness", "Reliability", "Accuracy"];
@@ -74,9 +75,11 @@ function HomePage() {
             {ratings.map((label) => (
               <RatingCard key={label} label={label} />
             ))}
-          </div>
 
+          </div>
+          <Link to="/quiz">
           <button className="primary-btn">Start Lifestyle Quiz</button>
+          </Link>
         </div>
 
         <div className="cover-right">

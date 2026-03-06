@@ -1,0 +1,1 @@
+export default function QuizSummary() { return <div>Step 4: Summary</div>; }
