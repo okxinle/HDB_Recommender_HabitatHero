@@ -6,7 +6,7 @@ function QuizSummary({ data }) {
 
     if (factor.mode === "ignore") return "Ignored";
     if (factor.mode === "strict") return "Strict Requirement";
-    if (factor.mode === "weighted") return "Weighted Preference";
+    if (factor.mode === "weighted") return `Weighted Preference = ${factor.weight.toFixed(1)}`;
 
     return factor.mode;
   };
@@ -62,7 +62,7 @@ function QuizSummary({ data }) {
                     </div>
 
                     <div className="summary-row">
-                    <span className="summary-key">• Flat Type</span>
+                    <span className="summary-key">• Flat Types</span>
                     <span className="summary-value">{selectedFlatTypes}</span>
                     </div>
 
@@ -136,7 +136,7 @@ function QuizSummary({ data }) {
                         </div>
 
                         <div className="summary-row">
-                        <span className="summary-key">• Fairness Priority</span>
+                        <span className="summary-key">• Commute Fairness Priority</span>
                         <span className="summary-value">
                             {data.commuters.fairness.toFixed(1)}
                         </span>

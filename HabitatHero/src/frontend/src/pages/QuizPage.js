@@ -143,7 +143,7 @@ function QuizPage() {
           "Structural Constraints",
           "Livability Factors",
           "Multi-Commuter Analysis",
-          "Summary of Preferences",
+          "Summary Of Preferences",
         ].map((label, index) => {
           const num = index + 1;
           return (
