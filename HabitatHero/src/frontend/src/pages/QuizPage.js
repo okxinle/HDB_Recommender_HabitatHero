@@ -18,7 +18,12 @@ function QuizPage() {
     factors: {
       solarOrientation: { mode: null, weight: 0 },
       acousticComfort: { mode: null, weight: 0 },
-      convenience: { mode: null, weight: 0 }
+      convenience: {
+        mode: null,
+        weight: 0,
+        selectedAmenities: [],
+        parentsAddress: ""
+      }
     },
     commuters: {
       enabled: false,
@@ -77,10 +82,37 @@ function QuizPage() {
     return false;
   };
 
+  const isConvenienceValid = () => {
+    const convenience = formData.factors.convenience;
+
+    if (!convenience || !convenience.mode) return false;
+
+    if (convenience.mode === "ignore") return true;
+
+    const hasAmenitySelected =
+      convenience.selectedAmenities &&
+      convenience.selectedAmenities.length > 0;
+
+    if (!hasAmenitySelected) return false;
+
+    if (
+      convenience.selectedAmenities.includes("parentsAddress") &&
+      convenience.parentsAddress.trim() === ""
+    ) {
+      return false;
+    }
+
+    if (convenience.mode === "weighted") {
+      return convenience.weight !== null && convenience.weight !== undefined;
+    }
+
+    return true;
+  };
+
   const isStep2Valid =
-    isFactorValid(formData.factors.solarOrientation) &&
-    isFactorValid(formData.factors.acousticComfort) &&
-    isFactorValid(formData.factors.convenience);
+  isFactorValid(formData.factors.solarOrientation) &&
+  isFactorValid(formData.factors.acousticComfort) &&
+  isConvenienceValid();
 
   const isStep3Valid =
     !formData.commuters.enabled ||

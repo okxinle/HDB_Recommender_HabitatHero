@@ -402,12 +402,74 @@
   margin-top: 6px;
 }
 
-.multi-commuter-analysis-section {
-  margin: 10px 0;
+.livability-factors-section .amenities-title {
+  font-size: 18px;
+  font-weight: 600;
+  text-decoration: underline;
 }
 
-h2 .optional {
-  font-style: italic;
+.amenity-chip-group {
+  display: flex;
+  gap: 20px;
+  margin-top: 15px;
+  
+}
+
+.amenity-chip {
+  padding: 8px 15px;
+  border: 1px solid #00786e;
+  background: white;
+  border-radius: 6px;
+  font-size: 16px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.amenity-chip:hover {
+  background: #e8f5f3;
+}
+
+.amenity-chip.selected {
+  background: #00786e33;
+  border-color: #00786e;
+}
+
+.parents-address-container {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 420px;
+}
+
+.parents-address-label {
+  font-size: 16px;
+  color: #212121;
+}
+
+.parents-address-input {
+  height: 46px;
+  padding: 0 14px;
+  border: 1.6px solid #2c7a73;
+  border-radius: 6px;
+  font-size: 16px;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.parents-address-input::placeholder {
+  color: #9aa3a8;
+}
+
+.parents-address-input:focus {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 2px rgba(15,118,110,0.15);
+}
+
+.multi-commuter-analysis-section {
+  margin: 10px 0;
 }
 
 .toggle-row {
@@ -724,6 +786,32 @@ h2 .optional {
   font-size: 16px;
   font-weight: 700;
   color: #00786e;
+}
+
+.summary-inner-divider {
+  height: 1px;
+  background: #d9d9d9;
+  margin: 4px 0 2px;
+}
+
+.summary-subtitle {
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 4px;
+  text-decoration: underline;
+}
+
+.summary-sublist {
+  margin-left: 18px;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.summary-subrow {
+  font-size: 16px;
+  color: #333;
 }
 
 

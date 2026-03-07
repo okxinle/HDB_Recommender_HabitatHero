@@ -112,10 +112,50 @@ function QuizSummary({ data }) {
               <div className="summary-row">
                 <span className="summary-key">• Convenience</span>
                 <span className={`summary-tag ${getFactorClass(data.factors.convenience)}`}>
-                  {formatFactorMode(data.factors.convenience)}
+                    {formatFactorMode(data.factors.convenience)}
                 </span>
-              </div>
             </div>
+
+            {(data.factors.convenience.mode === "strict" ||
+            data.factors.convenience.mode === "weighted") &&
+            data.factors.convenience.selectedAmenities &&
+            data.factors.convenience.selectedAmenities.length > 0 && (
+                <div className="summary-sublist">
+
+                <div className="summary-subtitle">
+                    Selected Amenities
+                </div>
+
+                {data.factors.convenience.selectedAmenities.map((amenity) => {
+
+                    const labels = {
+                    parentsAddress: "Parents’ Address",
+                    school: "Schools",
+                    hawkerCentre: "Hawker Centres",
+                    supermarket: "Supermarkets",
+                    park: "Parks",
+                    hospital: "Hospitals",
+                    playground: "Playgrounds"
+                    };
+
+                    if (amenity === "parentsAddress") {
+                    return (
+                        <div key={amenity} className="summary-subrow">
+                        - {labels[amenity]}: {data.factors.convenience.parentsAddress}
+                        </div>
+                    );
+                    }
+
+                    return (
+                    <div key={amenity} className="summary-subrow">
+                        - {labels[amenity]}
+                    </div>
+                    );
+                })}
+
+                </div>
+            )}
+                        </div>
           </div>
 
           <div className="summary-card">
