@@ -2,7 +2,7 @@ import "../styles/HomePage.css";
 import HDBHome from "../assets/hdb_home.png";
 import RatingCard from "../components/RatingCard";
 import FeatureCard from "../components/FeatureCard";
-import { Link } from "react-router-dom"; // Add this line
+import { Link } from "react-router-dom";
 
 function HomePage() {
   const ratings = ["Usefulness", "Reliability", "Accuracy"];

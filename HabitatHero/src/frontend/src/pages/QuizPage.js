@@ -32,26 +32,46 @@ function QuizPage() {
 
   return (
     <div className="quiz-page-container">
-      {/* Step Indicator (Progress Bar) */}
       <div className="quiz-stepper">
-        {[1, 2, 3, 4].map((num) => (
-          <div key={num} className={`step-item ${step === num ? "active" : ""} ${step > num ? "completed" : ""}`}>
-            <span className="step-number">{num}</span>
-            <span className="step-label">
-              {num === 1 && "Structural Constraints"}
-              {num === 2 && "Livability Factors"}
-              {num === 3 && "Multi-Commuter Analysis"}
-              {num === 4 && "Summary of Preferences"}
-            </span>
-          </div>
-        ))}
+        {[
+          "Structural Constraints",
+          "Livability Factors",
+          "Multi-Commuter Analysis",
+          "Summary of Preferences",
+        ].map((label, index) => {
+          const num = index + 1;
+          return (
+            <div
+              key={num}
+              className={`step-wrapper ${num < 4 ? "has-line" : ""} ${
+                step > num ? "completed" : ""
+              }`}
+            >
+              <div
+                className={`step-item ${
+                  step === num ? "active" : ""
+                } ${step > num ? "completed" : ""}`}
+              >
+                <span className="step-number">{num}.</span>
+                <span className="step-label">{label}</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <div className="quiz-card-content">
-        {renderStep()}
-        
+        <div className="quiz-inner-content">{renderStep()}</div>
+
         <div className="quiz-actions">
-          {step > 1 && <button onClick={prevStep} className="btn-back">Back</button>}
+          {step > 1 ? (
+            <button onClick={prevStep} className="btn-back">
+              &lt; Back
+            </button>
+          ) : (
+            <div />
+          )}
+
           <button onClick={nextStep} className="btn-next">
             {step === 4 ? "Submit" : "Next >"}
           </button>
