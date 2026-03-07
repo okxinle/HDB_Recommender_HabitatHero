@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import "../styles/QuizPage.css";
 import StructuralConstraints from "../components/StructuralConstraints";
 import LivabilityFactors from "../components/LivabilityFactors";
@@ -6,7 +7,7 @@ import CommuterAnalysis from "../components/CommuterAnalysis";
 import QuizSummary from "../components/QuizSummary";
 
 function QuizPage() {
-  const [step, setStep] = useState(1);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [attemptedNext, setAttemptedNext] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -26,6 +27,16 @@ function QuizPage() {
       fairness: 0.5
     }
   });
+
+  const step = parseInt(searchParams.get("step")) || 1;
+
+  useEffect(() => {
+    const stepFromUrl = parseInt(searchParams.get("step")) || 1;
+
+    if (stepFromUrl < 1 || stepFromUrl > 4) {
+      setSearchParams({ step: "1" });
+    }
+  }, [searchParams, setSearchParams]);
 
   const isStep1Valid =
     formData.budget[0] < formData.budget[1] &&
@@ -72,12 +83,18 @@ function QuizPage() {
     if (!isCurrentStepValid()) return;
 
     setAttemptedNext(false);
-    setStep((prev) => prev + 1);
+
+    if (step < 4) {
+      setSearchParams({ step: String(step + 1) });
+    }
   };
 
   const prevStep = () => {
     setAttemptedNext(false);
-    setStep((prev) => prev - 1);
+
+    if (step > 1) {
+      setSearchParams({ step: String(step - 1) });
+    }
   };
 
   const renderStep = () => {
@@ -162,7 +179,7 @@ function QuizPage() {
           )}
 
           <button onClick={nextStep} className="btn-next">
-            {step === 4 ? "Submit" : "Next >"}
+            {step === 4 ? "Find My HDB Match" : "Next >"}
           </button>
         </div>
       </div>

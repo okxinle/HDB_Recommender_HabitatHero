@@ -573,5 +573,157 @@ h2 .optional {
   color: #3b4c6b;
 }
 
+.summary-section {
+  margin: 10px 0;
+}
+
+.summary-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e1e1e;
+  margin: 0;
+}
+
+.summary-future-box {
+  background: #f3f3f3;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-top: 20px;
+}
+
+.summary-future-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  cursor: pointer;
+}
+
+.summary-future-label input[type="checkbox"] {
+  margin-top: 4px;
+  width: 18px;
+  height: 18px;
+  accent-color: #00786e;
+}
+
+.summary-future-heading {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e1e1e;
+  margin-bottom: 8px;
+}
+
+.summary-future-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #444;
+}
+
+.summary-divider {
+  height: 1px;
+  background: #333;
+  opacity: 0.5;
+  margin: 20px 0px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+}
+
+.summary-card {
+  border: 1.5px solid #8cc8c1;
+  border-radius: 12px;
+  padding: 22px 24px;
+  background: white;
+}
+
+.summary-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.summary-card-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: underline;
+  color: #1e1e1e;
+}
+
+.edit-link {
+  background: none;
+  border: none;
+  color: #00786e;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+}
+
+.summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.summary-key {
+  font-size: 16px;
+  font-weight: 500;
+  color: #1e1e1e;
+  flex-shrink: 0;
+}
+
+.summary-value {
+  font-size: 16px;
+  color: #1e1e1e;
+  text-align: right;
+}
+
+.summary-tag {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 10px;
+  line-height: 1;
+}
+
+.tag-ignore {
+  background: #e8e8e8;
+  color: #8a8a8a;
+}
+
+.tag-strict {
+  background: #ffd7d7;
+  color: #e53935;
+}
+
+.tag-weighted {
+  background: #d8ecff;
+  color: #1e88e5;
+}
+
+.tag-default {
+  background: #eeeeee;
+  color: #666;
+}
+
+.summary-status {
+  font-size: 16px;
+  font-weight: 700;
+  color: #00786e;
+}
 
 
