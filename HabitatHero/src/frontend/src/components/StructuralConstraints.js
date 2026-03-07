@@ -19,7 +19,7 @@ function StructuralConstraints({ data, update }) {
 
   return (
     <div className="step-content">
-      <div className="quiz-section">
+      <div className="structural-constraints-section">
         <h2>What is your budget?</h2>
         <div className="budget-slider-container">
           <p>
@@ -80,7 +80,7 @@ function StructuralConstraints({ data, update }) {
         </div>
       </div>
 
-      <div className="quiz-section">
+      <div className="structural-constraints-section">
         <h2>What are your preferred towns?</h2>
         <div className="town-grid">
           {towns.map((town) => (
@@ -95,7 +95,7 @@ function StructuralConstraints({ data, update }) {
         </div>
       </div>
 
-      <div className="quiz-section">
+      <div className="structural-constraints-section">
         <h2>What is your preferred flat type?</h2>
         <div className="flat-type-options">
           {flatTypes.map((type) => (
@@ -117,7 +117,7 @@ function StructuralConstraints({ data, update }) {
         </div>
       </div>
 
-      <div className="quiz-section">
+      <div className="structural-constraints-section">
         <h2>What is your preferred minimum lease remaining?</h2>
         <p>
           Minimum lease remaining: {data.lease} years
