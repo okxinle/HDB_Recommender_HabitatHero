@@ -30,14 +30,14 @@ function StructuralConstraints({ data, update, showErrors }) {
   ];
 
   const handleTownChange = (town) => {
-    const newTowns = data.towns.includes(town)
-      ? data.towns.filter((t) => t !== town)
-      : [...data.towns, town];
+    const newTowns = data.preferredTowns.includes(town)
+      ? data.preferredTowns.filter((t) => t !== town)
+      : [...data.preferredTowns, town];
 
-    update({ ...data, towns: newTowns });
+    update({ ...data, preferredTowns: newTowns });
   };
 
-  const flatTypes = [
+  const preferredFlatTypeOptions = [
     "2-Room",
     "3-Room",
     "4-Room",
@@ -53,7 +53,7 @@ function StructuralConstraints({ data, update, showErrors }) {
 
         <div className="budget-slider-container">
           <p>
-            Budget Range: SGD {data.budget[0].toLocaleString()} – SGD {data.budget[1].toLocaleString()}
+            Budget Range: SGD {data.maxBudget[0].toLocaleString()} – SGD {data.maxBudget[1].toLocaleString()}
           </p>
 
           <div className="budget-slider">
@@ -61,8 +61,8 @@ function StructuralConstraints({ data, update, showErrors }) {
             <div
               className="slider-range"
               style={{
-                left: `${((data.budget[0] - 200000) / (1000000 - 200000)) * 100}%`,
-                width: `${((data.budget[1] - data.budget[0]) / (1000000 - 200000)) * 100}%`,
+                left: `${((data.maxBudget[0] - 200000) / (1000000 - 200000)) * 100}%`,
+                width: `${((data.maxBudget[1] - data.maxBudget[0]) / (1000000 - 200000)) * 100}%`,
               }}
             ></div>
 
@@ -71,13 +71,13 @@ function StructuralConstraints({ data, update, showErrors }) {
               min="200000"
               max="1000000"
               step="10000"
-              value={data.budget[0]}
+              value={data.maxBudget[0]}
               onChange={(e) =>
                 update({
                   ...data,
-                  budget: [
-                    Math.min(parseInt(e.target.value), data.budget[1] - 10000),
-                    data.budget[1],
+                  maxBudget: [
+                    Math.min(parseInt(e.target.value), data.maxBudget[1] - 10000),
+                    data.maxBudget[1],
                   ],
                 })
               }
@@ -89,13 +89,13 @@ function StructuralConstraints({ data, update, showErrors }) {
               min="200000"
               max="1000000"
               step="10000"
-              value={data.budget[1]}
+              value={data.maxBudget[1]}
               onChange={(e) =>
                 update({
                   ...data,
-                  budget: [
-                    data.budget[0],
-                    Math.max(parseInt(e.target.value), data.budget[0] + 10000),
+                  maxBudget: [
+                    data.maxBudget[0],
+                    Math.max(parseInt(e.target.value), data.maxBudget[0] + 10000),
                   ],
                 })
               }
@@ -118,7 +118,7 @@ function StructuralConstraints({ data, update, showErrors }) {
             <label key={town}>
               <input
                 type="checkbox"
-                checked={data.towns.includes(town)}
+                checked={data.preferredTowns.includes(town)}
                 onChange={() => handleTownChange(town)}
               />{" "}
               {town}
@@ -126,40 +126,36 @@ function StructuralConstraints({ data, update, showErrors }) {
           ))}
         </div>
 
-        {showErrors && data.towns.length === 0 && (
+        {showErrors && data.preferredTowns.length === 0 && (
           <p className="field-error">Please select at least one town.</p>
         )}
       </div>
 
       <div className="structural-constraints-section">
-        <h2>What are your preferred flat types?</h2>
+        <h2>What is your preferred flat type?</h2>
 
         <div className="flat-type-options">
-          {flatTypes.map((type) => (
+          {preferredFlatTypeOptions.map((type) => (
             <button
               key={type}
               type="button"
               className={`flat-type-btn ${
-                data.flatTypes.includes(type) ? "selected" : ""
+                data.preferredFlatType === type ? "selected" : ""
               }`}
-              onClick={() => {
-                const updatedTypes = data.flatTypes.includes(type)
-                  ? data.flatTypes.filter((t) => t !== type)
-                  : [...data.flatTypes, type];
-
+              onClick={() =>
                 update({
                   ...data,
-                  flatTypes: updatedTypes
-                });
-              }}
+                  preferredFlatType: data.preferredFlatType === type ? "" : type
+                })
+              }
             >
               {type}
             </button>
           ))}
         </div>
 
-        {showErrors && data.flatTypes.length === 0 && (
-          <p className="field-error">Please select at least one flat type.</p>
+        {showErrors && !data.preferredFlatType && (
+          <p className="field-error">Please select one flat type.</p>
         )}
       </div>
 
@@ -167,7 +163,7 @@ function StructuralConstraints({ data, update, showErrors }) {
         <h2>What is your preferred minimum lease remaining?</h2>
 
         <p>
-          Minimum lease remaining: {data.minLease} years
+          Minimum lease remaining: {data.minLeaseYears} years
         </p>
 
         <div className="lease-slider">
@@ -178,11 +174,11 @@ function StructuralConstraints({ data, update, showErrors }) {
             min="10"
             max="99"
             step="1"
-            value={data.minLease}
+            value={data.minLeaseYears}
             onChange={(e) =>
               update({
                 ...data,
-                minLease: parseInt(e.target.value),
+                minLeaseYears: parseInt(e.target.value),
               })
             }
             className="thumb"
@@ -194,7 +190,7 @@ function StructuralConstraints({ data, update, showErrors }) {
           <span>99 years</span>
         </div>
 
-        {showErrors && (!data.minLease || data.minLease < 10) && (
+        {showErrors && (!data.minLeaseYears || data.minLeaseYears < 10) && (
           <p className="field-error">
             Please select a minimum lease remaining of at least 10 years.
           </p>

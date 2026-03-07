@@ -11,10 +11,10 @@ function QuizPage() {
   const [attemptedNext, setAttemptedNext] = useState(false);
 
   const [formData, setFormData] = useState({
-    budget: [400000, 450000],
-    towns: [],
-    flatTypes: [],
-    minLease: 50,
+    maxBudget: [400000, 450000],
+    preferredTowns: [],
+    preferredFlatType: "",
+    minLeaseYears: 50,
     factors: {
       solarOrientation: { mode: null, weight: 0 },
       acousticComfort: { mode: null, weight: 0 },
@@ -28,6 +28,27 @@ function QuizPage() {
     }
   });
 
+  const submitQuiz = async () => {
+  try {
+    const response = await fetch("http://localhost:8080/api/hdb/recommend", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(formData)
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to submit quiz data");
+    }
+
+    const result = await response.json();
+    console.log("Quiz submitted successfully:", result);
+  } catch (error) {
+    console.error("Error submitting quiz:", error);
+  }
+};
+
   const step = parseInt(searchParams.get("step")) || 1;
 
   useEffect(() => {
@@ -39,10 +60,10 @@ function QuizPage() {
   }, [searchParams, setSearchParams]);
 
   const isStep1Valid =
-    formData.budget[0] < formData.budget[1] &&
-    formData.towns.length > 0 &&
-    formData.flatTypes.length > 0 &&
-    formData.minLease >= 50;
+    formData.maxBudget[0] < formData.maxBudget[1] &&
+    formData.preferredTowns.length > 0 &&
+    formData.preferredFlatType.length > 0 &&
+    formData.minLeaseYears >= 50;
 
   const isFactorValid = (factor) => {
     if (!factor || !factor.mode) return false;
@@ -178,7 +199,10 @@ function QuizPage() {
             <div />
           )}
 
-          <button onClick={nextStep} className="btn-next">
+          <button
+            onClick={step === 4 ? submitQuiz : nextStep}
+            className="btn-next"
+          >
             {step === 4 ? "Find My HDB Match" : "Next >"}
           </button>
         </div>
