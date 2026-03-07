@@ -1,4 +1,4 @@
-function InputField({ label, type, placeholder, name, value, onChange }) {
+function InputField({ label, type, placeholder, name, value, onChange, ...props }) {
   return (
     <label className="field">
       <span className="label">{label}</span>
@@ -7,8 +7,9 @@ function InputField({ label, type, placeholder, name, value, onChange }) {
         type={type}
         placeholder={placeholder}
         name={name}
-        value={value}      
-        onChange={onChange} 
+        value={value}
+        onChange={onChange}
+        {...props}
       />
     </label>
   );
