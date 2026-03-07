@@ -1,6 +1,5 @@
 import { useState } from "react";
 import "../styles/QuizPage.css";
-// You will create these component files next
 import StructuralConstraints from "../components/StructuralConstraints";
 import LivabilityFactors from "../components/LivabilityFactors";
 import CommuterAnalysis from "../components/CommuterAnalysis";
@@ -8,25 +7,115 @@ import QuizSummary from "../components/QuizSummary";
 
 function QuizPage() {
   const [step, setStep] = useState(1);
+  const [attemptedNext, setAttemptedNext] = useState(false);
+
   const [formData, setFormData] = useState({
     budget: [400000, 450000],
     towns: [],
     flatTypes: [],
-    minLease: 70,
-    factors: {}, // For REQ-1.3
-    commuters: { destA: "", destB: "" } // For REQ-1.5
+    minLease: 50,
+    factors: {
+      solarOrientation: { mode: null, weight: 0 },
+      acousticComfort: { mode: null, weight: 0 },
+      convenience: { mode: null, weight: 0 }
+    },
+    commuters: {
+      enabled: false,
+      destA: "",
+      destB: "",
+      fairness: 0.5
+    }
   });
 
-  const nextStep = () => setStep((prev) => prev + 1);
-  const prevStep = () => setStep((prev) => prev - 1);
+  const isStep1Valid =
+    formData.budget[0] < formData.budget[1] &&
+    formData.towns.length > 0 &&
+    formData.flatTypes.length > 0 &&
+    formData.minLease >= 50;
+
+  const isFactorValid = (factor) => {
+    if (!factor || !factor.mode) return false;
+
+    if (factor.mode === "ignore") return true;
+    if (factor.mode === "strict") return true;
+    if (factor.mode === "weighted") {
+      return factor.weight !== null && factor.weight !== undefined;
+    }
+
+    return false;
+  };
+
+  const isStep2Valid =
+    isFactorValid(formData.factors.solarOrientation) &&
+    isFactorValid(formData.factors.acousticComfort) &&
+    isFactorValid(formData.factors.convenience);
+
+  const isStep3Valid =
+    !formData.commuters.enabled ||
+    (
+      formData.commuters.destA.trim() !== "" &&
+      formData.commuters.destB.trim() !== "" &&
+      formData.commuters.fairness !== null &&
+      formData.commuters.fairness !== undefined
+    );
+
+  const isCurrentStepValid = () => {
+    if (step === 1) return isStep1Valid;
+    if (step === 2) return isStep2Valid;
+    if (step === 3) return isStep3Valid;
+    return true;
+  };
+
+  const nextStep = () => {
+    setAttemptedNext(true);
+
+    if (!isCurrentStepValid()) return;
+
+    setAttemptedNext(false);
+    setStep((prev) => prev + 1);
+  };
+
+  const prevStep = () => {
+    setAttemptedNext(false);
+    setStep((prev) => prev - 1);
+  };
 
   const renderStep = () => {
     switch (step) {
-      case 1: return <StructuralConstraints data={formData} update={setFormData} />;
-      case 2: return <LivabilityFactors data={formData} update={setFormData} />;
-      case 3: return <CommuterAnalysis data={formData} update={setFormData} />;
-      case 4: return <QuizSummary data={formData} />;
-      default: return <StructuralConstraints />;
+      case 1:
+        return (
+          <StructuralConstraints
+            data={formData}
+            update={setFormData}
+            showErrors={attemptedNext}
+          />
+        );
+      case 2:
+        return (
+          <LivabilityFactors
+            data={formData}
+            update={setFormData}
+            showErrors={attemptedNext}
+          />
+        );
+      case 3:
+        return (
+          <CommuterAnalysis
+            data={formData}
+            update={setFormData}
+            showErrors={attemptedNext}
+          />
+        );
+      case 4:
+        return <QuizSummary data={formData} />;
+      default:
+        return (
+          <StructuralConstraints
+            data={formData}
+            update={setFormData}
+            showErrors={attemptedNext}
+          />
+        );
     }
   };
 

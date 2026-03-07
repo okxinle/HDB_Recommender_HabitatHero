@@ -1,10 +1,39 @@
-function StructuralConstraints({ data, update }) {
-  const towns = ["Ang Mo Kio", "Bedok", "Bishan", "Bukit Batok", "Bukit Merah", "Bukit Panjang", "Bukit Timah", "Central Area", "Choa Chu Kang", "Clementi", "Geylang", "Hougang", "Jurong East", "Jurong West", "Kallang/Whampoa", "Marine Parade", "Pasir Ris", "Punggol", "Queenstown", "Sembawang", "Seng Kang", "Serangoon", "Tampiness", "Tengah", "Toa Payoh", "Woodlands", "Yishun"];
+function StructuralConstraints({ data, update, showErrors }) {
+  const towns = [
+    "Ang Mo Kio",
+    "Bedok",
+    "Bishan",
+    "Bukit Batok",
+    "Bukit Merah",
+    "Bukit Panjang",
+    "Bukit Timah",
+    "Central Area",
+    "Choa Chu Kang",
+    "Clementi",
+    "Geylang",
+    "Hougang",
+    "Jurong East",
+    "Jurong West",
+    "Kallang/Whampoa",
+    "Marine Parade",
+    "Pasir Ris",
+    "Punggol",
+    "Queenstown",
+    "Sembawang",
+    "Seng Kang",
+    "Serangoon",
+    "Tampiness",
+    "Tengah",
+    "Toa Payoh",
+    "Woodlands",
+    "Yishun"
+  ];
 
   const handleTownChange = (town) => {
     const newTowns = data.towns.includes(town)
       ? data.towns.filter((t) => t !== town)
       : [...data.towns, town];
+
     update({ ...data, towns: newTowns });
   };
 
@@ -21,6 +50,7 @@ function StructuralConstraints({ data, update }) {
     <div className="step-content">
       <div className="structural-constraints-section">
         <h2>What is your budget?</h2>
+
         <div className="budget-slider-container">
           <p>
             Budget Range: SGD {data.budget[0].toLocaleString()} – SGD {data.budget[1].toLocaleString()}
@@ -74,53 +104,70 @@ function StructuralConstraints({ data, update }) {
           </div>
 
           <div className="budget-labels">
-            <span>$200k</span>
-            <span>$1M</span>
+            <span>SGD 200,000</span>
+            <span>SGD 1,000,000</span>
           </div>
         </div>
       </div>
 
       <div className="structural-constraints-section">
         <h2>What are your preferred towns?</h2>
+
         <div className="town-grid">
           {towns.map((town) => (
             <label key={town}>
-              <input 
-                type="checkbox" 
-                checked={data.towns.includes(town)} 
-                onChange={() => handleTownChange(town)} 
-              /> {town}
+              <input
+                type="checkbox"
+                checked={data.towns.includes(town)}
+                onChange={() => handleTownChange(town)}
+              />{" "}
+              {town}
             </label>
           ))}
         </div>
+
+        {showErrors && data.towns.length === 0 && (
+          <p className="field-error">Please select at least one town.</p>
+        )}
       </div>
 
       <div className="structural-constraints-section">
-        <h2>What is your preferred flat type?</h2>
+        <h2>What are your preferred flat types?</h2>
+
         <div className="flat-type-options">
           {flatTypes.map((type) => (
             <button
               key={type}
+              type="button"
               className={`flat-type-btn ${
-                data.flatType === type ? "selected" : ""
+                data.flatTypes.includes(type) ? "selected" : ""
               }`}
-              onClick={() =>
+              onClick={() => {
+                const updatedTypes = data.flatTypes.includes(type)
+                  ? data.flatTypes.filter((t) => t !== type)
+                  : [...data.flatTypes, type];
+
                 update({
                   ...data,
-                  flatType: type
-                })
-              }
+                  flatTypes: updatedTypes
+                });
+              }}
             >
               {type}
             </button>
           ))}
         </div>
+
+        {showErrors && data.flatTypes.length === 0 && (
+          <p className="field-error">Please select at least one flat type.</p>
+        )}
       </div>
 
       <div className="structural-constraints-section">
         <h2>What is your preferred minimum lease remaining?</h2>
+
         <p>
-          Minimum lease remaining: {data.lease} years
+          Minimum lease remaining: {data.minLease} years
         </p>
 
         <div className="lease-slider">
@@ -131,21 +178,27 @@ function StructuralConstraints({ data, update }) {
             min="10"
             max="99"
             step="1"
-            value={data.lease}
+            value={data.minLease}
             onChange={(e) =>
               update({
                 ...data,
-                lease: parseInt(e.target.value),
+                minLease: parseInt(e.target.value),
               })
             }
             className="thumb"
           />
         </div>
-      </div>
 
-      <div className="lease-labels">
-        <span>10 years</span>
-        <span>99 years</span>
+        <div className="lease-labels">
+          <span>10 years</span>
+          <span>99 years</span>
+        </div>
+
+        {showErrors && (!data.minLease || data.minLease < 10) && (
+          <p className="field-error">
+            Please select a minimum lease remaining of at least 10 years.
+          </p>
+        )}
       </div>
     </div>
   );

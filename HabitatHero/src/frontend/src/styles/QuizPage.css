@@ -114,6 +114,18 @@
   background: #00665d;
 }
 
+.field-error {
+  color: #d9534f;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.btn-next:disabled {
+  background: #d9d9d9;
+  color: #888;
+  cursor: not-allowed;
+}
+
 .structural-constraints-section {
   padding: 5px 0;
 }
@@ -330,7 +342,7 @@
 .warning-note {
   margin: 8px 0 0 0;
   font-size: 16px;
-  color: #ef4444;
+  color: #212121;
 }
 
 .weight-section {

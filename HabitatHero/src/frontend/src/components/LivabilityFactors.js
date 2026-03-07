@@ -1,40 +1,32 @@
-import { useState } from "react";
 import LivabilityPreferenceBlock from "../components/LivabilityPreferenceBlock";
 
-function LivabilityFactors() {
-  const [preferences, setPreferences] = useState({
-    solarOrientation: {
-      mode: "ignore",
-      weight: 0,
-    },
-    acousticComfort: {
-      mode: "ignore",
-      weight: 0,
-    },
-    convenience: {
-      mode: "ignore",
-      weight: 0,
-    },
-  });
+function LivabilityFactors({ data, update, showErrors }) {
+  const preferences = data.factors;
 
   const handleModeChange = (factor, mode) => {
-    setPreferences((prev) => ({
-      ...prev,
-      [factor]: {
-        mode,
-        weight: mode === "weighted" ? 0.5 : 0,
+    update({
+      ...data,
+      factors: {
+        ...preferences,
+        [factor]: {
+          mode,
+          weight: mode === "weighted" ? 0.5 : 0,
+        },
       },
-    }));
+    });
   };
 
   const handleWeightChange = (factor, weight) => {
-    setPreferences((prev) => ({
-      ...prev,
-      [factor]: {
-        ...prev[factor],
-        weight: parseFloat(weight),
+    update({
+      ...data,
+      factors: {
+        ...preferences,
+        [factor]: {
+          ...preferences[factor],
+          weight: parseFloat(weight),
+        },
       },
-    }));
+    });
   };
 
   return (
@@ -49,6 +41,9 @@ function LivabilityFactors() {
           onModeChange={handleModeChange}
           onWeightChange={handleWeightChange}
         />
+        {showErrors && !preferences.solarOrientation.mode && (
+          <p className="field-error">Please select an option for Solar Orientation.</p>
+        )}
       </div>
 
       <div className="livability-factors-section">
@@ -61,6 +56,9 @@ function LivabilityFactors() {
           onModeChange={handleModeChange}
           onWeightChange={handleWeightChange}
         />
+        {showErrors && !preferences.acousticComfort.mode && (
+          <p className="field-error">Please select an option for Acoustic Comfort.</p>
+        )}
       </div>
 
       <div className="livability-factors-section">
@@ -73,6 +71,9 @@ function LivabilityFactors() {
           onModeChange={handleModeChange}
           onWeightChange={handleWeightChange}
         />
+        {showErrors && !preferences.convenience.mode && (
+          <p className="field-error">Please select an option for Convenience.</p>
+        )}
       </div>
     </div>
   );
