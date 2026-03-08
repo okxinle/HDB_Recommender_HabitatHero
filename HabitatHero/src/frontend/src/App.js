@@ -18,6 +18,7 @@ function App() {
         <Route path="/create-account" element={<CreateAccountPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/quiz" element={<QuizPage />} />
+        <Route path="/results" element={<ResultsPage />} />
       </Routes>
       <Footer />
     </>
