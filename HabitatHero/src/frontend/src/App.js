@@ -7,6 +7,7 @@ import CreateAccountPage from "./pages/CreateAccountPage";
 import LoginPage from './pages/LoginPage';
 import Footer from "./components/Footer";
 import QuizPage from "./pages/QuizPage";
+import ResultsPage from './pages/ResultsPage';
 
 function App() {
   return (
