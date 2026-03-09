@@ -85,6 +85,7 @@
 }
 
 .btn-back {
+  font-family: inherit;
   background: transparent;
   border: none;
   color: #9ca3af;
@@ -99,6 +100,7 @@
 }
 
 .btn-next {
+  font-family: inherit;
   background: #00786e;
   color: white;
   border: none;
@@ -167,7 +169,7 @@
   transform: translateY(-50%);
   width: 100%;
   height: 18px;
-  background: #eaeaea;
+  background: #f5f7f9;
   border-radius: 999px;
   z-index: 1;
 }
@@ -246,21 +248,21 @@
 .flat-type-btn {
   padding: 8px 15px;
   border: 1px solid #00786e;
-  background: white;
+  border-color: #e0e0e0;
+  background: #f5f7f9;
   border-radius: 6px;
   font-size: 16px;
   font-family: inherit;
   cursor: pointer;
   transition: 0.2s;
-}
-
-.flat-type-btn:hover {
-  background: #e8f5f3;
+  font-weight: 400;
 }
 
 .flat-type-btn.selected {
-  background: #00786e33;
   border-color: #00786e;
+  background: #00786e;
+  color: white;
+  font-weight: 600;
 }
 
 .lease-slider {
@@ -311,8 +313,8 @@
 }
 
 .question-text {
-  font-size: 18px;
-  margin: 0 0 24px 0;
+  font-size: 16px;
+  margin-bottom: '8px';
   color: #212121;
 }
 
@@ -365,7 +367,7 @@
   position: absolute;
   width: 100%;
   height: 18px;
-  background: #eaeaea;
+  background: #f5f7f9;
   border-radius: 4px;
 }
 
@@ -417,22 +419,21 @@
 
 .amenity-chip {
   padding: 8px 15px;
-  border: 1px solid #00786e;
-  background: white;
+  border: 1px solid #e0e0e0;
+  background: #f5f7f9;
   border-radius: 6px;
   font-size: 16px;
   font-family: inherit;
   cursor: pointer;
   transition: 0.2s;
-}
-
-.amenity-chip:hover {
-  background: #e8f5f3;
+  font-weight: 400;
 }
 
 .amenity-chip.selected {
-  background: #00786e33;
+  background: #00786e;
   border-color: #00786e;
+  color: white;
+  font-weight: 600;
 }
 
 .parents-address-container {
@@ -548,11 +549,12 @@
   color: #1e1e1e;
 }
 
-.input {
+.multi-commuter-analysis-section .input {
+  font-family: inherit;
   width: 420px;
   height: 50px;
   padding: 0 16px;
-  border: 1.5px solid #00786e;
+  border: 1px solid #00786e;
   border-radius: 4px;
   font-size: 16px;
   outline: none;
@@ -575,15 +577,15 @@
   height: 18px;
   appearance: none;
   -webkit-appearance: none;
-  background: #eaeaea;
+  background: #f5f7f9;
   border-radius: 999px;
   outline: none;
   margin: 0;
 }
 
 .fairness-slider::-webkit-slider-runnable-track {
-  height: 14px;
-  background: #eaeaea;
+  height: 18px;
+  background: #f5f7f9;
   border-radius: 999px;
 }
 
@@ -601,7 +603,7 @@
 
 .fairness-slider::-moz-range-track {
   height: 14px;
-  background: #e0e0e0;
+  background: #f5f7f9;
   border-radius: 999px;
 }
 
@@ -635,183 +637,108 @@
   color: #3b4c6b;
 }
 
-.summary-section {
-  margin: 10px 0;
-}
-
 .summary-title {
-  font-size: 24px;
+  margin: 0 0 24px 0;
+  font-size: 28px;
   font-weight: 700;
-  color: #1e1e1e;
-  margin: 0;
-}
-
-.summary-future-box {
-  background: #f3f3f3;
-  border-radius: 12px;
-  padding: 20px 24px;
-  margin-top: 20px;
-}
-
-.summary-future-label {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  cursor: pointer;
-}
-
-.summary-future-label input[type="checkbox"] {
-  margin-top: 4px;
-  width: 18px;
-  height: 18px;
-  accent-color: #00786e;
-}
-
-.summary-future-heading {
-  display: block;
-  font-size: 16px;
-  font-weight: 700;
-  color: #1e1e1e;
-  margin-bottom: 8px;
-}
-
-.summary-future-text {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.6;
-  color: #444;
-}
-
-.summary-divider {
-  height: 1px;
-  background: #333;
-  opacity: 0.5;
-  margin: 20px 0px;
+  color: #1f2937;
 }
 
 .summary-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 28px;
+  gap: 28px 40px;
+  align-items: start;
 }
 
 .summary-card {
-  border: 1.5px solid #8cc8c1;
-  border-radius: 12px;
-  padding: 22px 24px;
-  background: white;
+  background: #ffffff;
+  border: 1.5px solid #8ccfc6;
+  border-radius: 18px;
+  padding: 28px 34px;
+  min-height: 220px;
+  box-sizing: border-box;
 }
 
 .summary-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 18px;
+  margin-bottom: 28px;
 }
 
 .summary-card-header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
+  color: #1f2937;
   text-decoration: underline;
-  color: #1e1e1e;
+  text-underline-offset: 4px;
 }
 
 .edit-link {
-  background: none;
-  border: none;
+  font-size: 18px;
+  font-weight: 700;
   color: #00786e;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0;
   text-decoration: none;
+}
+
+.edit-link:hover {
+  text-decoration: underline;
 }
 
 .summary-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 26px;
+}
+
+.summary-list p {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.5;
+  color: #212121;
 }
 
 .summary-row {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
+  align-items: center;
 }
 
 .summary-key {
-  font-size: 16px;
   font-weight: 500;
-  color: #1e1e1e;
-  flex-shrink: 0;
 }
 
-.summary-value {
-  font-size: 16px;
-  color: #1e1e1e;
-  text-align: right;
-}
 
 .summary-tag {
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: 14px;
+  font-size: 14px;
   font-weight: 600;
-  padding: 6px 12px;
-  border-radius: 10px;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .tag-ignore {
-  background: #e8e8e8;
+  background: #ececec;
   color: #8a8a8a;
 }
 
 .tag-strict {
-  background: #ffd7d7;
-  color: #e53935;
+  background: #ffd9d6;
+  color: #ef4444;
 }
 
 .tag-weighted {
-  background: #d8ecff;
-  color: #1e88e5;
+  background: #d8ebff;
+  color: #2f80ed;
 }
 
 .tag-default {
-  background: #eeeeee;
-  color: #666;
+  background: #ececec;
+  color: #8a8a8a;
 }
-
-.summary-status {
-  font-size: 16px;
-  font-weight: 700;
-  color: #00786e;
-}
-
-.summary-inner-divider {
-  height: 1px;
-  background: #d9d9d9;
-  margin: 4px 0 2px;
-}
-
-.summary-subtitle {
-  font-weight: 600;
-  font-size: 15px;
-  margin-bottom: 4px;
-  text-decoration: underline;
-}
-
-.summary-sublist {
-  margin-left: 18px;
-  margin-top: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.summary-subrow {
-  font-size: 16px;
-  color: #333;
-}
-
-

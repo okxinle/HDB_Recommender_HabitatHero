@@ -5,9 +5,9 @@ function QuizSummary({ data }) {
   const getFactor = (name) => data.softConstraints.find(f => f.preferenceName === name) || {};
 
   const formatFactorMode = (factor) => {
-    if (factor.mode === "ignore") return "Ignored";
-    if (factor.mode === "strict") return "Strict Requirement";
-    if (factor.mode === "weighted") return `Weighted Preference = ${factor.weight.toFixed(1)}`;
+    if (factor.mode === "ignore") return "IGNORED";
+    if (factor.mode === "strict") return "STRICT REQUIREMENT";
+    if (factor.mode === "weighted") return `WEIGHTED PREFERENCE = ${factor.weight.toFixed(1)}`;
     return "Not Selected";
   };
 
@@ -31,9 +31,37 @@ function QuizSummary({ data }) {
             <Link to="/quiz?step=1" className="edit-link">Edit</Link>
           </div>
           <div className="summary-list">
-            <p>• Budget: SGD {sc.budgetRange[0].toLocaleString()} – {sc.budgetRange[1].toLocaleString()}</p>
-            <p>• Flat Type: {sc.preferredFlatType || "Not selected"}</p>
-            <p>• Towns: {sc.preferredTowns.join(" / ") || "Not selected"}</p>
+
+            <div className="summary-row">
+              <span className="summary-key">• Budget</span>
+              <span className="summary-value">
+                SGD {sc.budgetRange[0].toLocaleString()} – {sc.budgetRange[1].toLocaleString()}
+              </span>
+            </div>
+
+            <div className="summary-row">
+              <span className="summary-key">• Flat Type</span>
+              <span className="summary-value">
+                {sc.preferredFlatType || "Not selected"}
+              </span>
+            </div>
+
+            <div className="summary-row">
+              <span className="summary-key">• Minimum Lease</span>
+              <span className="summary-value">
+                {sc.minLeaseYears ? `${sc.minLeaseYears} years` : "Not selected"}
+              </span>
+            </div>
+
+            <div className="summary-row">
+              <span className="summary-key">• Towns</span>
+              <span className="summary-value">
+                {sc.preferredTowns.length > 0
+                  ? sc.preferredTowns.join(", ").replace(/, ([^,]*)$/, " & $1")
+                  : "Not selected"}
+              </span>
+            </div>
+
           </div>
         </div>
 
@@ -48,7 +76,9 @@ function QuizSummary({ data }) {
               const f = getFactor(key);
               return (
                 <div key={key} className="summary-row">
-                  <span>• {key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                  <span className="summary-key">
+                    • {key.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase()).trim()}
+                  </span>
                   <span className={`summary-tag ${getFactorClass(f.mode)}`}>{formatFactorMode(f)}</span>
                 </div>
               );
@@ -62,14 +92,34 @@ function QuizSummary({ data }) {
             <h3>Multi-Commuter Analysis</h3>
             <Link to="/quiz?step=3" className="edit-link">Edit</Link>
           </div>
+
           <div className="summary-list">
-            <p>Status: {cp.enabled ? "✔ ENABLED" : "✖ DISABLED"}</p>
+
+            <div className="summary-row">
+              <span className="summary-key">• Status</span>
+              <span className="summary-value">
+                {cp.enabled ? "✔ ENABLED" : "✖ DISABLED"}
+              </span>
+            </div>
+
             {cp.enabled && (
               <>
-                <p>• Commuter A: {cp.destinations[0] || "Not entered"}</p>
-                <p>• Commuter B: {cp.destinations[1] || "Not entered"}</p>
+                <div className="summary-row">
+                  <span className="summary-key">• Commuter A Destination</span>
+                  <span className="summary-value">
+                    {cp.destinations[0] || "Not entered"}
+                  </span>
+                </div>
+
+                <div className="summary-row">
+                  <span className="summary-key">• Commuter B Destination</span>
+                  <span className="summary-value">
+                    {cp.destinations[1] || "Not entered"}
+                  </span>
+                </div>
               </>
             )}
+
           </div>
         </div>
         

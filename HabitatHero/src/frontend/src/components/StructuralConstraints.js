@@ -100,7 +100,7 @@ function StructuralConstraints({ data, update, showErrors }) {
         <h2>Preferred Location</h2>
         
         {/* Regions Row */}
-        <p className="question-text" style={{ fontSize: '15px', marginBottom: '8px' }}>Region</p>
+        <p className="question-text">Region</p>
         <div className="flat-type-options" style={{ marginBottom: '20px', flexWrap: 'wrap' }}>
           {Object.keys(REGION_TOWN_MAP).map((region) => {
             const isSelected = (data.structuralConstraints.preferredRegions || []).includes(region);
@@ -128,7 +128,7 @@ function StructuralConstraints({ data, update, showErrors }) {
         {/* Dynamic Towns Rows (Shows only for selected regions) */}
         {(data.structuralConstraints.preferredRegions || []).map((region) => (
           <div key={`towns-${region}`} style={{ marginBottom: '24px' }}>
-            <p className="question-text" style={{ fontSize: '15px', marginBottom: '10px', color: '#444' }}>
+            <p className="question-text">
               Towns in {region}
             </p>
             <div className="flat-type-options" style={{ flexWrap: 'wrap', gap: '12px' }}>

@@ -34,7 +34,7 @@ function CommuterAnalysis({ data, update, showErrors }) {
   return (
     <div className="step-content">
       <div className="multi-commuter-analysis-section">
-        <h2>Multi-Commuter Analysis<span className="optional"> (optional)</span></h2>
+        <h2>Multi-Commuter Analysis</h2>
         <p>Evaluate housing options based on the daily travel needs of up to two individuals.</p>
 
         <div className="toggle-row">
