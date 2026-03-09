@@ -178,6 +178,12 @@ function StructuralConstraints({ data, update, showErrors }) {
             </button>
           ))}
         </div>
+
+        {showErrors && !data.structuralConstraints.preferredFlatType && (
+          <p className="field-error">
+            Please select a preferred flat type.
+          </p>
+        )}
       </div>
 
       {/* 4. LEASE SLIDER SECTION */}
