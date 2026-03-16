@@ -1,5 +1,5 @@
 package habitathero.control;
-
+import org.locationtech.jts.geom.Geometry;
 import java.util.List;
 
 public class HDBGeometryMgr {

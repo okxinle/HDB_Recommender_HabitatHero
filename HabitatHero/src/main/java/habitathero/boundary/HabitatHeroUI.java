@@ -25,6 +25,9 @@ public class HabitatHeroUI {
 		// TODO - implement HabitatHeroUI.HabitatHeroUI
 		throw new UnsupportedOperationException();
 	}
+	public class UserProfileDbMgr {
+    // TODO: Implement later (placeholder to unblock compilation)
+	}
 
 	/**
 	 * 
