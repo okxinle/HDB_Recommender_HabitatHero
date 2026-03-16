@@ -2,6 +2,7 @@ package habitathero.control;
 
 import habitathero.entity.Coordinates;
 import java.util.List;
+import org.locationtech.jts.geom.Geometry;
 
 public class TransportLineMgr {
 
