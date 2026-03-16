@@ -1,5 +1,13 @@
 import { Link } from "react-router-dom";
 
+export const REGION_TOWN_MAP = {
+  "North": ["Sembawang", "Woodlands", "Yishun"],
+  "North-East": ["Ang Mo Kio", "Hougang", "Punggol", "Seng Kang", "Serangoon"],
+  "East": ["Bedok", "Pasir Ris", "Tampines"],
+  "West": ["Bukit Batok", "Bukit Panjang", "Choa Chu Kang", "Clementi", "Jurong East", "Jurong West", "Tengah"],
+  "Central": ["Bishan", "Bukit Merah", "Bukit Timah", "Central Area", "Geylang", "Kallang/Whampoa", "Marine Parade", "Queenstown", "Toa Payoh"]
+};
+
 function QuizSummary({ data }) {
   // Helper to find specific soft constraints in the new List format
   const getFactor = (name) => data.softConstraints.find(f => f.preferenceName === name) || {};
@@ -16,8 +24,31 @@ function QuizSummary({ data }) {
     return classes[mode] || "tag-default";
   };
 
+  const getDisplayedTowns = (structuralConstraints) => {
+    const selectedRegions = structuralConstraints.preferredRegions || [];
+    const selectedTowns = structuralConstraints.preferredTowns || [];
+
+    const finalTowns = new Set(selectedTowns);
+
+    selectedRegions.forEach((region) => {
+      const regionTowns = REGION_TOWN_MAP[region] || [];
+
+      const selectedTownsInThisRegion = regionTowns.filter((town) =>
+        finalTowns.has(town)
+      );
+
+      if (selectedTownsInThisRegion.length === 0) {
+        regionTowns.forEach((town) => finalTowns.add(town));
+      }
+    });
+
+    return Array.from(finalTowns);
+  };
+
   const sc = data.structuralConstraints;
   const cp = data.commuterProfile;
+
+  const displayedTowns = getDisplayedTowns(sc);
 
   return (
     <div className="step-content">
@@ -25,7 +56,7 @@ function QuizSummary({ data }) {
       <div className="summary-grid">
         
         {/* Structural Constraints Card */}
-        <div className="summary-card">
+        <div className="summary-card summary-card-wide">
           <div className="summary-card-header">
             <h3>Structural Constraints</h3>
             <Link to="/quiz?step=1" className="edit-link">Edit</Link>
@@ -53,11 +84,11 @@ function QuizSummary({ data }) {
               </span>
             </div>
 
-            <div className="summary-row">
+            <div className="summary-row summary-row-towns">
               <span className="summary-key">• Towns</span>
-              <span className="summary-value">
-                {sc.preferredTowns.length > 0
-                  ? sc.preferredTowns.join(", ").replace(/, ([^,]*)$/, " & $1")
+              <span className="summary-value summary-value-towns">
+                {displayedTowns.length > 0
+                  ? displayedTowns.join(", ").replace(/, ([^,]*)$/, " & $1")
                   : "Not selected"}
               </span>
             </div>
@@ -94,12 +125,16 @@ function QuizSummary({ data }) {
           </div>
 
           <div className="summary-list">
-
-            <div className="summary-row">
-              <span className="summary-key">• Status</span>
-              <span className="summary-value">
-                {cp.enabled ? "✔ ENABLED" : "✖ DISABLED"}
+            <div className="commuter-status-row">
+              <span className={`status-text ${cp.enabled ? "enabled" : "disabled"}`}>
+                {cp.enabled ? "✔ Status: ENABLED" : "✖ Status: DISABLED"}
               </span>
+
+              {cp.enabled && (
+              <span className="summary-tag tag-fairness">
+                COMMUTE FAIRNESS SCORE = {cp.fairnessWeight.toFixed(1)}
+              </span>
+            )}
             </div>
 
             {cp.enabled && (
