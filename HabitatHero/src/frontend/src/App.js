@@ -8,6 +8,7 @@ import LoginPage from './pages/LoginPage';
 import Footer from "./components/Footer";
 import QuizPage from "./pages/QuizPage";
 import ResultsPage from './pages/ResultsPage';
+import ProfilePage from './pages/ProfilePage';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/quiz" element={<QuizPage />} />
         <Route path="/results" element={<ResultsPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
       </Routes>
       <Footer />
     </>
