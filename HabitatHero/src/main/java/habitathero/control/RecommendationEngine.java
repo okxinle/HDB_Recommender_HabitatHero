@@ -1,6 +1,7 @@
 package habitathero.control;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -27,11 +28,21 @@ public class RecommendationEngine {
     // ── Public entry point ────────────────────────────────────────────────
 
     public List<HDBBlock> generateRecommendations(UserProfile profile) {
+        if (profile == null) {
+            throw new IllegalArgumentException("Request body is missing user profile data.");
+        }
+
+        StructuralConstraints constraints = profile.getStructuralConstraints();
+        if (constraints == null) {
+            throw new IllegalArgumentException("Missing structuralConstraints in request payload.");
+        }
+
         // Step 1 & 2: fetch all blocks and apply hard filters
         List<HDBBlock> allBlocks      = dbRepository.getAllBlocks();
-        List<HDBBlock> filteredBlocks = applyHardFilters(allBlocks, profile.getStructuralConstraints());
+        List<HDBBlock> filteredBlocks = applyHardFilters(allBlocks, constraints);
 
-        List<WeightedPreference> softConstraints = profile.getSoftConstraints();
+        List<WeightedPreference> softConstraints =
+                profile.getSoftConstraints() == null ? List.of() : profile.getSoftConstraints();
 
         // Pre-compute the maximum possible livability score (sum of all priority weights)
         // so we can normalise it to the range [0.0, 1.0] before combining with commuteScore.
@@ -70,10 +81,16 @@ public class RecommendationEngine {
     }
 
     private List<HDBBlock> applyHardFilters(List<HDBBlock> allBlocks, StructuralConstraints constraints) {
+        double maxBudget = constraints.getMaxBudget() > 0 ? constraints.getMaxBudget() : Double.MAX_VALUE;
+        int minLeaseYears = Math.max(0, constraints.getMinLeaseYears());
+        List<String> preferredTowns = constraints.getPreferredTowns();
+        boolean hasTownFilter = preferredTowns != null && !preferredTowns.isEmpty();
+
         List<HDBBlock> result = allBlocks.stream()
-                .filter(b -> b.getEstimatedPrice()      <= constraints.getMaxBudget())
-                .filter(b -> b.getRemainingLeaseYears() >= constraints.getMinLeaseYears())
-                .filter(b -> constraints.getPreferredTowns().contains(b.getTown()))
+            .filter(Objects::nonNull)
+            .filter(b -> b.getEstimatedPrice() <= maxBudget)
+            .filter(b -> b.getRemainingLeaseYears() >= minLeaseYears)
+            .filter(b -> !hasTownFilter || preferredTowns.contains(b.getTown()))
                 .collect(Collectors.toList());
 
         if (result.isEmpty()) {
@@ -114,8 +131,12 @@ public class RecommendationEngine {
     }
 
     private float calculateCommuteScore(HDBBlock block, CommuterProfile commuteProfile) {
-        if (!commuteProfile.isEnabled()) {
+        if (commuteProfile == null || !commuteProfile.isEnabled()) {
             return 0.0f;
+        }
+
+        if (commuteProfile.getDestinationA() == null || commuteProfile.getDestinationB() == null) {
+            return -1.0f;
         }
 
         int timeA = routingService.getTravelTime(block.getCoordinates(), commuteProfile.getDestinationA());

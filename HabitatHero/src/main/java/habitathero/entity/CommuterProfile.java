@@ -1,6 +1,10 @@
 package habitathero.entity;
+
+import com.fasterxml.jackson.annotation.JsonAlias;
+
 public class CommuterProfile {
 
+    @JsonAlias({"enabled", "isEnabled"})
     private boolean isEnabled;
     private Coordinates destinationA;
     private Coordinates destinationB;

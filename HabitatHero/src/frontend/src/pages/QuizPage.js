@@ -7,6 +7,79 @@ import CommuterAnalysis from "../components/CommuterAnalysis";
 import QuizSummary from "../components/QuizSummary";
 import { REGION_TOWN_MAP } from "../components/StructuralConstraints"; //
 
+const PREFERENCE_NAME_MAP = {
+  solarOrientation: "Solar Orientation",
+  acousticComfort: "Acoustic Comfort",
+  convenience: "Convenience"
+};
+
+const parseCoordinateInput = (value) => {
+  if (typeof value !== "string") return null;
+  const [latText, lngText] = value.split(",").map((part) => part.trim());
+  const lat = Number(latText);
+  const lng = Number(lngText);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat, lng };
+};
+
+const buildBackendPayload = (formData, preferredTowns) => {
+  const [minBudget = 0, maxBudget = 0] = formData.structuralConstraints.budgetRange || [];
+
+  return {
+    userId: formData.userId,
+    structuralConstraints: {
+      maxBudget: Math.max(minBudget, maxBudget),
+      preferredTowns,
+      preferredFlatType: formData.structuralConstraints.preferredFlatType,
+      minLeaseYears: formData.structuralConstraints.minLeaseYears
+    },
+    commuterProfile: {
+      isEnabled: formData.commuterProfile.enabled,
+      destinationA: parseCoordinateInput(formData.commuterProfile.destinations[0]),
+      destinationB: parseCoordinateInput(formData.commuterProfile.destinations[1])
+    },
+    softConstraints: formData.softConstraints.map((constraint) => ({
+      factorName: PREFERENCE_NAME_MAP[constraint.preferenceName] || constraint.preferenceName,
+      priorityWeight: constraint.mode === "weighted" ? constraint.weight : 0,
+      isStrict: constraint.mode === "strict"
+    }))
+  };
+};
+
+const parseBackendResponse = async (response) => {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    return response.json();
+  }
+
+  const text = await response.text();
+  return text || null;
+};
+
+const extractRankedBlocks = (responseBody) => {
+  if (Array.isArray(responseBody)) return responseBody;
+  if (responseBody && Array.isArray(responseBody.results)) return responseBody.results;
+  return [];
+};
+
+const extractErrorMessage = (responseBody, fallbackMessage) => {
+  if (typeof responseBody === "string" && responseBody.trim().length > 0) {
+    return responseBody;
+  }
+
+  if (responseBody && typeof responseBody.message === "string" && responseBody.message.trim().length > 0) {
+    return responseBody.message;
+  }
+
+  if (responseBody && typeof responseBody.error === "string" && responseBody.error.trim().length > 0) {
+    return responseBody.error;
+  }
+
+  return fallbackMessage;
+};
+
 function QuizPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [attemptedNext, setAttemptedNext] = useState(false);
@@ -46,14 +119,7 @@ const submitQuiz = async () => {
       }
     });
 
-    // Create the final payload mapped to UserProfile.java
-    const payload = {
-      ...formData,
-      structuralConstraints: {
-        ...formData.structuralConstraints,
-        preferredTowns: Array.from(finalTowns) // Overwrite with the auto-filled array
-      }
-    };
+    const payload = buildBackendPayload(formData, Array.from(finalTowns));
 
     const response = await fetch("http://localhost:8080/api/hdb/recommend", {
       method: "POST",
@@ -61,13 +127,31 @@ const submitQuiz = async () => {
       body: JSON.stringify(payload)
     });
 
-    if (!response.ok) throw new Error("Failed to submit quiz data");
+    const responseBody = await parseBackendResponse(response);
+    if (!response.ok) {
+      if (response.status === 400) {
+        alert(extractErrorMessage(responseBody, "Some quiz inputs are invalid. Please review your criteria and try again."));
+        return;
+      }
 
-    const result = await response.json();
-    navigate("/results", { state: { rankedBlocks: result } });
+      if (response.status === 404) {
+        alert(extractErrorMessage(responseBody, "No matches found. Please broaden your search criteria."));
+        return;
+      }
+
+      if (response.status >= 500) {
+        alert(extractErrorMessage(responseBody, "A server error occurred. Please try again later."));
+        return;
+      }
+
+      throw new Error(extractErrorMessage(responseBody, "Failed to submit quiz data"));
+    }
+
+    const rankedBlocks = extractRankedBlocks(responseBody);
+    navigate("/results", { state: { rankedBlocks } });
   } catch (error) {
     console.error("Error submitting quiz:", error);
-    alert("No matches found or system error. Please check your criteria.");
+    alert(error?.message || "Unable to submit your quiz right now. Please try again.");
   }
 };
 

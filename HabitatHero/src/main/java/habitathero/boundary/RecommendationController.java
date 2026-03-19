@@ -1,6 +1,7 @@
 package habitathero.boundary;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,25 +37,43 @@ public class RecommendationController {
      * list of HDBBlocks or a descriptive error response.
      *
      * @param  profile the user's constraints and preferences
-     * @return 200 OK        + ranked List<HDBBlock>  on success
-     *         404 NOT FOUND + error message           if no blocks match
-     *         500 ISE       + generic message         on unexpected error
+     * @return 200 OK        + {status, results}
+     *         400 BAD REQ   + {status, message}       if payload is invalid
+     *         404 NOT FOUND + {status, message}       if no blocks match
+     *         500 ISE       + {status, message}       on unexpected error
      */
     @PostMapping("/recommend")
     public ResponseEntity<?> recommend(@RequestBody UserProfile profile) {
         try {
             List<HDBBlock> recommendedBlocks = engine.generateRecommendations(profile);
-            return ResponseEntity.ok(recommendedBlocks);
+            return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "results", recommendedBlocks
+            ));
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                    "status", "error",
+                    "message", e.getMessage()
+                ));
 
         } catch (ZeroMatchesException e) {
             return ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
-                    .body(e.getMessage());
+                .body(Map.of(
+                    "status", "no_matches",
+                    "message", e.getMessage()
+                ));
 
         } catch (Exception e) {
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("An unexpected error occurred.");
+                .body(Map.of(
+                    "status", "error",
+                    "message", "An unexpected error occurred."
+                ));
         }
     }
 }

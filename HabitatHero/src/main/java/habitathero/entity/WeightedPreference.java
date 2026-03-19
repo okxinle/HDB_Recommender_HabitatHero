@@ -1,8 +1,12 @@
 package habitathero.entity;
+
+import com.fasterxml.jackson.annotation.JsonAlias;
+
 public class WeightedPreference {
 
     private String  factorName;
     private double  priorityWeight;
+    @JsonAlias({"strict", "isStrict"})
     private boolean isStrict;
 
     // ── Constructors ───────────────────────────────────────────────────────
@@ -26,11 +30,4 @@ public class WeightedPreference {
     public void setFactorName(String factorName)          { this.factorName     = factorName; }
     public void setPriorityWeight(double priorityWeight)  { this.priorityWeight = priorityWeight; }
     public void setStrict(boolean isStrict)               { this.isStrict       = isStrict; }
-
-    @Override
-    public String toString() {
-        return "WeightedPreference{factorName='" + factorName + "'"
-                + ", priorityWeight=" + priorityWeight
-                + ", isStrict=" + isStrict + "}";
-    }
 }
