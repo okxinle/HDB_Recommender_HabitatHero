@@ -12,19 +12,22 @@ import ProfilePage from './pages/ProfilePage';
 
 function App() {
   return (
-    <>
+    <div className="app-wrapper">
       <NavigationBar />
 
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/create-account" element={<CreateAccountPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/quiz" element={<QuizPage />} />
-        <Route path="/results" element={<ResultsPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-      </Routes>
+      <main className="main-content">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/create-account" element={<CreateAccountPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/quiz" element={<QuizPage />} />
+          <Route path="/results" element={<ResultsPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+        </Routes>
+      </main>
+
       <Footer />
-    </>
+    </div>
   );
 }
 

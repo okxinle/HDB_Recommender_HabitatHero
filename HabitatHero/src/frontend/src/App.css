@@ -1,38 +1,37 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
-/* Reset and ensure full height for the entire document */
-html, body, #root {
-  height: 100%;
+/* Reset and ensure full-height layout baseline */
+html,
+body,
+#root {
+  min-height: 100%;
   margin: 0;
   padding: 0;
+}
+
+body {
   font-family: "Poppins", sans-serif;
   background: #ffffff;
 }
 
-/* The wrapper that holds everything in a vertical flex column */
 .app-wrapper {
   display: flex;
   flex-direction: column;
-  min-height: 100vh; /* Minimum height is the full screen */
-  font-family: "Poppins", sans-serif;
-  background: #f5f7f9; /* Light neutral background */
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #ffffff;
 }
 
-/* This section grows to fill every pixel of empty vertical space */
 .main-content {
-  flex: 1 0 auto;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   width: 100%;
 }
 
-/* Styling for the Footer to remain at the bottom */
 footer {
   flex-shrink: 0;
   width: 100%;
-  background: #ffffff;
-  border-top: 1px solid #eaeaea;
-  padding: 20px 0;
 }
 
 /* Lease Slider consistency styles */

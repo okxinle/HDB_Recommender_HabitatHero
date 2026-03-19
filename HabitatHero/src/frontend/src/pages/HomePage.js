@@ -63,34 +63,38 @@ function HomePage() {
   return (
     <div className="home">
       <section className="cover">
-        <div className="cover-left">
-          <h1>
-            Don’t just find a house.<br />
-            <span className="highlight">Find a habitat.</span>
-          </h1>
+        <div className="cover-inner">
+          <div className="cover-left">
+            <h1>
+              Don’t just find a house.<br />
+              <span className="highlight">Find a habitat.</span>
+            </h1>
 
-          <p>We translate your lifestyle needs into a personalized HDB compatibility score.</p>
+            <p>We translate your lifestyle needs into a personalized HDB compatibility score.</p>
 
-          <div className="ratings">
-            {ratings.map((label) => (
-              <RatingCard key={label} label={label} />
-            ))}
+            <div className="ratings">
+              {ratings.map((label) => (
+                <RatingCard key={label} label={label} />
+              ))}
 
+            </div>
+            <Link to="/quiz">
+              <button className="primary-btn">Start Lifestyle Quiz</button>
+            </Link>
           </div>
-          <Link to="/quiz">
-          <button className="primary-btn">Start Lifestyle Quiz</button>
-          </Link>
-        </div>
 
-        <div className="cover-right">
-          <img src={HDBHome} alt="HDB Background" className="cover-image" />
+          <div className="cover-right">
+            <img src={HDBHome} alt="HDB Background" className="cover-image" />
+          </div>
         </div>
       </section>
 
-      <section className="features">
-        {features.map((f) => (
-          <FeatureCard key={f.title} icon={f.icon} title={f.title} description={f.description} />
-        ))}
+      <section className="features-section">
+        <div className="features">
+          {features.map((f) => (
+            <FeatureCard key={f.title} icon={f.icon} title={f.title} description={f.description} />
+          ))}
+        </div>
       </section>
     </div>
   );
