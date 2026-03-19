@@ -55,6 +55,7 @@
 }
 
 .field input {
+  font-family: inherit;
   height: 50px;
   padding: 0 16px;
   border: 1.5px solid #00786e;

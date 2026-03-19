@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS users (
+  user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'USER',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

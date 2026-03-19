@@ -71,27 +71,8 @@
   transition: 0.2s ease;
 }
 
-.login-input-wrap.has-right-icon input {
-  padding-right: 48px;
-}
-
 .login-input-wrap input:focus {
   box-shadow: 0 0 0 3px rgba(0, 120, 110, 0.15);
-}
-
-.login-right-icon {
-  position: absolute;
-  right: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #212121;
-  opacity: 0.7;
-}
-
-.login-right-icon svg {
-  width: 20px;
-  height: 20px;
 }
 
 .login-row {

@@ -40,6 +40,22 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>3.51.2.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mindrot</groupId>
+        	<artifactId>jbcrypt</artifactId>
+        	<version>0.4</version>
+        </dependency>
+		<dependency>
+			<groupId>org.locationtech.jts</groupId>
+			<artifactId>jts-core</artifactId>
+			<version>1.20.0</version>
+		</dependency>
 	</dependencies>
 
 	<build>
