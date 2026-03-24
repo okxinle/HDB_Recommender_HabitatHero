@@ -21,9 +21,10 @@ function LoginPage() {
     e.preventDefault();
     setErrorMessage("");
 
-    /* ============================================================
-    PRODUCTION CODE (Commented Out for Future Use)
-    ============================================================
+    // ============================================================
+    // PRODUCTION CODE (Commented Out for Future Use)
+    // ============================================================
+
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -43,8 +44,8 @@ function LoginPage() {
     } catch (error) {
       setErrorMessage("System error. Please try again later.");
     }
-    */
-
+    
+    /*
     // ============================================================
     // MOCK TESTING LOGIC (for Testing Now)
     // ============================================================
@@ -72,6 +73,7 @@ function LoginPage() {
       setErrorMessage("Invalid credentials. Try: user@example.com / 123");
     }
     // ============================================================
+    */
   };
 
 return (

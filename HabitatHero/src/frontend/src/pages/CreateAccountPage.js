@@ -23,6 +23,39 @@ function CreateAccountPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    try {
+      // Send a POST request to the Spring Boot backend
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        // Only sending email and password since the backend AccountController 
+        // currently does not process the 'name' field
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      // Check if the HTTP status code is 200-299
+      if (response.ok) {
+        alert("Account created successfully! Please log in.");
+        // Redirect to the Login Page
+        navigate("/login"); 
+      } else {
+        // If the backend returns a 400 Bad Request (e.g., account exists)
+        alert(data.message || "Registration failed. Please try again.");
+      }
+    } catch (error) {
+      // Handles network errors if the backend is not running
+      console.error("Error connecting to the backend:", error);
+      alert("Failed to connect to the server. Is the Spring Boot backend running?");
+    }
+
+    /*
     // --- TESTING LOGIC START ---
     console.log("Mocking Registration for UC-01:", formData);
     
@@ -34,6 +67,7 @@ function CreateAccountPage() {
     // Redirect to the Login Page as requested
     navigate("/login"); 
     // --- TESTING LOGIC END ---
+    */
   };
 
   return (
