@@ -1,5 +1,6 @@
 package habitathero.boundary;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +25,7 @@ public class AccountController {
     @Autowired
     private JwtService jwtService;
 
-    private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     // 1. The Registration Endpoint
     @PostMapping("/register")
@@ -63,7 +64,31 @@ public class AccountController {
             return ResponseEntity.status(401).body(Map.of("message", "Invalid email or password"));
         }
 
+        // --- LOCKOUT CHECK START ---
+        // Check if the user is currently locked out
+        if (user.getLockTime() != null) {
+            // Define the lockout duration (e.g., 15 minutes)
+            LocalDateTime lockExpiration = user.getLockTime().plusMinutes(15);
+            
+            if (LocalDateTime.now().isBefore(lockExpiration)) {
+                return ResponseEntity.status(403).body(Map.of(
+                    "message", "Account locked due to too many failed attempts. Please try again in 15 minutes."
+                ));
+            } else {
+                // The lock duration has passed, unlock the account
+                user.setFailedLoginAttempts(0);
+                user.setLockTime(null);
+                userRepository.save(user);
+            }
+        }
+        // --- LOCKOUT CHECK END ---
+
         if (passwordEncoder.matches(password, user.getPasswordHash())) {
+            // SUCCESSFUL LOGIN: Reset attempts and clear any locks
+            user.setFailedLoginAttempts(0);
+            user.setLockTime(null);
+            userRepository.save(user);
+
             String token = jwtService.generateToken(user);
             return ResponseEntity.ok(Map.of(
                 "status", "success",
@@ -71,7 +96,23 @@ public class AccountController {
                 "user", Map.of("email", user.getEmail(), "isActive", user.isActive())
             ));
         } else {
-            return ResponseEntity.status(401).body(Map.of("message", "Invalid email or password"));
+            // FAILED LOGIN: Increment attempts
+            int newAttempts = user.getFailedLoginAttempts() + 1;
+            user.setFailedLoginAttempts(newAttempts);
+
+            // Lock the account if attempts reach 5
+            if (newAttempts >= 5) {
+                user.setLockTime(LocalDateTime.now());
+                userRepository.save(user);
+                return ResponseEntity.status(403).body(Map.of(
+                    "message", "Account locked due to 5 failed attempts. Please try again in 15 minutes."
+                ));
+            }
+
+            userRepository.save(user);
+            return ResponseEntity.status(401).body(Map.of(
+                "message", "Invalid email or password. Attempts remaining: " + (5 - newAttempts)
+            ));
         }
     }
 }

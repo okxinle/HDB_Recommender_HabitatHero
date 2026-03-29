@@ -1,13 +1,35 @@
 package habitathero.entity;
+
 import java.util.List;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
+
+
+@Entity
+@Table(name = "user_profiles")
 public class UserProfile {
 
-    private int                       userId;
-    private StructuralConstraints     structuralConstraints;
-    private CommuterProfile           commuterProfile;
-    private List<WeightedPreference>  softConstraints;
+    @Id // The primary key is the userId, creating a One-to-One link with UserAccount
+    private int userId;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private StructuralConstraints structuralConstraints;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private CommuterProfile commuterProfile;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private List<WeightedPreference> softConstraints;
     // ── Constructors ─────────────────────────────────────────────────────────
 
     public UserProfile() {}

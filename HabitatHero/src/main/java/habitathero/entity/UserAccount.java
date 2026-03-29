@@ -1,5 +1,7 @@
 package habitathero.entity;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -38,4 +40,25 @@ public class UserAccount {
     
     public boolean isActive() { return isActive; }
     public void setActive(boolean active) { isActive = active; }
+
+    // Lockout Mechanism
+    private int failedLoginAttempts = 0;
+    private LocalDateTime lockTime = null;
+
+    // Getters and Setters
+    public int getFailedLoginAttempts() {
+        return failedLoginAttempts;
+    }
+
+    public void setFailedLoginAttempts(int failedLoginAttempts) {
+        this.failedLoginAttempts = failedLoginAttempts;
+    }
+
+    public LocalDateTime getLockTime() {
+        return lockTime;
+    }
+
+    public void setLockTime(LocalDateTime lockTime) {
+        this.lockTime = lockTime;
+    }
 }

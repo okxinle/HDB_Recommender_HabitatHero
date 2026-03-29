@@ -2,6 +2,7 @@ package habitathero.boundary;
 
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -10,38 +11,70 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import habitathero.auth.JwtService;
+import habitathero.entity.UserAccount;
 import habitathero.entity.UserProfile;
+import habitathero.repository.UserProfileRepository;
+import habitathero.repository.UserRepository;
 
 @RestController
 @RequestMapping("/api/profile")
 public class ProfileController {
 
-    // You will eventually inject your database service here:
-    // @Autowired
-    // private ProfileService profileService;
+    @Autowired
+    private UserProfileRepository profileRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private JwtService jwtService;
+
+    // --- SECURITY HELPER ---
+    // Extracts the user securely from the JWT wristband
+    private UserAccount getAuthenticatedUser(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return null;
+        }
+        String token = authHeader.substring(7);
+        // Extract email/username from token
+        String email = jwtService.extractEmail(token); 
+        return userRepository.findByEmail(email).orElse(null);
+    }
+
+    // --- ENDPOINTS ---
 
     @GetMapping
     public ResponseEntity<?> getSavedProfile(@RequestHeader("Authorization") String token) {
-        // TODO: Extract user ID/email from the token, then query your database
-        UserProfile profile = null; // Placeholder for your database call
+        UserAccount user = getAuthenticatedUser(token);
+        if (user == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
+        }
 
-        // If the user is new and hasn't saved a profile yet, return null data
+        // Fetch the profile using the user's ID
+        UserProfile profile = profileRepository.findById(user.getUserId()).orElse(null);
+
         if (profile == null) {
             return ResponseEntity.ok(Map.of("status", "success", "data", null));
         }
 
-        // Otherwise, return the populated UserProfile
         return ResponseEntity.ok(Map.of("status", "success", "data", profile));
     }
 
     @PostMapping
-    public ResponseEntity<?> saveProfile(@RequestBody UserProfile payload) {
-        // Because of your entity structure, Spring Boot automatically converts 
-        // the incoming JSON into your UserProfile object here!
+    public ResponseEntity<?> saveProfile(@RequestHeader("Authorization") String token, @RequestBody UserProfile payload) {
+        UserAccount user = getAuthenticatedUser(token);
+        if (user == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
+        }
+
+        // SECURITY OVERRIDE: Ignore any userId sent by the frontend.
+        // Force the profile ID to match the authenticated token's owner.
+        payload.setUserId(user.getUserId());
         
-        // TODO: Save 'payload' to the database linked to the authenticated user
-        // profileService.saveProfileData(payload);
+        // Save to PostgreSQL. If the ID exists, it runs an UPDATE. If new, it runs an INSERT.
+        profileRepository.save(payload);
         
-        return ResponseEntity.ok(Map.of("status", "success"));
+        return ResponseEntity.ok(Map.of("status", "success", "message", "Profile saved successfully"));
     }
 }
