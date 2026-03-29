@@ -7,7 +7,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.Table; // Required for the lock timer
 
 @Entity
 @Table(name = "user_accounts")
@@ -25,6 +25,12 @@ public class UserAccount {
     
     private boolean isActive = true;
 
+    // --- NEW: Account Lockout Fields ---
+    @Column(columnDefinition = "integer default 0")
+    private int failedLoginAttempts = 0;
+    
+    private LocalDateTime lockTime = null;
+
     // Constructors
     public UserAccount() {}
     
@@ -41,24 +47,10 @@ public class UserAccount {
     public boolean isActive() { return isActive; }
     public void setActive(boolean active) { isActive = active; }
 
-    // Lockout Mechanism
-    private int failedLoginAttempts = 0;
-    private LocalDateTime lockTime = null;
+    // --- NEW: Getters and Setters for Lockout ---
+    public int getFailedLoginAttempts() { return failedLoginAttempts; }
+    public void setFailedLoginAttempts(int failedLoginAttempts) { this.failedLoginAttempts = failedLoginAttempts; }
 
-    // Getters and Setters
-    public int getFailedLoginAttempts() {
-        return failedLoginAttempts;
-    }
-
-    public void setFailedLoginAttempts(int failedLoginAttempts) {
-        this.failedLoginAttempts = failedLoginAttempts;
-    }
-
-    public LocalDateTime getLockTime() {
-        return lockTime;
-    }
-
-    public void setLockTime(LocalDateTime lockTime) {
-        this.lockTime = lockTime;
-    }
+    public LocalDateTime getLockTime() { return lockTime; }
+    public void setLockTime(LocalDateTime lockTime) { this.lockTime = lockTime; }
 }

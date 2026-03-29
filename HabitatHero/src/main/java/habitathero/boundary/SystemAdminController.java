@@ -1,0 +1,49 @@
+package habitathero.boundary;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import habitathero.control.DataPipelineService;
+import habitathero.entity.AuditLog;
+import habitathero.repository.AuditLogRepository;
+
+@RestController
+@RequestMapping("/api/admin")
+public class SystemAdminController {
+
+    @Autowired
+    private DataPipelineService dataPipelineService;
+
+    @Autowired
+    private AuditLogRepository auditLogRepository;
+
+    // Headless API to manually trigger the sync (useful for testing)
+    @PostMapping("/trigger-sync")
+    public ResponseEntity<?> manualTriggerSync() {
+        // Run the sync process asynchronously or synchronously. 
+        // For immediate feedback in a headless API, we call it directly.
+        try {
+            dataPipelineService.syncHdbData();
+            return ResponseEntity.ok(Map.of("message", "Sync triggered and completed successfully. Check logs for details."));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Sync failed critically: " + e.getMessage()));
+        }
+    }
+
+    // API to view the audit logs
+    @GetMapping("/logs")
+    public ResponseEntity<List<AuditLog>> getAuditLogs() {
+        // Retrieves all logs, ordered from newest to oldest
+        List<AuditLog> logs = auditLogRepository.findAll(
+            org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "timestamp")
+        );
+        return ResponseEntity.ok(logs);
+    }
+}
