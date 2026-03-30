@@ -8,11 +8,18 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table; // Required for the lock timer
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 
 @Entity
 @Table(name = "user_accounts")
 public class UserAccount {
     
+    public enum Role {
+        USER,
+        ADMIN
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int userId;
@@ -22,6 +29,11 @@ public class UserAccount {
     
     @Column(nullable = false)
     private String passwordHash;
+
+    // role column
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "varchar(20) default 'USER'")
+    private Role role = Role.USER;
     
     private boolean isActive = true;
 

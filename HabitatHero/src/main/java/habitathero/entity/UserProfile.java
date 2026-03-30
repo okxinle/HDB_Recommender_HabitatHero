@@ -1,16 +1,12 @@
 package habitathero.entity;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-
-
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "user_profiles")
@@ -19,17 +15,38 @@ public class UserProfile {
     @Id // The primary key is the userId, creating a One-to-One link with UserAccount
     private int userId;
 
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "profile_id")
+    private Long profileId;
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "user_id")
+    private UserAccount user;
+
+    @Column(name = "profile_name", nullable = false)
+    private String profileName = "Default";
+
+    @Column(name = "is_default", nullable = false)
+    private boolean isDefault = false;
+
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
+    @Column(name = "structural_constraints", columnDefinition = "jsonb")
     private StructuralConstraints structuralConstraints;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
+    @Column(name = "commuter_profile", columnDefinition = "jsonb")
     private CommuterProfile commuterProfile;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
+    @Column(name = "soft_constraints", columnDefinition = "jsonb")
     private List<WeightedPreference> softConstraints;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt = LocalDateTime.now();
+
     // ── Constructors ─────────────────────────────────────────────────────────
 
     public UserProfile() {}
