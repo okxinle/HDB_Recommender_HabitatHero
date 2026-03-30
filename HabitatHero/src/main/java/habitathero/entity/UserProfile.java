@@ -6,22 +6,21 @@ import java.util.List;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "user_profiles")
 public class UserProfile {
 
-    @Id // The primary key is the userId, creating a One-to-One link with UserAccount
+    @Id // The primary key is the userId, matching your ProfileController logic
+    @Column(name = "user_id")
     private int userId;
 
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "profile_id")
-    private Long profileId;
-
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "user_id")
-    private UserAccount user;
+    // REMOVED profileId and UserAccount object to prevent mapping conflicts 
+    // and maintain the One-to-One relationship handled by the controller.
 
     @Column(name = "profile_name", nullable = false)
     private String profileName = "Default";
@@ -64,22 +63,34 @@ public class UserProfile {
     // ── Getters ───────────────────────────────────────────────────────────────
 
     public int                      getUserId()                { return userId; }
+    public String                   getProfileName()           { return profileName; }
+    public boolean                  isDefault()                { return isDefault; }
     public StructuralConstraints    getStructuralConstraints() { return structuralConstraints; }
     public CommuterProfile          getCommuterProfile()       { return commuterProfile; }
     public List<WeightedPreference> getSoftConstraints()       { return softConstraints; }
+    public LocalDateTime            getCreatedAt()             { return createdAt; }
+    public LocalDateTime            getUpdatedAt()             { return updatedAt; }
 
     // ── Setters ───────────────────────────────────────────────────────────────
 
     public void setUserId(int userId)                                          { this.userId                = userId; }
+    public void setProfileName(String profileName)                             { this.profileName           = profileName; }
+    public void setDefault(boolean isDefault)                                  { this.isDefault             = isDefault; }
     public void setStructuralConstraints(StructuralConstraints sc)             { this.structuralConstraints = sc; }
     public void setCommuterProfile(CommuterProfile commuterProfile)            { this.commuterProfile       = commuterProfile; }
     public void setSoftConstraints(List<WeightedPreference> softConstraints)   { this.softConstraints       = softConstraints; }
+    public void setCreatedAt(LocalDateTime createdAt)                          { this.createdAt             = createdAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt)                          { this.updatedAt             = updatedAt; }
 
     @Override
     public String toString() {
         return "UserProfile{userId=" + userId
+                + ", profileName='" + profileName + '\''
+                + ", isDefault=" + isDefault
                 + ", structuralConstraints=" + structuralConstraints
                 + ", commuterProfile=" + commuterProfile
-                + ", softConstraints=" + softConstraints + "}";
+                + ", softConstraints=" + softConstraints 
+                + ", createdAt=" + createdAt 
+                + ", updatedAt=" + updatedAt + "}";
     }
 }
