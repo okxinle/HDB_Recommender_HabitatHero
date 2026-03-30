@@ -9,7 +9,7 @@ import java.sql.Statement;
 import java.util.stream.Collectors;
 
 public final class Db {
-    private static final String DB_URL = "jdbc:sqlite:HabitatHero/data/habitathero.db";
+    private static final String DB_URL = "jdbc:sqlite:database/habitathero.db";
 
     private Db() {}
 
