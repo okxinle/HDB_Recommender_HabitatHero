@@ -78,6 +78,10 @@
 				<artifactId>jts-core</artifactId>
 				<version>1.20.0</version>
 			</dependency>
+			<dependency>
+				<groupId>org.hibernate.orm</groupId>
+				<artifactId>hibernate-community-dialects</artifactId>
+			</dependency>
         <dependency>
             <groupId>org.xerial</groupId>
             <artifactId>sqlite-jdbc</artifactId>
