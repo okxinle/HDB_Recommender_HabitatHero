@@ -12,11 +12,24 @@ import org.springframework.web.bind.annotation.RestController;
 
 import habitathero.control.DataPipelineService;
 import habitathero.entity.AuditLog;
+import habitathero.entity.HDBBlock;
 import habitathero.repository.AuditLogRepository;
+import habitathero.repository.IHDBRepository;
 
 @RestController
 @RequestMapping("/api/admin")
 public class SystemAdminController {
+
+    @Autowired
+    private IHDBRepository hdbRepository;
+
+    // Add this new endpoint
+    @GetMapping("/hdb-data")
+    public ResponseEntity<List<HDBBlock>> getAllHdbData() {
+        // Fetches all the records you just synced from the database
+        List<HDBBlock> allBlocks = hdbRepository.findAll();
+        return ResponseEntity.ok(allBlocks);
+    }
 
     @Autowired
     private DataPipelineService dataPipelineService;

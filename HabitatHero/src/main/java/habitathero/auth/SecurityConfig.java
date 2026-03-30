@@ -19,6 +19,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            .cors(org.springframework.security.config.Customizer.withDefaults())
             // 1. Disable CSRF (Cross-Site Request Forgery) since we are using JWTs
             .csrf(csrf -> csrf.disable())
             
@@ -28,8 +29,8 @@ public class SecurityConfig {
             
             // 3. Configure which endpoints are public vs. private
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll() // Open the doors for Login & Register!
-                .anyRequest().authenticated()                // Everything else requires a JWT wristband
+                .requestMatchers("/api/auth/**", "/error").permitAll() 
+                .anyRequest().authenticated()
             )
             
             // 4. Tell Spring Security NOT to use traditional login sessions

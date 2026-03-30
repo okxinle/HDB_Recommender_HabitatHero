@@ -6,6 +6,10 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,20 +43,33 @@ public class DataPipelineService {
         try {
             RestTemplate restTemplate = new RestTemplate();
             
-            // 1. Fetch data from the API
-            Map<String, Object> response = restTemplate.getForObject(API_URL, Map.class);
+            // 1. Setup headers with the API Key
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("x-api-key", "YOUR_DATAGOVSG_API_KEY_HERE"); // NOTE: Put your actual key here
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            // 2. Fetch data from the API using exchange (this includes your headers)
+            ResponseEntity<Map> response = restTemplate.exchange(
+                API_URL, 
+                HttpMethod.GET, 
+                entity, 
+                Map.class
+            );
+
+            // 3. Parse the CKAN JSON structure safely
+            Map<String, Object> body = response.getBody();
+            if (body == null || !body.containsKey("result")) {
+                throw new RuntimeException("API response body is null or missing 'result' object.");
+            }
             
-            // 2. Parse the CKAN JSON structure
-            Map<String, Object> result = (Map<String, Object>) response.get("result");
+            Map<String, Object> result = (Map<String, Object>) body.get("result");
             List<Map<String, Object>> records = (List<Map<String, Object>>) result.get("records");
 
             List<HDBBlock> blocksToSave = new ArrayList<>();
 
-            // 3. Map JSON to your HDBBlock entity
+            // 4. Map JSON to your HDBBlock entity
             for (Map<String, Object> record : records) {
                 HDBBlock block = new HDBBlock();
-                // Map the specific fields from the API to your entity.
-                // Example mapping based on standard Data.gov.sg fields:
                 block.setBlockNumber((String) record.get("block"));
                 block.setStreetName((String) record.get("street_name"));
                 block.setTown((String) record.get("town"));
@@ -67,18 +84,15 @@ public class DataPipelineService {
                 blocksToSave.add(block);
             }
 
-            // 4. Perform the UPSERT (Save All)
-            // Spring Data JPA's saveAll will check if the entity exists (via ID) 
-            // and perform an UPDATE if it does, or an INSERT if it is new.
-            // This prevents table-locking drop/create scenarios.
+            // 5. Perform the UPSERT (Save All)
             hdbRepository.saveAll(blocksToSave);
 
-            // 5. Log Success
+            // 6. Log Success
             log.setStatus("SUCCESS");
             log.setDetails("Successfully synced " + blocksToSave.size() + " records.");
 
         } catch (Exception e) {
-            // 6. Log Failure
+            // 7. Log Failure
             log.setStatus("FAILED");
             log.setDetails("Error during sync: " + e.getMessage());
             e.printStackTrace(); // Keep for server console debugging
