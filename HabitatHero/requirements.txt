@@ -1,36 +1,4 @@
-HabitatHero Runtime Requirements (Windows)
-=========================================
-
-Backend requirements
---------------------
-1) Java JDK 17
-   - Verify: java -version
-
-2) Apache Maven 3.9+
-   - Verify: mvn -v
-   - If mvn is not found in current terminal, add:
-   $env:Path += ";<your-maven-install-path>\\bin"
-
-Backend run commands
---------------------
-1) From workspace root (folder containing HabitatHero), run:
-   cd .\HabitatHero
-2) mvn clean compile
-3) mvn spring-boot:run
-
-Notes:
-- Always run Maven commands from the HabitatHero folder (same folder as pom.xml).
-- If port 8080 is already used, stop the running process first or change server port.
-
-Frontend requirements
----------------------
-1) Node.js 18+ and npm
-   - Verify: node -v
-   - Verify: npm -v
-
-Frontend run commands
----------------------
-1) From workspace root (folder containing HabitatHero), run:
-   cd .\HabitatHero\src\frontend
-2) npm install
-3) npm start
+# This project currently has no Python runtime dependencies.
+# Keep this file for future Python components.
+# When Python dependencies are added, regenerate with:
+#   pip freeze > requirements.txt
