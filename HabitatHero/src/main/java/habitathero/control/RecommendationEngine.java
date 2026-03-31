@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import habitathero.entity.CommuterProfile;
 import habitathero.entity.HDBBlock;
+import habitathero.entity.HDBDataConstants;
 import habitathero.entity.StructuralConstraints;
 import habitathero.entity.UserProfile;
 import habitathero.entity.WeightedPreference;
@@ -36,6 +37,9 @@ public class RecommendationEngine {
         if (constraints == null) {
             throw new IllegalArgumentException("Missing structuralConstraints in request payload.");
         }
+
+        // Lab 3: Validate user inputs against official HDB data
+        validateStructuralConstraints(constraints);
 
         // Step 1 & 2: fetch all blocks and apply hard filters
         List<HDBBlock> allBlocks      = dbRepository.getAllBlocks();
@@ -155,5 +159,33 @@ public class RecommendationEngine {
 
     private void sortBlocksByMatchIndex(List<HDBBlock> blocks) {
         blocks.sort(Comparator.comparingDouble(HDBBlock::getGlobalMatchIndex).reversed());
+    }
+
+    /**
+     * Validates structural constraints against official HDB data.
+     * Lab 3: Encapsulation & Input Validation
+     */
+    private void validateStructuralConstraints(StructuralConstraints constraints) {
+        // Validate flat type if provided
+        if (constraints.getPreferredFlatType() != null && !constraints.getPreferredFlatType().isEmpty()) {
+            if (!HDBDataConstants.isValidFlatType(constraints.getPreferredFlatType())) {
+                throw new IllegalArgumentException(
+                    "Invalid flat type: " + constraints.getPreferredFlatType() +
+                    ". Valid options are: " + HDBDataConstants.VALID_FLAT_TYPES
+                );
+            }
+        }
+
+        // Validate towns if provided
+        if (constraints.getPreferredTowns() != null && !constraints.getPreferredTowns().isEmpty()) {
+            for (String town : constraints.getPreferredTowns()) {
+                if (!HDBDataConstants.isValidTown(town)) {
+                    throw new IllegalArgumentException(
+                        "Invalid town: " + town +
+                        ". Valid towns are: " + HDBDataConstants.getAllValidTowns()
+                    );
+                }
+            }
+        }
     }
 }

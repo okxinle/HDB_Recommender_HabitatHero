@@ -4,7 +4,7 @@ export const REGION_TOWN_MAP = {
   "North": ["Sembawang", "Woodlands", "Yishun"],
   "North-East": ["Ang Mo Kio", "Hougang", "Punggol", "Seng Kang", "Serangoon"],
   "East": ["Bedok", "Pasir Ris", "Tampines"],
-  "West": ["Bukit Batok", "Bukit Panjang", "Choa Chu Kang", "Clementi", "Jurong East", "Jurong West", "Tengah"],
+  "West": ["Bukit Batok", "Bukit Panjang", "Choa Chu Kang", "Clementi", "Jurong East", "Jurong West"],
   "Central": ["Bishan", "Bukit Merah", "Bukit Timah", "Central Area", "Geylang", "Kallang/Whampoa", "Marine Parade", "Queenstown", "Toa Payoh"]
 };
 

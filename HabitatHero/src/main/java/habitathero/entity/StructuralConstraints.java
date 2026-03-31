@@ -19,7 +19,7 @@ public class StructuralConstraints {
         this.maxBudget        = maxBudget;
         this.preferredTowns   = preferredTowns;
         this.preferredFlatType= preferredFlatType;
-        this.minLeaseYears    = minLeaseYears;
+        this.minLeaseYears    = Math.max(0, minLeaseYears);
     }
 
     // ── Getters ───────────────────────────────────────────────────────────────
@@ -34,7 +34,7 @@ public class StructuralConstraints {
     public void setMaxBudget(double maxBudget)                   { this.maxBudget         = maxBudget; }
     public void setPreferredTowns(List<String> preferredTowns)   { this.preferredTowns    = preferredTowns; }
     public void setPreferredFlatType(String preferredFlatType)   { this.preferredFlatType = preferredFlatType; }
-    public void setMinLeaseYears(int minLeaseYears)               { this.minLeaseYears     = minLeaseYears; }
+    public void setMinLeaseYears(int minLeaseYears)               { this.minLeaseYears     = Math.max(0, minLeaseYears); }
 
     @Override
     public String toString() {

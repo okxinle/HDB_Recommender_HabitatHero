@@ -1,10 +1,13 @@
-// Export this map so QuizPage.js can use it to auto-fill empty regions during submission
+/**
+ * Official HDB Towns by Region (Sentence Case)
+ * Lab 3: Ensures traceability between React View and Java Entity layer
+ */
 export const REGION_TOWN_MAP = {
   "North": ["Sembawang", "Woodlands", "Yishun"],
-  "North-East": ["Ang Mo Kio", "Hougang", "Punggol", "Seng Kang", "Serangoon"],
-  "East": ["Bedok", "Pasir Ris", "Tampines"],
-  "West": ["Bukit Batok", "Bukit Panjang", "Choa Chu Kang", "Clementi", "Jurong East", "Jurong West", "Tengah"],
-  "Central": ["Bishan", "Bukit Merah", "Bukit Timah", "Central Area", "Geylang", "Kallang/Whampoa", "Marine Parade", "Queenstown", "Toa Payoh"]
+  "North-East": ["Ang Mo Kio", "Bishan", "Hougang", "Punggol", "Sengkang", "Serangoon"],
+  "East": ["Bedok", "Marine Parade", "Pasir Ris", "Tampines"],
+  "West": ["Bukit Batok", "Bukit Panjang", "Bukit Timah", "Choa Chu Kang", "Clementi", "Jurong East", "Jurong West"],
+  "Central": ["Bukit Merah", "Central Area", "Geylang", "Kallang/Whampoa", "Queenstown", "Toa Payoh"]
 };
 
 function StructuralConstraints({ data, update, showErrors }) {
@@ -40,7 +43,11 @@ function StructuralConstraints({ data, update, showErrors }) {
     updateStructural("preferredTowns", newTowns);
   };
 
-  const preferredFlatTypeOptions = ["2-Room", "3-Room", "4-Room", "5-Room", "Executive", "Maisonette"];
+  /**
+   * Official HDB Flat Types (Sentence Case)
+   * Lab 3: Ensures traceability between React View and Java Entity layer
+   */
+  const preferredFlatTypeOptions = ["1 Room", "2 Room", "3 Room", "4 Room", "5 Room", "Executive", "Multi-generation"];
 
   return (
     <div className="step-content">
@@ -57,15 +64,15 @@ function StructuralConstraints({ data, update, showErrors }) {
             <div
               className="slider-range"
               style={{
-                left: `${((data.structuralConstraints.budgetRange[0] - 200000) / (1000000 - 200000)) * 100}%`,
-                width: `${((data.structuralConstraints.budgetRange[1] - data.structuralConstraints.budgetRange[0]) / (1000000 - 200000)) * 100}%`,
+                left: `${((data.structuralConstraints.budgetRange[0] - 200000) / (2000000 - 200000)) * 100}%`,
+                width: `${((data.structuralConstraints.budgetRange[1] - data.structuralConstraints.budgetRange[0]) / (2000000 - 200000)) * 100}%`,
               }}
             ></div>
 
             <input
               type="range"
               min="200000"
-              max="1000000"
+              max="2000000"
               step="10000"
               value={data.structuralConstraints.budgetRange[0]}
               onChange={(e) =>
@@ -80,7 +87,7 @@ function StructuralConstraints({ data, update, showErrors }) {
             <input
               type="range"
               min="200000"
-              max="1000000"
+              max="2000000"
               step="10000"
               value={data.structuralConstraints.budgetRange[1]}
               onChange={(e) =>

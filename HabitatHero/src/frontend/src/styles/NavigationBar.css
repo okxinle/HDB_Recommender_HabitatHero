@@ -35,6 +35,11 @@
   color: #1e3240;
 }
 
+.nav-links a.active-link {
+  color: #00786e;
+  font-weight: 600;
+}
+
 .search-btn {
   background: transparent;
   border: none;

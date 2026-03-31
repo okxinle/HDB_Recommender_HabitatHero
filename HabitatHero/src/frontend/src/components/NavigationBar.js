@@ -1,6 +1,6 @@
 import Logo from "../assets/logo.svg";
 import "../styles/NavigationBar.css";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useState } from "react";
 
 function NavigationBar() {
@@ -27,9 +27,9 @@ return (
       </div>
 
       <div className="nav-links">
-        <Link to="/">Home</Link>
-        <Link to="/results">Your Results</Link>
-        <Link to="/resources">Resources</Link>
+        <NavLink to="/" className={({ isActive }) => (isActive ? "active-link" : "")}>Home</NavLink>
+        <NavLink to="/results" className={({ isActive }) => (isActive ? "active-link" : "")}>Your Results</NavLink>
+        <NavLink to="/resources" className={({ isActive }) => (isActive ? "active-link" : "")}>Resources</NavLink>
 
         {user ? (
           /* 3. Sleek Profile Dropdown Section */

@@ -1,3 +1,5 @@
+package habitathero.GeoSpatialAnalysis.src;
+
 public class Coordinate {
 
     private double latitude;
@@ -33,3 +35,4 @@ public class Coordinate {
         return "Latitude: " + latitude + ", Longitude: " + longitude;
     }
 }
+
