@@ -86,6 +86,28 @@
   background: #00655c;
 }
 
+.auth-switch-text {
+  margin-top: 20px;
+  font-family: inherit;
+  font-size: 14px;
+  color: #212121;
+}
+
+.auth-switch-top {
+  margin-top: -20px;
+  margin-bottom: 24px;
+}
+
+.auth-switch-link {
+  color: #00786e;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-switch-link:hover {
+  text-decoration: underline;
+}
+
 .create-right {
   display: flex;
   justify-content: center;

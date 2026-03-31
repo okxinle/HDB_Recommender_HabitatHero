@@ -80,6 +80,12 @@ return (
         <div className="login-left">
           <h1 className="login-title">Welcome Back!</h1>
           <p className="login-subtitle">Login with your email address and password.</p>
+          <p className="auth-switch-text auth-switch-top">
+            Don’t have an account yet?{" "}
+            <Link className="auth-switch-link" to="/create-account">
+              Sign up
+            </Link>
+          </p>
 
           {/* Display validation errors if any */}
           {errorMessage && <p className="error-text" style={{ color: 'red' }}>{errorMessage}</p>}
@@ -108,13 +114,6 @@ return (
               </label>
 
             </div>
-
-            <p className="signup-hint">
-              {/* This links to your sign-up requirement (UC-01) */}
-              <Link className="signup-link" to="/create-account">
-                Don’t have an account yet? Sign up here.
-              </Link>
-            </p>
 
             <button className="signin-btn" type="submit">
               SIGN IN

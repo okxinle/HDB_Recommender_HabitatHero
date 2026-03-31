@@ -1,5 +1,5 @@
 import { useState } from "react"; // Added for state management
-import { useNavigate } from "react-router-dom"; // Added for redirection
+import { Link, useNavigate } from "react-router-dom"; // Added for redirection
 import "../styles/CreateAccountPage.css";
 import HDBAccount from "../assets/hdb_account.png";
 import InputField from "../components/InputField";
@@ -43,6 +43,10 @@ function CreateAccountPage() {
           <h1 className="create-title">Create New Account</h1>
           <p className="create-subtitle">
             No account with us? Create an account to save your results!
+          </p>
+          <p className="auth-switch-text auth-switch-top">
+            Already have an account?{" "}
+            <Link to="/login" className="auth-switch-link">Log in</Link>
           </p>
 
           <form className="create-form" onSubmit={handleSubmit}>

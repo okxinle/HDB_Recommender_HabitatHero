@@ -82,10 +82,6 @@
   margin-top: -8px;
 }
 
-.login-page a {
-  color: #212121;
-}
-
 .login-remember {
   display: inline-flex;
   align-items: center;
@@ -113,15 +109,25 @@
   text-decoration: underline;
 }
 
-.login-hint {
-  font-size: 16px;
+.auth-switch-text {
+  margin-top: 20px;
+  font-family: inherit;
+  font-size: 14px;
   color: #212121;
-  margin-top: -6px;
 }
 
-.login-hint a {
-  color: #212121;
+.auth-switch-top {
+  margin-top: -20px;
+  margin-bottom: 24px;
+}
+
+.auth-switch-link {
+  color: #00786e;
   font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-switch-link:hover {
   text-decoration: underline;
 }
 

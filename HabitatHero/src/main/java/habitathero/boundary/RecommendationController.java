@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -12,7 +13,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import habitathero.control.RecommendationEngine;
+import habitathero.control.UserProfileDbManager;
 import habitathero.entity.HDBBlock;
+import habitathero.entity.UserAccount;
 import habitathero.entity.UserProfile;
 import habitathero.exception.ZeroMatchesException;
 
@@ -26,9 +29,11 @@ public class RecommendationController {
      * UserProfile using a RecommendationEngine.
      */
     private final RecommendationEngine engine;
+    private final UserProfileDbManager userProfileDbManager;
 
-    public RecommendationController(RecommendationEngine engine) {
+    public RecommendationController(RecommendationEngine engine, UserProfileDbManager userProfileDbManager) {
         this.engine = engine;
+        this.userProfileDbManager = userProfileDbManager;
     }
 
     /**
@@ -43,9 +48,15 @@ public class RecommendationController {
      *         500 ISE       + {status, message}       on unexpected error
      */
     @PostMapping("/recommend")
-    public ResponseEntity<?> recommend(@RequestBody UserProfile profile) {
+    public ResponseEntity<?> recommend(@RequestBody UserProfile profile, Authentication authentication) {
         try {
             List<HDBBlock> recommendedBlocks = engine.generateRecommendations(profile);
+
+            // Persist only for authenticated members.
+            if (authentication != null && authentication.isAuthenticated() && authentication.getPrincipal() instanceof UserAccount userAccount) {
+                userProfileDbManager.saveLatestResults(userAccount.getUserId(), recommendedBlocks);
+            }
+
             return ResponseEntity.ok(Map.of(
                 "status", "success",
                 "results", recommendedBlocks
