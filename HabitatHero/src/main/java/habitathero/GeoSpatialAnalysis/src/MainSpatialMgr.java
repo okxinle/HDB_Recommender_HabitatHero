@@ -1,10 +1,4 @@
-<<<<<<< HEAD
-package habitathero.GeoSpatialAnalysis.src;
-
-import java.sql.ResultSet;
-=======
 import org.json.JSONObject;
->>>>>>> d70a765e53bb95c730ec303d0b194b9572c4d634
 
 public class MainSpatialMgr {
 
@@ -22,40 +16,6 @@ public class MainSpatialMgr {
 
     public JSONObject calNoiseLevel(Coordinate coords){
         return TransportLineMgr.getInstance().calNoiseLevel(coords);
-    }
-
-    public double calWestSunLevel(String postalCode) {
-        // Get sun facing analysis for postal code
-        JSONObject result = HDBBuildingMgr.getInstance().calSunFacing(postalCode);
-        
-        if (!result.optString("status", "").equals("OK")) {
-            System.out.println("Error calculating west sun level for postal code: " + postalCode);
-            return 0.0;
-        }
-        
-        // Return west score and exposure percentage
-        double westScore = result.optDouble("westScore", 0.0);
-        double westExposurePct = result.optDouble("westScoreRelativeExposurePct", 0.0);
-        
-        System.out.println("West sun score: " + westScore + ", Exposure: " + westExposurePct + "%");
-        return westExposurePct;
-    }
-
-    public double calEastSunLevel(String postalCode) {
-        // Get sun facing analysis for postal code
-        JSONObject result = HDBBuildingMgr.getInstance().calSunFacing(postalCode);
-        
-        if (!result.optString("status", "").equals("OK")) {
-            System.out.println("Error calculating east sun level for postal code: " + postalCode);
-            return 0.0;
-        }
-        
-        // Return east score and exposure percentage
-        double eastScore = result.optDouble("eastScore", 0.0);
-        double eastExposurePct = result.optDouble("eastScoreRelativeExposurePct", 0.0);
-        
-        System.out.println("East sun score: " + eastScore + ", Exposure: " + eastExposurePct + "%");
-        return eastExposurePct;
     }
 
     public JSONObject calSunFacing(String postal_code) {
@@ -126,4 +86,3 @@ public class MainSpatialMgr {
     }
 
 }
-

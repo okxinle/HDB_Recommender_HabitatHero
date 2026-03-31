@@ -1,10 +1,4 @@
-<<<<<<< HEAD
-package habitathero.GeoSpatialAnalysis.src;
-
-import java.sql.ResultSet;
-=======
 import org.json.JSONObject;
->>>>>>> d70a765e53bb95c730ec303d0b194b9572c4d634
 
 public class TransportLineMgr {
     private static final String DATASET_ID = "d_222bfc84eb86c7c11994d02f8939da8d";
@@ -19,8 +13,8 @@ public class TransportLineMgr {
 
     public static void main(String[] args) {
         TransportLineMgr tlMgr = TransportLineMgr.getInstance();
-        // tlMgr.importGeoJsonToSQLDb();
-        tlMgr.createSQLTable();
+        tlMgr.tlCalNoiseLevel("670180");
+        
     }
 
     // singleton initalization of TransportLineMgr
@@ -64,9 +58,36 @@ public class TransportLineMgr {
         return tlCalMinDist.calMinDist(coords);
     }
 
+    public JSONObject calMinDistToLine(String postalCode) {
+        return tlCalMinDist.calMinDist(postalCode);
+    }
+
     public JSONObject calNoiseLevel(Coordinate coords){
         JSONObject minDistResult = calMinDistToLine(coords);
         return tlCalNoiseLevel.calNoiseLevel(minDistResult);
     }
-}
 
+    public JSONObject calNoiseLevel(String postalCode){
+        JSONObject minDistResult = calMinDistToLine(postalCode);
+        return tlCalNoiseLevel.calNoiseLevel(minDistResult);
+    }
+
+    public JSONObject calMinDistToLine(Coordinate coords, double radius) {
+        return tlCalMinDist.calMinDist(coords, radius);
+    }
+
+    public JSONObject calMinDistToLine(String postalCode, double radius) {
+        return tlCalMinDist.calMinDist(postalCode, radius);
+    }
+
+    public JSONObject calNoiseLevel(Coordinate coords, double radius){
+        JSONObject minDistResult = calMinDistToLine(coords, radius);
+        return tlCalNoiseLevel.calNoiseLevel(minDistResult);
+    }
+
+    public JSONObject calNoiseLevel(String postalCode, double radius){
+        JSONObject minDistResult = calMinDistToLine(postalCode, radius);
+        return tlCalNoiseLevel.calNoiseLevel(minDistResult);
+    }
+
+}

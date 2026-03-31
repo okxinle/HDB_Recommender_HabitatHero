@@ -4,6 +4,7 @@ public class TransportLineCalNoiseLevel {
     private static final int mrtAvgSpl = 85;// Average sound pressure level in dbA of mrt train
     private static final int lrtAvgSpl = 67;// Average soud pressure level in dbA of lrt train
 
+
     public JSONObject calNoiseLevel(JSONObject transportLineMinDistResult) {
         if (transportLineMinDistResult.has("error")) {
             System.out.println("Error calculating transport distance: " + transportLineMinDistResult.getString("error"));

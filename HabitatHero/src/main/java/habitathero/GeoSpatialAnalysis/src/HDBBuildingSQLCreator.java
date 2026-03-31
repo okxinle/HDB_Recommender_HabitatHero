@@ -1,5 +1,3 @@
-package habitathero.GeoSpatialAnalysis.src;
-
 import java.sql.ResultSet;
 import java.sql.Statement;
 
@@ -56,4 +54,3 @@ public class HDBBuildingSQLCreator extends SQLDbConnect {
         }
     }
 }
-

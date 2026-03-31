@@ -1,5 +1,3 @@
-package habitathero.GeoSpatialAnalysis.src;
-
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import org.json.JSONArray;
@@ -25,7 +23,8 @@ public class LandUseCheckDevelopment extends SQLDbConnect {
                         ST_Distance(
                             ST_Centroid(geom)::geography,
                             ref.ref_point
-                        ) AS distance_meters,geom
+                        ) AS distance_meters,
+                        ST_AsGeoJSON(geom) AS geojson_geom
                     FROM land_use,
                     (
                         SELECT
@@ -60,11 +59,13 @@ public class LandUseCheckDevelopment extends SQLDbConnect {
                 int objectId = rs.getInt("OBJECTID");
                 String gpr = rs.getString("GPR");
                 double cal_distance = rs.getDouble("distance_meters");
+                String geojson_geom = rs.getString("geojson_geom");
 
                 JSONObject development = new JSONObject();
                 development.put("objectId", objectId);
                 development.put("gpr", gpr);
                 development.put("distance_meters", cal_distance);
+                development.put("geom", geojson_geom);
                 developments.put(development);
 
                 System.out.println("\nOBJECTID: " + objectId);
@@ -89,4 +90,3 @@ public class LandUseCheckDevelopment extends SQLDbConnect {
     }
 
 }
-

@@ -1,5 +1,3 @@
-package habitathero.GeoSpatialAnalysis.src;
-
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
@@ -104,4 +102,3 @@ public class DatasetMetadataSQLHandler extends SQLDbConnect {
         return result;
     }
 }
-

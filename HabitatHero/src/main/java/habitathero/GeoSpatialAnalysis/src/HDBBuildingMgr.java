@@ -1,5 +1,3 @@
-package habitathero.GeoSpatialAnalysis.src;
-
 import org.json.JSONObject;
 
 public class HDBBuildingMgr {
@@ -67,4 +65,3 @@ public class HDBBuildingMgr {
     }
 
 }
-
