@@ -11,6 +11,7 @@ import QuizPage from "./pages/QuizPage";
 import ResultsPage from './pages/ResultsPage';
 import ProfilePage from './pages/ProfilePage';
 import ResourcesPage from './pages/ResourcesPage';
+import ResultDetailPage from './pages/ResultDetailPage';
 
 function App() {
   useEffect(() => {
@@ -34,6 +35,7 @@ function App() {
           <Route path="/results" element={<ResultsPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/result-detail" element={<ResultDetailPage />} />
         </Routes>
       </main>
 
