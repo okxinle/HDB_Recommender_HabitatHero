@@ -4,6 +4,9 @@ import "../styles/LoginPage.css";
 import InputField from "../components/InputField";
 import HDBAccount from "../assets/hdb_account.png";
 
+const TEMP_RESULTS_KEY = "temporaryGuestResults";
+const MEMBER_RESULTS_AVAILABLE_KEY = "memberResultsAvailable";
+
 function LoginPage() {
   const navigate = useNavigate();
 
@@ -21,11 +24,8 @@ function LoginPage() {
     e.preventDefault();
     setErrorMessage("");
 
-    /* ============================================================
-    PRODUCTION CODE (Commented Out for Future Use)
-    ============================================================
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch("http://localhost:8080/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData), 
@@ -36,6 +36,28 @@ function LoginPage() {
       if (data.status === "success") {
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
+
+        // Login/Results Sync: transfer guest temporary results into persistent member storage.
+        const cachedResults = JSON.parse(sessionStorage.getItem(TEMP_RESULTS_KEY) || "[]");
+        if (Array.isArray(cachedResults) && cachedResults.length > 0) {
+          try {
+            await fetch("http://localhost:8080/api/profile/results", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${data.token}`
+              },
+              body: JSON.stringify(cachedResults)
+            });
+
+            sessionStorage.removeItem(TEMP_RESULTS_KEY);
+            localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "true");
+          } catch (syncError) {
+            // Keep temporary results if sync fails so user does not lose state.
+            localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "false");
+          }
+        }
+
         navigate("/");
       } else {
         setErrorMessage(data.message || "Login failed. Please try again.");
@@ -43,35 +65,6 @@ function LoginPage() {
     } catch (error) {
       setErrorMessage("System error. Please try again later.");
     }
-    */
-
-    // ============================================================
-    // MOCK TESTING LOGIC (for Testing Now)
-    // ============================================================
-    // Test Credentials: user@example.com / password123
-    if (formData.email === "user@example.com" && formData.password === "123") {
-      
-      const mockSuccessData = {
-        status: "success",
-        token: "jwt-session-token-abc", // Matches your UC-02 contract
-        user: {
-          userID: 1042,
-          email: "user@example.com",
-          isActive: true
-        }
-      };
-
-      // Store in localStorage so NavigationBar can read it
-      localStorage.setItem("token", mockSuccessData.token);
-      localStorage.setItem("user", JSON.stringify(mockSuccessData.user));
-
-      // Redirect to Homepage
-      navigate("/");
-    } else {
-      // Simulate "The Universal Error Response"
-      setErrorMessage("Invalid credentials. Try: user@example.com / 123");
-    }
-    // ============================================================
   };
 
 return (

@@ -1,5 +1,6 @@
 import './App.css';
 
+import { useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
 import NavigationBar from "./components/NavigationBar";
 import HomePage from "./pages/HomePage";
@@ -9,8 +10,16 @@ import Footer from "./components/Footer";
 import QuizPage from "./pages/QuizPage";
 import ResultsPage from './pages/ResultsPage';
 import ProfilePage from './pages/ProfilePage';
+import ResourcesPage from './pages/ResourcesPage';
 
 function App() {
+  useEffect(() => {
+    const navEntry = performance.getEntriesByType("navigation")[0];
+    if (navEntry && navEntry.type === "reload") {
+      sessionStorage.removeItem("temporaryGuestResults");
+    }
+  }, []);
+
   return (
     <div className="app-wrapper">
       <NavigationBar />
@@ -23,6 +32,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/quiz" element={<QuizPage />} />
           <Route path="/results" element={<ResultsPage />} />
+          <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/profile" element={<ProfilePage />} />
         </Routes>
       </main>

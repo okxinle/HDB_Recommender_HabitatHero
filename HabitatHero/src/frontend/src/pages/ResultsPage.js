@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { SearchX } from 'lucide-react';
 import '../styles/ResultsPage.css';
 
-const RESULTS_CACHE_KEY = 'latestRankedBlocks';
+const TEMP_RESULTS_KEY = 'temporaryGuestResults';
 const MEMBER_RESULTS_AVAILABLE_KEY = 'memberResultsAvailable';
 
 const getSafeNumber = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : null);
@@ -35,7 +36,7 @@ function ResultsPage() {
 
   const cachedRankedBlocks = (() => {
     try {
-      const parsed = JSON.parse(localStorage.getItem(RESULTS_CACHE_KEY) || '[]');
+      const parsed = JSON.parse(sessionStorage.getItem(TEMP_RESULTS_KEY) || '[]');
       return Array.isArray(parsed) ? parsed : [];
     } catch (error) {
       return [];
@@ -49,6 +50,13 @@ function ResultsPage() {
   useEffect(() => {
     // Guests: no backend fetch needed.
     if (!isAuthenticated) return;
+
+    // If we just navigated from quiz with fresh results, show them immediately.
+    if (Array.isArray(stateRankedBlocks) && stateRankedBlocks.length > 0) {
+      setMemberRankedBlocks(stateRankedBlocks);
+      localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, 'true');
+      return;
+    }
 
     let isMounted = true;
     const loadMemberResults = async () => {
@@ -83,10 +91,14 @@ function ResultsPage() {
     return () => {
       isMounted = false;
     };
-  }, [isAuthenticated, token]);
+  }, [isAuthenticated, token, stateRankedBlocks]);
 
   const rankedBlocks = useMemo(() => {
     if (isAuthenticated) {
+      // Priority for logged-in users: freshly generated results -> DB results.
+      if (Array.isArray(stateRankedBlocks) && stateRankedBlocks.length > 0) {
+        return stateRankedBlocks;
+      }
       return memberRankedBlocks;
     }
     return stateRankedBlocks ?? cachedRankedBlocks;
@@ -94,9 +106,9 @@ function ResultsPage() {
 
   if (stateRankedBlocks !== null) {
     if (!isAuthenticated && stateRankedBlocks.length > 0) {
-      localStorage.setItem(RESULTS_CACHE_KEY, JSON.stringify(stateRankedBlocks));
+      sessionStorage.setItem(TEMP_RESULTS_KEY, JSON.stringify(stateRankedBlocks));
     } else if (!isAuthenticated) {
-      localStorage.removeItem(RESULTS_CACHE_KEY);
+      sessionStorage.removeItem(TEMP_RESULTS_KEY);
     }
 
     if (isAuthenticated) {
@@ -117,11 +129,14 @@ function ResultsPage() {
     if (!isAuthenticated) {
       return (
         <div className="no-results-container">
-          <h2>Please Log In or Sign Up to see your personalized results.</h2>
-          <p>Create an account or log in to unlock your tailored HDB recommendations.</p>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '16px' }}>
+          <div className="no-results-hero-card">
+            <SearchX className="no-results-icon" size={42} strokeWidth={2} />
+            <h2>Please Log In or Sign Up to see your personalized results.</h2>
+            <p>Create an account or log in to unlock your tailored HDB recommendations.</p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '16px' }}>
             <button onClick={() => navigate('/login')} className="back-btn">Log In</button>
             <button onClick={() => navigate('/create-account')} className="back-btn">Sign Up</button>
+            </div>
           </div>
         </div>
       );
@@ -129,9 +144,12 @@ function ResultsPage() {
 
     return (
       <div className="no-results-container">
-        <h2>No Matches Found</h2>
-        <p>We couldn't find any HDBs matching your specific criteria. Try broadening your budget or location!</p>
-        <button onClick={() => navigate('/quiz')} className="back-btn">Back to Quiz</button>
+        <div className="no-results-hero-card">
+          <SearchX className="no-results-icon" size={42} strokeWidth={2} />
+          <h2>No Matches Found</h2>
+          <p>We couldn't find any HDBs matching your specific criteria. Try broadening your budget or location!</p>
+          <button onClick={() => navigate('/quiz')} className="back-btn">Back to Quiz</button>
+        </div>
       </div>
     );
   }

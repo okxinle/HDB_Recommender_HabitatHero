@@ -2,29 +2,24 @@ package habitathero.boundary;
 
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import habitathero.auth.JwtService;
+import habitathero.control.AuthService;
 import habitathero.entity.UserAccount;
-import habitathero.repository.UserRepository;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AccountController {
 
-    @Autowired
-    private UserRepository userRepository;
-    
-    @Autowired
-    private JwtService jwtService;
+    private final AuthService authService;
 
-    private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    public AccountController(AuthService authService) {
+        this.authService = authService;
+    }
 
     // 1. The Registration Endpoint
     @PostMapping("/register")
@@ -32,23 +27,22 @@ public class AccountController {
         String email = request.get("email");
         String password = request.get("password");
 
-        if (userRepository.findByEmail(email).isPresent()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Registration Invalid. Account already exists"));
-        }
+        try {
+            UserAccount newUser = authService.registerUser(email, password);
+            String token = authService.generateToken(newUser);
 
-        UserAccount newUser = new UserAccount();
-        newUser.setEmail(email);
-        newUser.setPasswordHash(passwordEncoder.encode(password)); 
-        
-        userRepository.save(newUser);
-        
-        // Automatically generate token upon registration
-        String token = jwtService.generateToken(newUser);
-        return ResponseEntity.ok(Map.of(
-            "status", "success",
-            "token", token,
-            "user", Map.of("email", newUser.getEmail(), "isActive", newUser.isActive())
-        ));
+            return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "token", token,
+                "user", Map.of(
+                    "userId", newUser.getUserId(),
+                    "email", newUser.getEmail(),
+                    "isActive", newUser.isActive()
+                )
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
     // 2. The Login Endpoint
@@ -57,20 +51,19 @@ public class AccountController {
         String email = request.get("email");
         String password = request.get("password");
 
-        UserAccount user = userRepository.findByEmail(email).orElse(null);
-
-        if (user == null) {
-            return ResponseEntity.status(401).body(Map.of("message", "Invalid email or password"));
-        }
-
-        if (passwordEncoder.matches(password, user.getPasswordHash())) {
-            String token = jwtService.generateToken(user);
+        try {
+            UserAccount user = authService.authenticateUser(email, password);
+            String token = authService.generateToken(user);
             return ResponseEntity.ok(Map.of(
                 "status", "success",
                 "token", token,
-                "user", Map.of("email", user.getEmail(), "isActive", user.isActive())
+                "user", Map.of(
+                    "userId", user.getUserId(),
+                    "email", user.getEmail(),
+                    "isActive", user.isActive()
+                )
             ));
-        } else {
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.status(401).body(Map.of("message", "Invalid email or password"));
         }
     }

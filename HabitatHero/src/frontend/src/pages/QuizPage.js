@@ -7,7 +7,7 @@ import CommuterAnalysis from "../components/CommuterAnalysis";
 import QuizSummary from "../components/QuizSummary";
 import { REGION_TOWN_MAP } from "../components/StructuralConstraints"; //
 
-const RESULTS_CACHE_KEY = "latestRankedBlocks";
+const TEMP_RESULTS_KEY = "temporaryGuestResults";
 const MEMBER_RESULTS_AVAILABLE_KEY = "memberResultsAvailable";
 
 const PREFERENCE_NAME_MAP = {
@@ -26,11 +26,21 @@ const parseCoordinateInput = (value) => {
   return { lat, lng };
 };
 
+const getCurrentUserId = () => {
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    const userId = Number(user?.userId);
+    return Number.isFinite(userId) ? userId : 0;
+  } catch (error) {
+    return 0;
+  }
+};
+
 const buildBackendPayload = (formData, preferredTowns) => {
   const [minBudget = 0, maxBudget = 0] = formData.structuralConstraints.budgetRange || [];
 
   return {
-    userId: formData.userId,
+    userId: getCurrentUserId(),
     structuralConstraints: {
       maxBudget: Math.max(minBudget, maxBudget),
       preferredTowns,
@@ -102,7 +112,7 @@ function QuizPage() {
   const [formData, setFormData] = useState({
     userId: 0,
     structuralConstraints: {
-      budgetRange: [450000, 650000], 
+      budgetRange: [400000, 800000], 
       preferredRegions: [],
       preferredTowns: [],
       preferredFlatType: "",
@@ -173,14 +183,32 @@ const submitQuiz = async () => {
     const isAuthenticated = Boolean(token && user);
 
     if (!isAuthenticated && rankedBlocks.length > 0) {
-      localStorage.setItem(RESULTS_CACHE_KEY, JSON.stringify(rankedBlocks));
+      // Temporary guest data: session-only and cleared on refresh/logout.
+      sessionStorage.setItem(TEMP_RESULTS_KEY, JSON.stringify(rankedBlocks));
       localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "false");
     } else if (!isAuthenticated) {
-      localStorage.removeItem(RESULTS_CACHE_KEY);
+      sessionStorage.removeItem(TEMP_RESULTS_KEY);
       localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "false");
     } else {
-      // Members persist results in backend DB; keep only a lightweight availability flag on UI.
+      // Members persist results in backend DB only.
+      sessionStorage.removeItem(TEMP_RESULTS_KEY);
       localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, rankedBlocks.length > 0 ? "true" : "false");
+
+      if (rankedBlocks.length > 0) {
+        try {
+          await fetch("http://localhost:8080/api/profile/results", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify(rankedBlocks)
+          });
+        } catch (syncError) {
+          // Keep local cache as fallback if backend persistence is temporarily unavailable.
+          console.warn("Unable to sync quiz results to profile storage:", syncError);
+        }
+      }
     }
 
     navigate("/results", { state: { rankedBlocks } });
