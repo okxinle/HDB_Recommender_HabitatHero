@@ -112,7 +112,7 @@ function QuizPage() {
   const [formData, setFormData] = useState({
     userId: 0,
     structuralConstraints: {
-      budgetRange: [450000, 650000], 
+      budgetRange: [400000, 800000], 
       preferredRegions: [],
       preferredTowns: [],
       preferredFlatType: "",
