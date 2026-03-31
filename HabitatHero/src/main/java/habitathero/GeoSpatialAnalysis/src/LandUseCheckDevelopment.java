@@ -1,5 +1,7 @@
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class LandUseCheckDevelopment extends SQLDbConnect {
 
@@ -8,10 +10,11 @@ public class LandUseCheckDevelopment extends SQLDbConnect {
         super();
     }
 
-    public ResultSet checkProxNewDev(Coordinate coords, double distance) {
+    public JSONObject calFutureDevRisk(Coordinate coords, double distance) {
         double longitude = coords.getLongitude();
         double latitude = coords.getLatitude();
-        ResultSet rs_return = null;
+        JSONObject result = new JSONObject();
+        JSONArray developments = new JSONArray();
 
         String sql = """
                     SELECT
@@ -48,7 +51,6 @@ public class LandUseCheckDevelopment extends SQLDbConnect {
             pstmt.setDouble(6, distance);
 
             ResultSet rs = pstmt.executeQuery();
-            rs_return = rs;
 
             System.out.printf("\nFuture developments within distance: %f\n", distance);
 
@@ -57,18 +59,31 @@ public class LandUseCheckDevelopment extends SQLDbConnect {
                 String gpr = rs.getString("GPR");
                 double cal_distance = rs.getDouble("distance_meters");
 
+                JSONObject development = new JSONObject();
+                development.put("objectId", objectId);
+                development.put("gpr", gpr);
+                development.put("distance_meters", cal_distance);
+                developments.put(development);
+
                 System.out.println("\nOBJECTID: " + objectId);
                 System.out.println("GPR: " + gpr);
                 System.out.println("Centroid distance (m): " + cal_distance);
             }
 
+            rs.close();
+            pstmt.close();
             super.closeConnection();
 
         } catch (Exception e) {
             e.printStackTrace();
+            result.put("error", e.getMessage());
         }
 
-        return rs_return;
+        result.put("developments", developments);
+        result.put("search_distance", distance);
+        result.put("latitude", latitude);
+        result.put("longitude", longitude);
+        return result;
     }
 
 }

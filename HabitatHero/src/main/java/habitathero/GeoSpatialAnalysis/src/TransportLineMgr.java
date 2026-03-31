@@ -1,4 +1,4 @@
-import java.sql.ResultSet;
+import org.json.JSONObject;
 
 public class TransportLineMgr {
     private static final String DATASET_ID = "d_222bfc84eb86c7c11994d02f8939da8d";
@@ -9,6 +9,7 @@ public class TransportLineMgr {
     private TransportLineGeoJsonImporter tlDbImporter;
     private TransportLineSQLCreator tlSQLCreator;
     private TransportLineCalMinDist tlCalMinDist;
+    private TransportLineCalNoiseLevel tlCalNoiseLevel;
 
     public static void main(String[] args) {
         TransportLineMgr tlMgr = TransportLineMgr.getInstance();
@@ -22,6 +23,7 @@ public class TransportLineMgr {
         tlSQLCreator = new TransportLineSQLCreator();
         tlCalMinDist = new TransportLineCalMinDist();
         tlGJDownloader = new TransportLineGeoJsonDownloader();
+        tlCalNoiseLevel = new TransportLineCalNoiseLevel();
     }
 
     // call to create TransportLineMgr
@@ -43,12 +45,21 @@ public class TransportLineMgr {
     public void importGeoJsonToSQLDb() {
         tlDbImporter.importGeoJsonToSQLDb(LOCALFILEPATH);
     }
+    
+    public Boolean checkCurrency(){
+        return DataGovAPIHandler.getInstance().checkAPIDataCurrency(DATASET_ID);
+    }
 
     public void createSQLTable() {
         tlSQLCreator.createSQLTable();
     }
 
-    public ResultSet calMinDistToLine(Coordinate coords) {
+    public JSONObject calMinDistToLine(Coordinate coords) {
         return tlCalMinDist.calMinDist(coords);
+    }
+
+    public JSONObject calNoiseLevel(Coordinate coords){
+        JSONObject minDistResult = calMinDistToLine(coords);
+        return tlCalNoiseLevel.calNoiseLevel(minDistResult);
     }
 }
