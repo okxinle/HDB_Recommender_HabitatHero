@@ -4,6 +4,7 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 const MEMBER_RESULTS_AVAILABLE_KEY = "memberResultsAvailable";
+const TEMP_RESULTS_KEY = "temporaryGuestResults";
 
 function NavigationBar() {
   const navigate = useNavigate();
@@ -53,6 +54,8 @@ function NavigationBar() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "false");
+    sessionStorage.removeItem(TEMP_RESULTS_KEY);
+    localStorage.removeItem("latestRankedBlocks"); // cleanup legacy key from older builds
     setIsMenuOpen(false); // Close menu on logout
     navigate("/login");
   };

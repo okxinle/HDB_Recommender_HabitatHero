@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { SearchX } from 'lucide-react';
 import '../styles/ResultsPage.css';
 
-const RESULTS_CACHE_KEY = 'latestRankedBlocks';
+const TEMP_RESULTS_KEY = 'temporaryGuestResults';
 const MEMBER_RESULTS_AVAILABLE_KEY = 'memberResultsAvailable';
 
 const getSafeNumber = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : null);
@@ -36,7 +36,7 @@ function ResultsPage() {
 
   const cachedRankedBlocks = (() => {
     try {
-      const parsed = JSON.parse(localStorage.getItem(RESULTS_CACHE_KEY) || '[]');
+      const parsed = JSON.parse(sessionStorage.getItem(TEMP_RESULTS_KEY) || '[]');
       return Array.isArray(parsed) ? parsed : [];
     } catch (error) {
       return [];
@@ -95,20 +95,20 @@ function ResultsPage() {
 
   const rankedBlocks = useMemo(() => {
     if (isAuthenticated) {
-      // Priority for logged-in users: freshly generated results -> DB results -> temporary cached results.
+      // Priority for logged-in users: freshly generated results -> DB results.
       if (Array.isArray(stateRankedBlocks) && stateRankedBlocks.length > 0) {
         return stateRankedBlocks;
       }
-      return memberRankedBlocks.length > 0 ? memberRankedBlocks : cachedRankedBlocks;
+      return memberRankedBlocks;
     }
     return stateRankedBlocks ?? cachedRankedBlocks;
   }, [isAuthenticated, memberRankedBlocks, stateRankedBlocks, cachedRankedBlocks]);
 
   if (stateRankedBlocks !== null) {
     if (!isAuthenticated && stateRankedBlocks.length > 0) {
-      localStorage.setItem(RESULTS_CACHE_KEY, JSON.stringify(stateRankedBlocks));
+      sessionStorage.setItem(TEMP_RESULTS_KEY, JSON.stringify(stateRankedBlocks));
     } else if (!isAuthenticated) {
-      localStorage.removeItem(RESULTS_CACHE_KEY);
+      sessionStorage.removeItem(TEMP_RESULTS_KEY);
     }
 
     if (isAuthenticated) {

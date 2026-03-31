@@ -4,7 +4,7 @@ import "../styles/LoginPage.css";
 import InputField from "../components/InputField";
 import HDBAccount from "../assets/hdb_account.png";
 
-const RESULTS_CACHE_KEY = "latestRankedBlocks";
+const TEMP_RESULTS_KEY = "temporaryGuestResults";
 const MEMBER_RESULTS_AVAILABLE_KEY = "memberResultsAvailable";
 
 function LoginPage() {
@@ -38,7 +38,7 @@ function LoginPage() {
         localStorage.setItem("user", JSON.stringify(data.user));
 
         // Login/Results Sync: transfer guest temporary results into persistent member storage.
-        const cachedResults = JSON.parse(localStorage.getItem(RESULTS_CACHE_KEY) || "[]");
+        const cachedResults = JSON.parse(sessionStorage.getItem(TEMP_RESULTS_KEY) || "[]");
         if (Array.isArray(cachedResults) && cachedResults.length > 0) {
           try {
             await fetch("http://localhost:8080/api/profile/results", {
@@ -50,7 +50,7 @@ function LoginPage() {
               body: JSON.stringify(cachedResults)
             });
 
-            localStorage.removeItem(RESULTS_CACHE_KEY);
+            sessionStorage.removeItem(TEMP_RESULTS_KEY);
             localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "true");
           } catch (syncError) {
             // Keep temporary results if sync fails so user does not lose state.

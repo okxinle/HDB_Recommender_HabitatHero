@@ -7,7 +7,7 @@ import CommuterAnalysis from "../components/CommuterAnalysis";
 import QuizSummary from "../components/QuizSummary";
 import { REGION_TOWN_MAP } from "../components/StructuralConstraints"; //
 
-const RESULTS_CACHE_KEY = "latestRankedBlocks";
+const TEMP_RESULTS_KEY = "temporaryGuestResults";
 const MEMBER_RESULTS_AVAILABLE_KEY = "memberResultsAvailable";
 
 const PREFERENCE_NAME_MAP = {
@@ -182,19 +182,16 @@ const submitQuiz = async () => {
     const user = localStorage.getItem("user");
     const isAuthenticated = Boolean(token && user);
 
-    // Always cache latest quiz results for immediate UX continuity across navigation.
-    if (rankedBlocks.length > 0) {
-      localStorage.setItem(RESULTS_CACHE_KEY, JSON.stringify(rankedBlocks));
-    } else {
-      localStorage.removeItem(RESULTS_CACHE_KEY);
-    }
-
     if (!isAuthenticated && rankedBlocks.length > 0) {
+      // Temporary guest data: session-only and cleared on refresh/logout.
+      sessionStorage.setItem(TEMP_RESULTS_KEY, JSON.stringify(rankedBlocks));
       localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "false");
     } else if (!isAuthenticated) {
+      sessionStorage.removeItem(TEMP_RESULTS_KEY);
       localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "false");
     } else {
-      // Members persist results in backend DB; keep availability flag and proactively sync.
+      // Members persist results in backend DB only.
+      sessionStorage.removeItem(TEMP_RESULTS_KEY);
       localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, rankedBlocks.length > 0 ? "true" : "false");
 
       if (rankedBlocks.length > 0) {
