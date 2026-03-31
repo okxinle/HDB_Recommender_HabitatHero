@@ -38,6 +38,19 @@ public class ProfileController {
         return ResponseEntity.ok(Map.of("status", "success", "results", results));
     }
 
+    @PostMapping("/results")
+    public ResponseEntity<?> importSavedResults(@RequestBody java.util.List<HDBBlock> results, Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated() || !(authentication.getPrincipal() instanceof UserAccount userAccount)) {
+            return ResponseEntity.status(401).body(Map.of(
+                "status", "unauthorized",
+                "message", "Please log in to save results."
+            ));
+        }
+
+        userProfileDbManager.saveLatestResults(userAccount.getUserId(), results == null ? java.util.List.of() : results);
+        return ResponseEntity.ok(Map.of("status", "success"));
+    }
+
     @PostMapping
     public ResponseEntity<?> saveProfile(@RequestBody UserProfile payload) {
         // Because of your entity structure, Spring Boot automatically converts 

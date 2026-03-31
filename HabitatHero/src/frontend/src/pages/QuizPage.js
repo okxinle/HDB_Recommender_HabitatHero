@@ -26,11 +26,21 @@ const parseCoordinateInput = (value) => {
   return { lat, lng };
 };
 
+const getCurrentUserId = () => {
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    const userId = Number(user?.userId);
+    return Number.isFinite(userId) ? userId : 0;
+  } catch (error) {
+    return 0;
+  }
+};
+
 const buildBackendPayload = (formData, preferredTowns) => {
   const [minBudget = 0, maxBudget = 0] = formData.structuralConstraints.budgetRange || [];
 
   return {
-    userId: formData.userId,
+    userId: getCurrentUserId(),
     structuralConstraints: {
       maxBudget: Math.max(minBudget, maxBudget),
       preferredTowns,
@@ -172,15 +182,36 @@ const submitQuiz = async () => {
     const user = localStorage.getItem("user");
     const isAuthenticated = Boolean(token && user);
 
-    if (!isAuthenticated && rankedBlocks.length > 0) {
+    // Always cache latest quiz results for immediate UX continuity across navigation.
+    if (rankedBlocks.length > 0) {
       localStorage.setItem(RESULTS_CACHE_KEY, JSON.stringify(rankedBlocks));
+    } else {
+      localStorage.removeItem(RESULTS_CACHE_KEY);
+    }
+
+    if (!isAuthenticated && rankedBlocks.length > 0) {
       localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "false");
     } else if (!isAuthenticated) {
-      localStorage.removeItem(RESULTS_CACHE_KEY);
       localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "false");
     } else {
-      // Members persist results in backend DB; keep only a lightweight availability flag on UI.
+      // Members persist results in backend DB; keep availability flag and proactively sync.
       localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, rankedBlocks.length > 0 ? "true" : "false");
+
+      if (rankedBlocks.length > 0) {
+        try {
+          await fetch("http://localhost:8080/api/profile/results", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify(rankedBlocks)
+          });
+        } catch (syncError) {
+          // Keep local cache as fallback if backend persistence is temporarily unavailable.
+          console.warn("Unable to sync quiz results to profile storage:", syncError);
+        }
+      }
     }
 
     navigate("/results", { state: { rankedBlocks } });

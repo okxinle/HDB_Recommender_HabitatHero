@@ -1,7 +1,9 @@
 import Logo from "../assets/logo.svg";
 import "../styles/NavigationBar.css";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+const MEMBER_RESULTS_AVAILABLE_KEY = "memberResultsAvailable";
 
 function NavigationBar() {
   const navigate = useNavigate();
@@ -11,10 +13,46 @@ function NavigationBar() {
 
   // 2. Check login state
   const user = JSON.parse(localStorage.getItem("user"));
+  const token = localStorage.getItem("token") || "";
+
+  useEffect(() => {
+    if (!user || !token) {
+      localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "false");
+      return;
+    }
+
+    let isMounted = true;
+    const syncMemberResultsState = async () => {
+      try {
+        const response = await fetch("http://localhost:8080/api/profile/results", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        const body = await response.json().catch(() => ({}));
+        const hasResults = Array.isArray(body?.results) && body.results.length > 0;
+        if (isMounted) {
+          localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, hasResults ? "true" : "false");
+        }
+      } catch (error) {
+        if (isMounted) {
+          localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "false");
+        }
+      }
+    };
+
+    syncMemberResultsState();
+    return () => {
+      isMounted = false;
+    };
+  }, [user, token]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "false");
     setIsMenuOpen(false); // Close menu on logout
     navigate("/login");
   };
