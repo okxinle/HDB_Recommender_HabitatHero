@@ -79,6 +79,11 @@
 				<version>1.20.0</version>
 			</dependency>
 			<dependency>
+				<groupId>org.json</groupId>
+				<artifactId>json</artifactId>
+				<version>20240303</version>
+			</dependency>
+			<dependency>
 				<groupId>org.hibernate.orm</groupId>
 				<artifactId>hibernate-community-dialects</artifactId>
 			</dependency>

@@ -1,3 +1,5 @@
+package habitathero.GeoSpatialAnalysis.src;
+
 import java.sql.ResultSet;
 
 public class LandUseMgr {
@@ -47,3 +49,4 @@ public class LandUseMgr {
     }
 
 }
+

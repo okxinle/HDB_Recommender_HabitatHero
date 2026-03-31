@@ -1,3 +1,5 @@
+package habitathero.GeoSpatialAnalysis.src;
+
 import java.sql.ResultSet;
 import java.sql.Statement;
 
@@ -58,3 +60,4 @@ public class LandUseSQLCreator extends SQLDbConnect {
         }
     }
 }
+

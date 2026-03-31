@@ -1,3 +1,5 @@
+package habitathero.GeoSpatialAnalysis.src;
+
 import org.json.JSONObject;
 
 // Service to manage metadata of dataset from DataGov and dataset metadata SQL
@@ -39,3 +41,4 @@ public class DataGovMetadataMgr {
         return datasetMetadataSQLHandler.retrieveSQLMetadata(datasetid);
     }
 }
+

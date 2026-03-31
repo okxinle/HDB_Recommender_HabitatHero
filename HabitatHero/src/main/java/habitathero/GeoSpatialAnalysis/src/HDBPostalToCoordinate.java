@@ -1,3 +1,5 @@
+package habitathero.GeoSpatialAnalysis.src;
+
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
@@ -42,3 +44,4 @@ public class HDBPostalToCoordinate extends SQLDbConnect {
         return coords;
     }
 }
+

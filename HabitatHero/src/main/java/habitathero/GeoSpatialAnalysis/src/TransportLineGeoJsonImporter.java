@@ -1,3 +1,5 @@
+package habitathero.GeoSpatialAnalysis.src;
+
 import java.sql.PreparedStatement;
 import java.io.FileReader;
 
@@ -73,3 +75,4 @@ public class TransportLineGeoJsonImporter extends SQLDbConnect {
         }
     }
 }
+

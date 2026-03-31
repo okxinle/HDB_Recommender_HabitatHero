@@ -1,3 +1,5 @@
+package habitathero.GeoSpatialAnalysis.src;
+
 import java.sql.ResultSet;
 
 public class TransportLineMgr {
@@ -52,3 +54,4 @@ public class TransportLineMgr {
         return tlCalMinDist.calMinDist(coords);
     }
 }
+

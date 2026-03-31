@@ -1,3 +1,5 @@
+package habitathero.GeoSpatialAnalysis.src;
+
 import java.sql.ResultSet;
 
 public class MainSpatialMgr {
@@ -64,3 +66,4 @@ public class MainSpatialMgr {
     }
 
 }
+

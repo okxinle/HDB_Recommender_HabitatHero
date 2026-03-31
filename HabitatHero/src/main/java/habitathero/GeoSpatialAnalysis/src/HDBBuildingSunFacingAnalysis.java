@@ -1,3 +1,5 @@
+package habitathero.GeoSpatialAnalysis.src;
+
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -75,7 +77,7 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
             output.put("dominant", "BALANCED");
         }
 
-        // Full 360° sweep with 1-degree steps to get absolute worst/best case for comparison basis
+        // Full 360Â° sweep with 1-degree steps to get absolute worst/best case for comparison basis
         JSONObject fullSweep = calSunFacingRange(postalCode, 0.0, 360.0, 1.0);
         double minScoreAbsolute = fullSweep.optDouble("minScore", 0.0);
         double maxScoreAbsolute = fullSweep.optDouble("maxScore", 0.0);
@@ -91,7 +93,7 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
         output.put("absoluteMinScore", minScoreAbsolute);
         output.put("absoluteMaxScore", maxScoreAbsolute);
 
-        // All percentages based on ABSOLUTE worst/best across full 360°
+        // All percentages based on ABSOLUTE worst/best across full 360Â°
         // Note: High score = WORST sun exposure, Low score = BEST sun exposure
         // So minScore is best, maxScore is worst
         output.put("eastScoreRelativeExposurePct", computePercentFromBest(eastScore, minScoreAbsolute, maxScoreAbsolute));
@@ -140,7 +142,7 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
         double az = normalizeAzimuth(startAzimuth);
         double end = normalizeAzimuth(endAzimuth);
 
-        // Check if we want a full 360° sweep
+        // Check if we want a full 360Â° sweep
         boolean fullCircle = Math.abs(endAzimuth - startAzimuth) >= 359.9;
         
         // support wrapping across 360
@@ -462,15 +464,15 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
         // Direct point scores without range averaging (diagnostic)
         System.out.println("=== POINT-ONLY SCORES (No Range Averaging) ===");
         JSONObject point60 = analyzer.calSunFacingPointOnly(postalCode, 60);
-        System.out.println("Azimuth 60° only: " + point60.toString());
+        System.out.println("Azimuth 60Â° only: " + point60.toString());
         System.out.println();
 
         JSONObject point160 = analyzer.calSunFacingPointOnly(postalCode, 160);
-        System.out.println("Azimuth 160° only: " + point160.toString());
+        System.out.println("Azimuth 160Â° only: " + point160.toString());
         System.out.println();
 
         JSONObject point300 = analyzer.calSunFacingPointOnly(postalCode, 300);
-        System.out.println("Azimuth 300° only: " + point300.toString());
+        System.out.println("Azimuth 300Â° only: " + point300.toString());
         System.out.println();
 
 
@@ -479,11 +481,12 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
         System.out.println();
 
         // Full 360-degree analysis with 1-degree steps
-        System.out.println("=== FULL 360° ANALYSIS (1-Degree Steps) ===");
+        System.out.println("=== FULL 360Â° ANALYSIS (1-Degree Steps) ===");
         JSONObject fullRange = analyzer.calSunFacingRange(postalCode, 0.0, 360.0, 1.0);
-        System.out.println("Full 360° sweep (0-360°, 1° steps): " + fullRange.toString());
+        System.out.println("Full 360Â° sweep (0-360Â°, 1Â° steps): " + fullRange.toString());
         System.out.println();
     }
 
 }
+
 
