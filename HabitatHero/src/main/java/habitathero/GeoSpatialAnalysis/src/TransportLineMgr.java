@@ -16,7 +16,7 @@ public class TransportLineMgr {
 
     public static void main(String[] args) {
         TransportLineMgr tlMgr = TransportLineMgr.getInstance();
-        tlMgr.tlCalNoiseLevel("670180");
+        tlMgr.calNoiseLevel("670180");
         
     }
 
