@@ -1,6 +1,9 @@
-import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import '../styles/ResultsPage.css';
+
+const RESULTS_CACHE_KEY = 'latestRankedBlocks';
+const MEMBER_RESULTS_AVAILABLE_KEY = 'memberResultsAvailable';
 
 const getSafeNumber = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : null);
 
@@ -23,11 +26,107 @@ function ResultsPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const rankedBlocks = Array.isArray(location.state?.rankedBlocks)
+  const token = localStorage.getItem('token') || '';
+  const user = localStorage.getItem('user');
+  const isAuthenticated = Boolean(token && user);
+
+  const [memberRankedBlocks, setMemberRankedBlocks] = useState([]);
+  const [isLoadingMemberResults, setIsLoadingMemberResults] = useState(false);
+
+  const cachedRankedBlocks = (() => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(RESULTS_CACHE_KEY) || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      return [];
+    }
+  })();
+
+  const stateRankedBlocks = Array.isArray(location.state?.rankedBlocks)
     ? location.state.rankedBlocks
-    : [];
+    : null;
+
+  useEffect(() => {
+    // Guests: no backend fetch needed.
+    if (!isAuthenticated) return;
+
+    let isMounted = true;
+    const loadMemberResults = async () => {
+      setIsLoadingMemberResults(true);
+      try {
+        const response = await fetch('http://localhost:8080/api/profile/results', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        const responseBody = await response.json().catch(() => ({}));
+        const latestResults = Array.isArray(responseBody?.results) ? responseBody.results : [];
+
+        if (!isMounted) return;
+        setMemberRankedBlocks(latestResults);
+
+        localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, latestResults.length > 0 ? 'true' : 'false');
+      } catch (error) {
+        if (!isMounted) return;
+        setMemberRankedBlocks([]);
+        localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, 'false');
+      } finally {
+        if (isMounted) {
+          setIsLoadingMemberResults(false);
+        }
+      }
+    };
+
+    loadMemberResults();
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, token]);
+
+  const rankedBlocks = useMemo(() => {
+    if (isAuthenticated) {
+      return memberRankedBlocks;
+    }
+    return stateRankedBlocks ?? cachedRankedBlocks;
+  }, [isAuthenticated, memberRankedBlocks, stateRankedBlocks, cachedRankedBlocks]);
+
+  if (stateRankedBlocks !== null) {
+    if (!isAuthenticated && stateRankedBlocks.length > 0) {
+      localStorage.setItem(RESULTS_CACHE_KEY, JSON.stringify(stateRankedBlocks));
+    } else if (!isAuthenticated) {
+      localStorage.removeItem(RESULTS_CACHE_KEY);
+    }
+
+    if (isAuthenticated) {
+      localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, stateRankedBlocks.length > 0 ? 'true' : 'false');
+    }
+  }
+
+  if (isAuthenticated && isLoadingMemberResults) {
+    return (
+      <div className="no-results-container">
+        <h2>Loading Your Saved Results...</h2>
+        <p>Retrieving your latest personalized recommendations from your profile.</p>
+      </div>
+    );
+  }
 
   if (rankedBlocks.length === 0) {
+    if (!isAuthenticated) {
+      return (
+        <div className="no-results-container">
+          <h2>Please Log In or Sign Up to see your personalized results.</h2>
+          <p>Create an account or log in to unlock your tailored HDB recommendations.</p>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '16px' }}>
+            <button onClick={() => navigate('/login')} className="back-btn">Log In</button>
+            <button onClick={() => navigate('/create-account')} className="back-btn">Sign Up</button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="no-results-container">
         <h2>No Matches Found</h2>
@@ -39,6 +138,15 @@ function ResultsPage() {
 
   return (
     <div className="results-page-wrapper">
+      {!isAuthenticated && (
+        <div className="guest-results-banner">
+          Viewing temporary results.{' '}
+          <Link to="/signup" className="guest-results-signup-link">
+            Sign up to save these to your profile permanently!
+          </Link>
+        </div>
+      )}
+
       <div className="results-header">
         <h1>Your HDB Matches</h1>
         <p>We found {rankedBlocks.length} blocks tailored to your lifestyle preferences.</p>

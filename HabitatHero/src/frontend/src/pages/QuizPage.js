@@ -7,6 +7,9 @@ import CommuterAnalysis from "../components/CommuterAnalysis";
 import QuizSummary from "../components/QuizSummary";
 import { REGION_TOWN_MAP } from "../components/StructuralConstraints"; //
 
+const RESULTS_CACHE_KEY = "latestRankedBlocks";
+const MEMBER_RESULTS_AVAILABLE_KEY = "memberResultsAvailable";
+
 const PREFERENCE_NAME_MAP = {
   solarOrientation: "Solar Orientation",
   acousticComfort: "Acoustic Comfort",
@@ -80,6 +83,17 @@ const extractErrorMessage = (responseBody, fallbackMessage) => {
   return fallbackMessage;
 };
 
+const buildAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  const headers = { "Content-Type": "application/json" };
+
+  if (token && token.trim().length > 0) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
+};
+
 function QuizPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [attemptedNext, setAttemptedNext] = useState(false);
@@ -123,7 +137,7 @@ const submitQuiz = async () => {
 
     const response = await fetch("http://localhost:8080/api/hdb/recommend", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: buildAuthHeaders(),
       body: JSON.stringify(payload)
     });
 
@@ -139,6 +153,12 @@ const submitQuiz = async () => {
         return;
       }
 
+      if (response.status === 401) {
+        alert(extractErrorMessage(responseBody, "Please log in or sign up to see your personalized results."));
+        navigate("/login");
+        return;
+      }
+
       if (response.status >= 500) {
         alert(extractErrorMessage(responseBody, "A server error occurred. Please try again later."));
         return;
@@ -148,6 +168,21 @@ const submitQuiz = async () => {
     }
 
     const rankedBlocks = extractRankedBlocks(responseBody);
+    const token = localStorage.getItem("token") || "";
+    const user = localStorage.getItem("user");
+    const isAuthenticated = Boolean(token && user);
+
+    if (!isAuthenticated && rankedBlocks.length > 0) {
+      localStorage.setItem(RESULTS_CACHE_KEY, JSON.stringify(rankedBlocks));
+      localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "false");
+    } else if (!isAuthenticated) {
+      localStorage.removeItem(RESULTS_CACHE_KEY);
+      localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "false");
+    } else {
+      // Members persist results in backend DB; keep only a lightweight availability flag on UI.
+      localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, rankedBlocks.length > 0 ? "true" : "false");
+    }
+
     navigate("/results", { state: { rankedBlocks } });
   } catch (error) {
     console.error("Error submitting quiz:", error);
@@ -168,7 +203,8 @@ const submitQuiz = async () => {
     formData.structuralConstraints.budgetRange[0] < formData.structuralConstraints.budgetRange[1] &&
     formData.structuralConstraints.preferredRegions.length > 0 && 
     formData.structuralConstraints.preferredFlatType.length > 0 &&
-    formData.structuralConstraints.minLeaseYears >= 50;
+    Number.isFinite(formData.structuralConstraints.minLeaseYears) &&
+    formData.structuralConstraints.minLeaseYears >= 0;
 
   const isStep2Valid = formData.softConstraints.every(factor => {
     if (factor.mode === "ignore" || factor.mode === "strict") return true;

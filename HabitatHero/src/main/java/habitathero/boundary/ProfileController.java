@@ -3,35 +3,39 @@ package habitathero.boundary;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import habitathero.control.UserProfileDbManager;
+import habitathero.entity.HDBBlock;
+import habitathero.entity.UserAccount;
 import habitathero.entity.UserProfile;
 
 @RestController
 @RequestMapping("/api/profile")
 public class ProfileController {
 
-    // You will eventually inject your database service here:
-    // @Autowired
-    // private ProfileService profileService;
+    private final UserProfileDbManager userProfileDbManager;
 
-    @GetMapping
-    public ResponseEntity<?> getSavedProfile(@RequestHeader("Authorization") String token) {
-        // TODO: Extract user ID/email from the token, then query your database
-        UserProfile profile = null; // Placeholder for your database call
+    public ProfileController(UserProfileDbManager userProfileDbManager) {
+        this.userProfileDbManager = userProfileDbManager;
+    }
 
-        // If the user is new and hasn't saved a profile yet, return null data
-        if (profile == null) {
-            return ResponseEntity.ok(Map.of("status", "success", "data", null));
+    @GetMapping("/results")
+    public ResponseEntity<?> getSavedResults(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated() || !(authentication.getPrincipal() instanceof UserAccount userAccount)) {
+            return ResponseEntity.status(401).body(Map.of(
+                "status", "unauthorized",
+                "message", "Please log in to view saved results."
+            ));
         }
 
-        // Otherwise, return the populated UserProfile
-        return ResponseEntity.ok(Map.of("status", "success", "data", profile));
+        java.util.List<HDBBlock> results = userProfileDbManager.getLatestResults(userAccount.getUserId());
+        return ResponseEntity.ok(Map.of("status", "success", "results", results));
     }
 
     @PostMapping
