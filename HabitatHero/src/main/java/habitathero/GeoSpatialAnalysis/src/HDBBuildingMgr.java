@@ -42,6 +42,10 @@ public class HDBBuildingMgr {
         hdbDbImporter.importGeoJsonToSQLDb(LOCALFILEPATH);
     }
 
+    public Boolean checkCurrency(){
+        return DataGovAPIHandler.getInstance().checkAPIDataCurrency(DATASET_ID);
+    }
+
     public void createSQLTable() {
         hdbSQLCreator.createSQLTable();
     }
@@ -50,8 +54,16 @@ public class HDBBuildingMgr {
         return hdbPostalToCoordinate.postalToCoordinate(postalCode);
     }
 
-    public JSONObject calSunFacing(String postal_cod){
-        return hdbSunFacingAnalysis.calSunFacing(postal_cod);
+    public JSONObject calSunFacing(String postalCode){
+        return hdbSunFacingAnalysis.calSunFacing(postalCode);
+    }
+
+    public JSONObject calSunFacing(String postalCode, double sunAzimuth) {
+        return hdbSunFacingAnalysis.calSunFacing(postalCode, sunAzimuth);
+    }
+
+    public JSONObject calSunFacing(String postalCode, double eastAzimuth, double westAzimuth){
+        return hdbSunFacingAnalysis.calSunFacing(postalCode, eastAzimuth, westAzimuth);
     }
 
 }

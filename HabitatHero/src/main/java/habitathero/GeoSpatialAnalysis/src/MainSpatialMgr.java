@@ -1,68 +1,128 @@
+<<<<<<< HEAD
 package habitathero.GeoSpatialAnalysis.src;
 
 import java.sql.ResultSet;
+=======
+import org.json.JSONObject;
+>>>>>>> d70a765e53bb95c730ec303d0b194b9572c4d634
 
 public class MainSpatialMgr {
 
-    public void main(String[] args) {
-        Coordinate coords = postalCodeToCoordinate("670180");
+    public static void main(String[] args) {
+        MainSpatialMgr mgr = new MainSpatialMgr();
+        Coordinate coords = mgr.postalCodeToCoordinate("670180");
         System.out.printf("Coordinate: %f, %f\n", coords.getLatitude(), coords.getLongitude());
     }
 
-    public double calNoiseLevel(String postal_code) {
+    public JSONObject calNoiseLevel(String postalCode) {
         // convert postal code to coordinate
-        Coordinate coords = this.postalCodeToCoordinate(postal_code);
+        Coordinate coords = this.postalCodeToCoordinate(postalCode);
         return this.calNoiseLevel(coords);
     }
 
-    public double calNoiseLevel(Coordinate coords){
-        ResultSet rs = null;
-        int mrtSpl = 85; // Average sound pressure level in dbA of mrt train
-        int lrtSpl = 67; // Average soud pressure level in dbA of lrt train
-        double splNew = 0;
-        String rail_type = "";
-        double distance = 0;
+    public JSONObject calNoiseLevel(Coordinate coords){
+        return TransportLineMgr.getInstance().calNoiseLevel(coords);
+    }
 
-        //calculate nearest distance to rail line from coordinate
-        rs = TransportLineMgr.getInstance().calMinDistToLine(coords);
-        try {
-            rail_type = rs.getString("RAIL_TYPE");
-            distance = rs.getDouble("distance_meters");
-            System.out.println(rail_type);
-
-        } catch (Exception e) {
-            e.printStackTrace();
+    public double calWestSunLevel(String postalCode) {
+        // Get sun facing analysis for postal code
+        JSONObject result = HDBBuildingMgr.getInstance().calSunFacing(postalCode);
+        
+        if (!result.optString("status", "").equals("OK")) {
+            System.out.println("Error calculating west sun level for postal code: " + postalCode);
+            return 0.0;
         }
+        
+        // Return west score and exposure percentage
+        double westScore = result.optDouble("westScore", 0.0);
+        double westExposurePct = result.optDouble("westScoreRelativeExposurePct", 0.0);
+        
+        System.out.println("West sun score: " + westScore + ", Exposure: " + westExposurePct + "%");
+        return westExposurePct;
+    }
 
-        /*
-         * Calculate sound pressure level at new distance
-         * Formula: Lp2 = Lp1 - 20 * log10(r2 / r1)
-         */
-        if (rail_type.equals("MRT")) {
-            splNew = mrtSpl - (20 * Math.log10(distance / 5));
-        } else if (rail_type.equals("LRT")) {
-            splNew = lrtSpl - (20 * Math.log10(distance / 5));
+    public double calEastSunLevel(String postalCode) {
+        // Get sun facing analysis for postal code
+        JSONObject result = HDBBuildingMgr.getInstance().calSunFacing(postalCode);
+        
+        if (!result.optString("status", "").equals("OK")) {
+            System.out.println("Error calculating east sun level for postal code: " + postalCode);
+            return 0.0;
         }
-        return splNew;
+        
+        // Return east score and exposure percentage
+        double eastScore = result.optDouble("eastScore", 0.0);
+        double eastExposurePct = result.optDouble("eastScoreRelativeExposurePct", 0.0);
+        
+        System.out.println("East sun score: " + eastScore + ", Exposure: " + eastExposurePct + "%");
+        return eastExposurePct;
     }
 
-    public double calWestSunLevel() {
-        return 0;
+    public JSONObject calSunFacing(String postal_code) {
+        // Get complete sun facing analysis with all metrics
+        return HDBBuildingMgr.getInstance().calSunFacing(postal_code);
     }
 
-    public ResultSet calFutureDevelopmentRisk(Coordinate coords, double distance) {
-        return LandUseMgr.getInstance().checkProxNewDev(coords, distance);
+    public JSONObject calSunFacing(String postal_code, double customAzimuth) {
+        // Get sun facing analysis for custom azimuth
+        return HDBBuildingMgr.getInstance().calSunFacing(postal_code,customAzimuth);
     }
 
-    public ResultSet calFutureDevelopmentRisk(String postal_code, double distance){
+    public JSONObject calSunFacing(String postalCode, double eastAzimuth, double westAzimuth) {
+        // Get sun facing analysis for two custom azimuth
+        return HDBBuildingMgr.getInstance().calSunFacing(postalCode, eastAzimuth, westAzimuth);
+    }
+
+    public JSONObject calFutureDevelopmentRisk(Coordinate coords, double distance) {
+        return LandUseMgr.getInstance().calFutureDevRisk(coords, distance);
+    }
+
+    public JSONObject calFutureDevelopmentRisk(String postalCode, double distance){
         // convert postal code to coordinate
-        Coordinate coords = this.postalCodeToCoordinate(postal_code);
-        return this.calFutureDevelopmentRisk(coords, distance);
+        return LandUseMgr.getInstance().calFutureDevRisk(postalCode, distance);
     }
 
     //only used internally within class
     private Coordinate postalCodeToCoordinate(String postal_code) {
         return HDBBuildingMgr.getInstance().postalCodeToCoordinate(postal_code);
+    }
+
+    // Comprehensive analysis integrating all managers and analyzers
+    public JSONObject getComprehensiveLocationAnalysis(String postal_code) {
+        JSONObject comprehensive = new JSONObject();
+        
+        try {
+            // Building info
+            comprehensive.put("postalCode", postal_code);
+            Coordinate coords = postalCodeToCoordinate(postal_code);
+            comprehensive.put("latitude", coords.getLatitude());
+            comprehensive.put("longitude", coords.getLongitude());
+            
+            // Noise level analysis (TransportLineMgr integration)
+            JSONObject noiseResult = calNoiseLevel(postal_code);
+            if (noiseResult.has("error")) {
+                comprehensive.put("noiseLevel_dBA", "Error: " + noiseResult.getString("error"));
+            } else {
+                comprehensive.put("noiseLevel_dBA", noiseResult.optDouble("noise_level_db", 0.0));
+            }
+            
+            // Sun exposure analysis (HDBBuildingSunFacingAnalysis integration)
+            JSONObject sunAnalysis = calSunFacing(postal_code);
+            comprehensive.put("sunExposure", sunAnalysis);
+            
+            // Future development risk (LandUseMgr integration)
+            JSONObject devRisk = calFutureDevelopmentRisk(postal_code, 500.0);  // 500m radius
+            comprehensive.put("futureDevRisk_500m", devRisk);
+            
+            comprehensive.put("status", "OK");
+            
+        } catch (Exception e) {
+            comprehensive.put("status", "ERROR");
+            comprehensive.put("error", e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return comprehensive;
     }
 
 }
