@@ -1,10 +1,7 @@
-<<<<<<< HEAD
 package habitathero.GeoSpatialAnalysis.src;
 
 import java.sql.ResultSet;
-=======
 import org.json.JSONObject;
->>>>>>> d70a765e53bb95c730ec303d0b194b9572c4d634
 
 public class MainSpatialMgr {
 
