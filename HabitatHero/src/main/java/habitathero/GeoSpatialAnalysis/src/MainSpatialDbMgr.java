@@ -90,7 +90,7 @@ public class MainSpatialDbMgr {
 
     /**
      * Download dataset from DataGov API and save to local file
-     * Checks for updates and only downloads if new data is available
+     * Checks for updates and only downloads if newer data is available
      */
     public boolean downloadDatasetFromAPI(String datasetId, String localFilePath) {
         System.out.println("[API] Downloading dataset " + datasetId + " from DataGov API...");
@@ -180,17 +180,17 @@ public class MainSpatialDbMgr {
      * Refresh data from DataGov API: check for updates, download if needed, and
      * re-import
      */
-    public void refreshDataFromAPI() {
+    public void refreshAllGeoJsonDataFromAPI() {
         System.out.println("\n===== REFRESHING DATA FROM DATAGOV API =====");
 
         // Refresh HDB Building data
-        refreshHDBBuildingFromAPI();
+        refreshHDBBuildingGeoJsonFromAPI();
 
         // Refresh Land Use data
-        refreshLandUseFromAPI();
+        refreshLandUseGeoJsonFromAPI();
 
         // Refresh Transport Line data
-        refreshTransportLineFromAPI();
+        refreshTransportLineGeoJsonFromAPI();
 
         System.out.println("\n===== API REFRESH COMPLETE =====\n");
     }
@@ -198,7 +198,7 @@ public class MainSpatialDbMgr {
     /**
      * Check and refresh HDB Building data from API
      */
-    private void refreshHDBBuildingFromAPI() {
+    private void refreshHDBBuildingGeoJsonFromAPI() {
         System.out.println("\n--- Processing HDB Building ---");
         HDBBuildingMgr hdbMgr = HDBBuildingMgr.getInstance();
 
@@ -216,7 +216,7 @@ public class MainSpatialDbMgr {
     /**
      * Check and refresh Land Use data from API
      */
-    private void refreshLandUseFromAPI() {
+    private void refreshLandUseGeoJsonFromAPI() {
         System.out.println("\n--- Processing Land Use ---");
         LandUseMgr landUseMgr = LandUseMgr.getInstance();
 
@@ -234,7 +234,7 @@ public class MainSpatialDbMgr {
     /**
      * Check and refresh Transport Line data from API
      */
-    private void refreshTransportLineFromAPI() {
+    private void refreshTransportLineGeoJsonFromAPI() {
         System.out.println("\n--- Processing Transport Line ---");
         TransportLineMgr transportMgr = TransportLineMgr.getInstance();
 
@@ -257,8 +257,8 @@ public class MainSpatialDbMgr {
      */
     public void setupAndSyncDatabase() {
         System.out.println("\n===== COMPREHENSIVE DATABASE SETUP AND SYNC =====");
-        setupDatabaseFromLocalFiles();
-        refreshDataFromAPI();
+        refreshAllGeoJsonDataFromAPI(); //download all GeoJson data
+        setupDatabaseFromLocalFiles(); //
         System.out.println("===== COMPREHENSIVE SETUP COMPLETE =====\n");
     }
 
