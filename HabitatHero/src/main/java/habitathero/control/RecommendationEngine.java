@@ -42,7 +42,7 @@ public class RecommendationEngine {
         validateStructuralConstraints(constraints);
 
         // Step 1 & 2: fetch all blocks and apply hard filters
-        List<HDBBlock> allBlocks      = dbRepository.getAllBlocks();
+        List<HDBBlock> allBlocks      = dbRepository.findAll();
         List<HDBBlock> filteredBlocks = applyHardFilters(allBlocks, constraints);
 
         List<WeightedPreference> softConstraints =
