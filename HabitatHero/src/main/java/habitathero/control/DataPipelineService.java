@@ -12,7 +12,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import habitathero.entity.AuditLog;
@@ -29,73 +28,94 @@ public class DataPipelineService {
     @Autowired
     private AuditLogRepository auditLogRepository;
 
-    // The Data.gov.sg resource ID for HDB Resale Flat Prices
-    private final String API_URL = "https://data.gov.sg/api/action/datastore_search?resource_id=f1765b54-a209-4718-8d38-a39237f502b3&limit=1000";
+    // 1. BASE URL (Notice we removed the limit=1000 from the end of the string)
+    private final String BASE_API_URL = "https://data.gov.sg/api/action/datastore_search?resource_id=f1765b54-a209-4718-8d38-a39237f502b3";
 
     // Runs automatically every day at 2:00 AM server time
     @Scheduled(cron = "0 0 2 * * ?")
-    @Transactional // Ensures the database update is atomic
+    // NOTE: We removed @Transactional here so the database can commit in batches.
     public void syncHdbData() {
         AuditLog log = new AuditLog();
         log.setTimestamp(LocalDateTime.now());
-        log.setActionType("HDB_DATA_SYNC");
+        log.setActionType("HDB_DATA_SYNC_ALL");
 
         try {
             RestTemplate restTemplate = new RestTemplate();
-            
-            // 1. Setup headers with the API Key
             HttpHeaders headers = new HttpHeaders();
-            headers.set("x-api-key", "YOUR_DATAGOVSG_API_KEY_HERE"); // NOTE: Put your actual key here
+            headers.set("x-api-key", "v2:5a244eb57abb2f7764779ca43c86ae26b2222a9e5458f522a5576a434a547599:D9iWv4WJNLtSbAI3MeDCL5RpntDtiRES"); 
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
-            // 2. Fetch data from the API using exchange (this includes your headers)
-            ResponseEntity<Map> response = restTemplate.exchange(
-                API_URL, 
-                HttpMethod.GET, 
-                entity, 
-                Map.class
-            );
+            // 2. PAGINATION VARIABLES
+            int offset = 0;
+            int limit = 1000; // Fetch 1000 records at a time
+            boolean hasMoreRecords = true;
+            int totalRecordsSynced = 0;
 
-            // 3. Parse the CKAN JSON structure safely
-            Map<String, Object> body = response.getBody();
-            if (body == null || !body.containsKey("result")) {
-                throw new RuntimeException("API response body is null or missing 'result' object.");
-            }
-            
-            Map<String, Object> result = (Map<String, Object>) body.get("result");
-            List<Map<String, Object>> records = (List<Map<String, Object>>) result.get("records");
-
-            List<HDBBlock> blocksToSave = new ArrayList<>();
-
-            // 4. Map JSON to your HDBBlock entity
-            for (Map<String, Object> record : records) {
-                HDBBlock block = new HDBBlock();
-                block.setBlockNumber((String) record.get("block"));
-                block.setStreetName((String) record.get("street_name"));
-                block.setTown((String) record.get("town"));
-                block.setFlatType((String) record.get("flat_type"));
+            // 3. THE PAGINATION LOOP
+            while (hasMoreRecords) {
+                // Build the URL for the current chunk
+                String paginatedUrl = BASE_API_URL + "&limit=" + limit + "&offset=" + offset;
                 
-                // Parse numeric values carefully
-                String priceStr = (String) record.get("resale_price");
-                if (priceStr != null) {
-                    block.setResalePrice(Double.parseDouble(priceStr));
+                System.out.println("Fetching 1000 records starting from offset: " + offset + "...");
+
+                ResponseEntity<Map> response = restTemplate.exchange(
+                    paginatedUrl, 
+                    HttpMethod.GET, 
+                    entity, 
+                    Map.class
+                );
+
+                Map<String, Object> body = response.getBody();
+                if (body == null || !body.containsKey("result")) {
+                    throw new RuntimeException("API response body is null.");
                 }
                 
-                blocksToSave.add(block);
+                Map<String, Object> result = (Map<String, Object>) body.get("result");
+                List<Map<String, Object>> records = (List<Map<String, Object>>) result.get("records");
+
+                // 4. STOP CONDITION: If the API returns 0 records, we have downloaded everything!
+                if (records == null || records.isEmpty()) {
+                    hasMoreRecords = false;
+                    break;
+                }
+
+                List<HDBBlock> blocksToSave = new ArrayList<>();
+
+                // Map JSON to HDBBlock entity
+                for (Map<String, Object> record : records) {
+                    HDBBlock block = new HDBBlock();
+                    block.setBlockNumber((String) record.get("block"));
+                    block.setStreetName((String) record.get("street_name"));
+                    block.setTown((String) record.get("town"));
+                    block.setFlatType((String) record.get("flat_type"));
+                    
+                    String priceStr = (String) record.get("resale_price");
+                    if (priceStr != null) {
+                        block.setResalePrice(Double.parseDouble(priceStr));
+                    }
+                    blocksToSave.add(block);
+                }
+
+                // Save this chunk of 1000 to the database
+                hdbRepository.saveAll(blocksToSave);
+                totalRecordsSynced += blocksToSave.size();
+
+                // 5. MOVE THE OFFSET FORWARD (Next loop starts at 1000, then 2000, etc.)
+                offset += limit;
+
+                // 6. RATE LIMIT PREVENTER: Pause for half a second before asking for the next chunk
+                Thread.sleep(500); 
             }
 
-            // 5. Perform the UPSERT (Save All)
-            hdbRepository.saveAll(blocksToSave);
-
-            // 6. Log Success
+            // 7. Log Success
             log.setStatus("SUCCESS");
-            log.setDetails("Successfully synced " + blocksToSave.size() + " records.");
+            log.setDetails("Successfully paginated and synced a total of " + totalRecordsSynced + " records.");
+            System.out.println("FULL SYNC COMPLETE: " + totalRecordsSynced + " records saved.");
 
         } catch (Exception e) {
-            // 7. Log Failure
             log.setStatus("FAILED");
             log.setDetails("Error during sync: " + e.getMessage());
-            e.printStackTrace(); // Keep for server console debugging
+            e.printStackTrace(); 
         } finally {
             auditLogRepository.save(log);
         }

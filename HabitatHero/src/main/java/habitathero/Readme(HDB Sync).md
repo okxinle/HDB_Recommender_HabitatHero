@@ -67,7 +67,7 @@ If successful, you will see `Tomcat started on port(s): 8080 (http)` and `Starte
 
 To ensure your database and API connections are working perfectly, run these two tests in Postman:
 
-### Test 1: Register an Account (Generates your VIP Token)
+### Test 1a: Register an Account (Generates your VIP Token)
 * **Method:** POST
 * **URL:** `http://localhost:8080/api/auth/register`
 * **Body (raw JSON):**
@@ -79,11 +79,17 @@ To ensure your database and API connections are working perfectly, run these two
 ```
 * **Expected:** `200 OK` and a response containing your long JWT token string. Copy this token.
 
+### Test 1b: Login to an Existing Account (If Token Expires or Restarting)
+* **Method:** POST
+* **URL:** `http://localhost:8080/api/auth/login`
+
 ### Test 2: Trigger the HDB Data Sync
 * **Method:** POST
 * **URL:** `http://localhost:8080/api/admin/trigger-sync`
 * **Auth:** Go to the Authorization tab -> Select "Bearer Token" -> Paste your JWT token.
 * **Expected:** `200 OK` with the message "Sync triggered and completed successfully." You should also see Hibernate logging the database inserts in your Spring Boot terminal!
+
+
 
 ---
 
