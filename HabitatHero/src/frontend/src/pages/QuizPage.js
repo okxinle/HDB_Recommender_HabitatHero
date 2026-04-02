@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import "../styles/QuizPage.css";
-import StructuralConstraints from "../components/StructuralConstraints";
-import LivabilityFactors from "../components/LivabilityFactors";
-import CommuterAnalysis from "../components/CommuterAnalysis";
-import QuizSummary from "../components/QuizSummary";
-import { REGION_TOWN_MAP } from "../components/StructuralConstraints"; //
+import StructuralConstraints, { REGION_TOWN_MAP } from "./QuizSteps/StructuralConstraints";
+import LivabilityFactors from "./QuizSteps/LivabilityFactors";
+import CommuterAnalysis from "./QuizSteps/CommuterAnalysis";
+import QuizSummary from "./QuizSteps/QuizSummary";
 
 const TEMP_RESULTS_KEY = "temporaryGuestResults";
 const MEMBER_RESULTS_AVAILABLE_KEY = "memberResultsAvailable";
