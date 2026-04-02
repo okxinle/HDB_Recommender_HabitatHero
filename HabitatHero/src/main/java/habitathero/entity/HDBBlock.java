@@ -1,7 +1,30 @@
 package habitathero.entity;
+
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
+@Entity
+@Table(name = "hdb_blocks")
 public class HDBBlock {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int         blockId;
+    
+    // --- NEW FIELDS REQUIRED FOR DATA.GOV.SG API SYNC ---
+    private String      blockNumber;
+    private String      streetName;
+    private String      flatType;
+    private double      resalePrice;
+
+    // --- YOUR EXISTING FIELDS ---
     private String      postalCode;
     private String      town;
     private double      estimatedPrice;
@@ -10,6 +33,9 @@ public class HDBBlock {
     private String      noiseRiskLevel;
     private boolean     futureRiskFlag;
     private double      globalMatchIndex;
+    
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
     private Coordinates coordinates;
 
     // ── Constructors ─────────────────────────────────────────────────────────
@@ -46,6 +72,12 @@ public class HDBBlock {
     public boolean isFutureRiskFlag()       { return futureRiskFlag; }
     public double  getGlobalMatchIndex()    { return globalMatchIndex; }
     public Coordinates getCoordinates()     { return coordinates; }
+    
+    // New Getters
+    public String  getBlockNumber()         { return blockNumber; }
+    public String  getStreetName()          { return streetName; }
+    public String  getFlatType()            { return flatType; }
+    public double  getResalePrice()         { return resalePrice; }
 
     // ── Setters ───────────────────────────────────────────────────────────────
 
@@ -60,9 +92,19 @@ public class HDBBlock {
     public void setGlobalMatchIndex(double globalMatchIndex)    { this.globalMatchIndex    = globalMatchIndex; }
     public void setCoordinates(Coordinates coordinates)         { this.coordinates         = coordinates; }
 
+    // New Setters
+    public void setBlockNumber(String blockNumber)              { this.blockNumber         = blockNumber; }
+    public void setStreetName(String streetName)                { this.streetName          = streetName; }
+    public void setFlatType(String flatType)                    { this.flatType            = flatType; }
+    public void setResalePrice(double resalePrice)              { this.resalePrice         = resalePrice; }
+
     @Override
     public String toString() {
         return "HDBBlock{blockId=" + blockId
+                + ", blockNumber='" + blockNumber + "'"
+                + ", streetName='" + streetName + "'"
+                + ", flatType='" + flatType + "'"
+                + ", resalePrice=" + resalePrice
                 + ", postalCode='" + postalCode + "'"
                 + ", town='" + town + "'"
                 + ", estimatedPrice=" + estimatedPrice
