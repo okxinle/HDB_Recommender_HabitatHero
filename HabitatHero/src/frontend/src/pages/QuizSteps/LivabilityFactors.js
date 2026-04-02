@@ -1,4 +1,4 @@
-import LivabilityPreferenceBlock from "../components/LivabilityPreferenceBlock";
+import LivabilityPreferenceBlock from "./LivabilityPreferenceBlock";
 
 function LivabilityFactors({ data, update, showErrors }) {
   // 1. Safe helper to find a factor in the new List structure
