@@ -1,6 +1,13 @@
 package habitathero.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "resale_transactions")
@@ -73,4 +80,18 @@ public class ResaleTransaction {
 
     public String getMonth() { return month; }
     public void setMonth(String month) { this.month = month; }
+
+    @Override
+    public String toString() {
+        return "ResaleTransaction{" +
+                "transactionId=" + transactionId +
+                ", blockId=" + (block != null ? block.getBlockId() : "null") +
+                ", town='" + town + '\'' +
+                ", flatType='" + flatType + '\'' +
+                ", floorAreaSqm=" + floorAreaSqm +
+                ", remainingLease=" + remainingLease +
+                ", resalePrice=" + resalePrice +
+                ", month='" + month + '\'' +
+                '}';
+    }
 }

@@ -46,7 +46,7 @@ Our HDB synchronization pipeline (`DataPipelineService.java`) pulls real-time re
 4. Locate line 47:
 
 ```java
-headers.set("api-key", "YOUR_DATAGOVSG_API_KEY_HERE"); 
+headers.set("x-api-key", "YOUR_DATAGOVSG_API_KEY_HERE"); 
 ```
 
 Replace `"YOUR_DATAGOVSG_API_KEY_HERE"` with your actual key.
