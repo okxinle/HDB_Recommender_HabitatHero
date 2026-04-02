@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { SearchX } from 'lucide-react';
-import '../styles/ResultsPage.css';
+import '../styles/HDBResultDashBoardPage.css';
 
 const TEMP_RESULTS_KEY = 'temporaryGuestResults';
 const MEMBER_RESULTS_AVAILABLE_KEY = 'memberResultsAvailable';
@@ -23,7 +23,7 @@ const formatLeaseYears = (value) => {
   return years === null ? 'N/A' : `${years} Years`;
 };
 
-function ResultsPage() {
+function HDBResultDashBoardPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -246,4 +246,4 @@ function ResultsPage() {
   );
 }
 
-export default ResultsPage;
+export default HDBResultDashBoardPage;
