@@ -11,6 +11,7 @@ function CommuterAnalysis({ data, update, showErrors }) {
       commuterProfile: {
         ...profile,
         enabled: !profile.enabled,
+        destinations: profile.enabled ? ["", ""] : profile.destinations,
       },
     });
   };
