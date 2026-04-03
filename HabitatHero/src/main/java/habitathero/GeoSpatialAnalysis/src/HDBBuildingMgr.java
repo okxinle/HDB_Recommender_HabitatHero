@@ -38,6 +38,15 @@ public class HDBBuildingMgr {
         hdbGJDownloader.downloadGeoJson(DATASET_ID, LOCALFILEPATH);
     }
 
+    public boolean forceDownloadGeoJson() {
+        Boolean result = DataGovAPIHandler.getInstance().pollForcedDownloadAndSave(DATASET_ID, LOCALFILEPATH);
+        return result != null && result;
+    }
+
+    public static String getLocalFilePath() {
+        return LOCALFILEPATH;
+    }
+
     public void importGeoJsonToSQLDb() {
         hdbDbImporter.importGeoJsonToSQLDb(LOCALFILEPATH);
     }

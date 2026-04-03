@@ -53,6 +53,7 @@ public class HDBBuildingSQLCreator extends SQLDbConnect {
 
         } catch (Exception e) {
             e.printStackTrace();
+            throw new IllegalStateException("Failed to create hdb_building table.", e);
         }
     }
 }
