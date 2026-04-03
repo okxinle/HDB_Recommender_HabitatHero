@@ -100,38 +100,55 @@ mvn clean spring-boot:run
 
 If successful, you will see `Tomcat started on port(s): 8080 (http)` and `Started Main in X seconds` in the terminal.
 
-## Step 5: Verifying the Setup
+## Step 5: Verifying the Setup & Syncing Data
 
-To ensure your database and API connections are working perfectly, run these two tests in Postman:
+To ensure your database and API connections are working perfectly, run these tests in Postman. **You must run these in exact order.**
 
-### Test 1a: Register an Account (Generates your VIP Token)
+### Test 1a: Register an Account 
 * **Method:** POST
 * **URL:** `http://localhost:8080/api/auth/register`
 * **Body (raw JSON):**
-```json
-{
-    "email": "test@habitathero.com",
-    "password": "password123"
-}
-```
+  ```json
+  {
+      "email": "test@habitathero.com",
+      "password": "password123"
+  }
+  ```
 * **Expected:** `200 OK` and a response containing your long JWT token string. Copy this token.
 
-### Test 1b: Login to an Existing Account (If Token Expires or Restarting)
-* **Method:** POST
-* **URL:** `http://localhost:8080/api/auth/login`
+### Test 1b: Promote Your Account to Admin (Crucial)
+By default, newly registered accounts are standard users and cannot trigger data syncs. You must manually promote your test account.
+1. Open the **Query Tool** in pgAdmin for the `habitathero_db`.
+2. Run this exact SQL command: 
+   ```sql
+   UPDATE user_accounts SET role = 'ADMIN';
+   ```
+3. **Important:** Go back to Postman and run a **POST** to `http://localhost:8080/api/auth/login` using the exact same JSON body as Test 1a. Copy the *new* long JWT token string. This is your Admin Bearer Token.
 
 ### Test 2: Trigger the HDB Data Sync
 * **Method:** POST
 * **URL:** `http://localhost:8080/api/admin/trigger-sync`
-* **Auth:** Go to the Authorization tab -> Select "Bearer Token" -> Paste your JWT token.
-* **Expected:** `200 OK` with the message "Sync triggered and completed successfully." You should also see Hibernate logging the database inserts in your Spring Boot terminal!
+* **Auth:** Go to the Authorization tab -> Select "Bearer Token" -> Paste your JWT Admin token.
+* **Expected:** `200 OK`. You should see Hibernate logging the database inserts in your terminal. This downloads the raw resale pricing (~228,000 rows).
 
+### Test 3: Initialize Spatial Data (The "Master Map")
+The raw dataset lacks coordinates. This step automatically downloads the GeoJSON map of Singapore and creates a spatial reference table.
+* **Method:** POST
+* **URL:** `http://localhost:8080/api/admin/init-hdb-building`
+* **Auth:** Go to the Authorization tab -> Select "Bearer Token" -> Paste your JWT Admin token.
+* **Expected:** `200 OK`. Check your terminal to watch the GeoJSON parsing.
 
+### Test 4: Backfill HDB Coordinates
+This final step matches our pricing records to the spatial map so they can be plotted and routed by the recommendation engine.
+* **Method:** POST
+* **URL:** `http://localhost:8080/api/admin/backfill-coordinates`
+* **Auth:** Go to the Authorization tab -> Select "Bearer Token" -> Paste your JWT Admin token.
+* **Expected:** `200 OK`. The response payload will show `candidatesScanned`, `updatedBlocks`, and `unresolvedBlocks`. Check your terminal to watch the service batch-process the coordinates!
 
 ---
 
 ## Troubleshooting
 
-* **`ApplicationContextException: Unable to start web server`**: Usually means Port 8080 is already in use by another app, or your PostgreSQL database is turned off.
-* **`403 Forbidden` on Login/Register**: Ensure your Postman request is set to POST and not GET.
+* **`ApplicationContextException: Unable to start web server`**: Port 8080 is already in use by another app, or your PostgreSQL database is turned off.
+* **`403 Forbidden` on `/api/admin/` endpoints**: This means your token is working, but you are not recognized as an Admin. Ensure you ran the SQL `UPDATE` command in Test 1b and **logged in again** to get a fresh token.
 * **`500 Internal Server Error` on Login/Register**: Ensure your JSON body strictly uses lowercase keys (`email`, `password`) and valid formatting.
