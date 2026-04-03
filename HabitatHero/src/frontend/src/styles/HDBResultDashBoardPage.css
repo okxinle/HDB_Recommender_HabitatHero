@@ -111,6 +111,8 @@
 }
 
 .back-btn {
+  font-family: inherit;
+  margin-top: 20px;
   border: none;
   border-radius: 8px;
   background: #00786e;
