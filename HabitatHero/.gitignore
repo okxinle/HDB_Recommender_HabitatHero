@@ -6,4 +6,6 @@ src/main/resources/application.properties
 .env.local
 *.key
 *.pem
+src/main/resources/*api*key*.txt
+src/main/resources/*production-key*.txt
 

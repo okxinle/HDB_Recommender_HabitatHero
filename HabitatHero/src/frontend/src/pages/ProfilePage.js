@@ -41,6 +41,21 @@ function ProfilePage() {
     fetchProfile();
   }, [navigate]);
 
+  // Format date if available
+  const formatDate = (dateString) => {
+    if (!dateString) return "Not available";
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
   return (
     <div className="profile-page">
       <div className="profile-header">
@@ -95,7 +110,7 @@ function ProfilePage() {
           <div className="profile-info">
             <span className="profile-label">Account created on</span>
             <span className="profile-value">
-              {user?.createdAt || "Not available"}
+              {formatDate(profile?.createdAt || user?.createdAt)}
             </span>
           </div>
         </div>

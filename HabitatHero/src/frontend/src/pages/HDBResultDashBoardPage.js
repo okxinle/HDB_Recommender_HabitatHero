@@ -33,6 +33,7 @@ function HDBResultDashBoardPage() {
 
   const [memberRankedBlocks, setMemberRankedBlocks] = useState([]);
   const [isLoadingMemberResults, setIsLoadingMemberResults] = useState(false);
+  const [hasQuizBeenTaken, setHasQuizBeenTaken] = useState(false);
 
   const cachedRankedBlocks = (() => {
     try {
@@ -54,6 +55,7 @@ function HDBResultDashBoardPage() {
     // If we just navigated from quiz with fresh results, show them immediately.
     if (Array.isArray(stateRankedBlocks) && stateRankedBlocks.length > 0) {
       setMemberRankedBlocks(stateRankedBlocks);
+      setHasQuizBeenTaken(true);
       localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, 'true');
       return;
     }
@@ -74,6 +76,11 @@ function HDBResultDashBoardPage() {
 
         if (!isMounted) return;
         setMemberRankedBlocks(latestResults);
+        
+        // Mark quiz as taken if there are results from backend
+        if (latestResults.length > 0) {
+          setHasQuizBeenTaken(true);
+        }
 
         localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, latestResults.length > 0 ? 'true' : 'false');
       } catch (error) {
@@ -142,6 +149,21 @@ function HDBResultDashBoardPage() {
       );
     }
 
+    // Check if quiz has never been taken
+    if (!hasQuizBeenTaken) {
+      return (
+        <div className="no-results-container">
+          <div className="no-results-hero-card">
+            <SearchX className="no-results-icon" size={42} strokeWidth={2} />
+            <h2>Start the quiz now!</h2>
+            <p>Take our personalized quiz to discover HDB flats that match your lifestyle and preferences.</p>
+            <button onClick={() => navigate('/quiz')} className="back-btn">Start Quiz</button>
+          </div>
+        </div>
+      );
+    }
+
+    // Quiz was taken but no matches found
     return (
       <div className="no-results-container">
         <div className="no-results-hero-card">
