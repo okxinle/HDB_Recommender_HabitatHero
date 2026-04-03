@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -23,6 +24,9 @@ import habitathero.repository.ResaleTransactionRepository;
 
 @Service
 public class DataPipelineService {
+
+    @Value("${DATAGOV_API_KEY:}")
+    private String dataGovApiKey;
 
     @Autowired
     private IHDBRepository hdbRepository;
@@ -44,11 +48,10 @@ public class DataPipelineService {
         try {
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();
-            String apiKey = System.getenv("DATAGOV_API_KEY");
-            if (apiKey == null || apiKey.isEmpty()) {
+            if (dataGovApiKey == null || dataGovApiKey.isEmpty()) {
                 throw new IllegalStateException("DATAGOV_API_KEY environment variable not set");
             }
-            headers.set("x-api-key", apiKey); 
+            headers.set("x-api-key", dataGovApiKey);
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
             int offset = 0;
