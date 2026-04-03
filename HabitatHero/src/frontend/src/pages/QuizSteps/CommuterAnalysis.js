@@ -3,6 +3,7 @@ import InputField from "../../components/InputField";
 function CommuterAnalysis({ data, update, showErrors }) {
   // 1. Point to the renamed path
   const profile = data.commuterProfile;
+  const isValidPostalCode = (value) => /^\d{6}$/.test((value || "").trim());
 
   const handleToggleChange = () => {
     update({
@@ -15,10 +16,12 @@ function CommuterAnalysis({ data, update, showErrors }) {
   };
 
   const handleInputChange = (field, value) => {
+    const sanitizedValue = typeof value === "string" ? value.replace(/\D/g, "").slice(0, 6) : "";
+
     // Handling the 'destinations' array for REQ-1.5
     if (field === "destA" || field === "destB") {
       const newDests = [...profile.destinations];
-      newDests[field === "destA" ? 0 : 1] = value;
+      newDests[field === "destA" ? 0 : 1] = sanitizedValue;
       update({
         ...data,
         commuterProfile: { ...profile, destinations: newDests }
@@ -52,23 +55,35 @@ function CommuterAnalysis({ data, update, showErrors }) {
         <>
           <div className="multi-commuter-analysis-section">
             <InputField
-              label="Commuter A Destination"
+              label="Commuter A Postal Code"
               value={profile.destinations[0]}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              placeholder="e.g. 670180"
               onChange={(e) => handleInputChange("destA", e.target.value)}
             />
-            {showErrors && profile.destinations[0].trim() === "" && (
-              <p className="field-error">Please enter Commuter A destination.</p>
+            <p className="field-helper">Enter a 6-digit Singapore postal code</p>
+            {showErrors && !isValidPostalCode(profile.destinations[0]) && (
+              <p className="field-error">Please enter a valid 6-digit postal code for Commuter A.</p>
             )}
           </div>
 
           <div className="multi-commuter-analysis-section">
             <InputField
-              label="Commuter B Destination"
+              label="Commuter B Postal Code"
               value={profile.destinations[1]}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              placeholder="e.g. 560123"
               onChange={(e) => handleInputChange("destB", e.target.value)}
             />
-            {showErrors && profile.destinations[1].trim() === "" && (
-              <p className="field-error">Please enter Commuter B destination.</p>
+            <p className="field-helper">Enter a 6-digit Singapore postal code</p>
+            {showErrors && !isValidPostalCode(profile.destinations[1]) && (
+              <p className="field-error">Please enter a valid 6-digit postal code for Commuter B.</p>
             )}
           </div>
 

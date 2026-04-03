@@ -12,8 +12,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import habitathero.GeoSpatialAnalysis.src.Coordinate;
+import habitathero.GeoSpatialAnalysis.src.HDBBuildingMgr;
 import habitathero.control.RecommendationEngine;
 import habitathero.control.UserProfileDbManager;
+import habitathero.entity.CommuterProfile;
+import habitathero.entity.Coordinates;
 import habitathero.entity.HDBBlock;
 import habitathero.entity.UserAccount;
 import habitathero.entity.UserProfile;
@@ -48,8 +52,11 @@ public class RecommendationController {
      *         500 ISE       + {status, message}       on unexpected error
      */
     @PostMapping("/recommend")
-    public ResponseEntity<?> recommend(@RequestBody UserProfile profile, Authentication authentication) {
+    public ResponseEntity<?> recommend(@RequestBody RecommendationRequest request, Authentication authentication) {
         try {
+            UserProfile profile = request;
+            applyPostalCodeDestinations(request, profile);
+
             List<HDBBlock> recommendedBlocks = engine.generateRecommendations(profile);
 
             // Persist only for authenticated members.
@@ -86,5 +93,42 @@ public class RecommendationController {
                     "message", "An unexpected error occurred."
                 ));
         }
+    }
+
+    private void applyPostalCodeDestinations(RecommendationRequest request, UserProfile profile) {
+        if (request == null || profile == null) {
+            return;
+        }
+
+        CommuterProfile commuterProfile = profile.getCommuterProfile();
+        if (commuterProfile == null) {
+            return;
+        }
+
+        if (hasText(request.getPostalCodeA())) {
+            commuterProfile.setDestinationA(resolveDestination(request.getPostalCodeA(), "postalCodeA"));
+        }
+
+        if (hasText(request.getPostalCodeB())) {
+            commuterProfile.setDestinationB(resolveDestination(request.getPostalCodeB(), "postalCodeB"));
+        }
+    }
+
+    private Coordinates resolveDestination(String postalCode, String fieldName) {
+        Coordinate geospatialCoordinate = HDBBuildingMgr.getInstance().postalCodeToCoordinate(postalCode);
+
+        if (geospatialCoordinate == null ||
+            (Double.compare(geospatialCoordinate.getLatitude(), -1.0) == 0 &&
+             Double.compare(geospatialCoordinate.getLongitude(), -1.0) == 0)) {
+            throw new IllegalArgumentException(
+                "Invalid " + fieldName + ": unable to resolve coordinates for postal code " + postalCode + "."
+            );
+        }
+
+        return new Coordinates(geospatialCoordinate.getLatitude(), geospatialCoordinate.getLongitude());
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 }

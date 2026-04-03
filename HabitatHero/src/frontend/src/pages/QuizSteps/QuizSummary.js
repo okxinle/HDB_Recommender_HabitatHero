@@ -140,14 +140,14 @@ function QuizSummary({ data }) {
             {cp.enabled && (
               <>
                 <div className="summary-row">
-                  <span className="summary-key">• Commuter A Destination</span>
+                  <span className="summary-key">• Commuter A Postal Code</span>
                   <span className="summary-value">
                     {cp.destinations[0] || "Not entered"}
                   </span>
                 </div>
 
                 <div className="summary-row">
-                  <span className="summary-key">• Commuter B Destination</span>
+                  <span className="summary-key">• Commuter B Postal Code</span>
                   <span className="summary-value">
                     {cp.destinations[1] || "Not entered"}
                   </span>

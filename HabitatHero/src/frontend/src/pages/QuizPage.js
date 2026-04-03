@@ -15,15 +15,7 @@ const PREFERENCE_NAME_MAP = {
   convenience: "Convenience"
 };
 
-const parseCoordinateInput = (value) => {
-  if (typeof value !== "string") return null;
-  const [latText, lngText] = value.split(",").map((part) => part.trim());
-  const lat = Number(latText);
-  const lng = Number(lngText);
-
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-  return { lat, lng };
-};
+const isValidPostalCode = (value) => /^\d{6}$/.test((value || "").trim());
 
 const getCurrentUserId = () => {
   try {
@@ -37,6 +29,8 @@ const getCurrentUserId = () => {
 
 const buildBackendPayload = (formData, preferredTowns) => {
   const [minBudget = 0, maxBudget = 0] = formData.structuralConstraints.budgetRange || [];
+  const postalCodeA = (formData.commuterProfile.destinations[0] || "").trim();
+  const postalCodeB = (formData.commuterProfile.destinations[1] || "").trim();
 
   return {
     userId: getCurrentUserId(),
@@ -48,9 +42,11 @@ const buildBackendPayload = (formData, preferredTowns) => {
     },
     commuterProfile: {
       isEnabled: formData.commuterProfile.enabled,
-      destinationA: parseCoordinateInput(formData.commuterProfile.destinations[0]),
-      destinationB: parseCoordinateInput(formData.commuterProfile.destinations[1])
+      destinationA: null,
+      destinationB: null
     },
+    postalCodeA,
+    postalCodeB,
     softConstraints: formData.softConstraints.map((constraint) => ({
       factorName: PREFERENCE_NAME_MAP[constraint.preferenceName] || constraint.preferenceName,
       priorityWeight: constraint.mode === "weighted" ? constraint.weight : 0,
@@ -243,9 +239,11 @@ const submitQuiz = async () => {
   const isStep3Valid =
     !formData.commuterProfile.enabled ||
     (
-      formData.commuterProfile.destinations[0].trim() !== "" &&
-      formData.commuterProfile.destinations[1].trim() !== ""
+      isValidPostalCode(formData.commuterProfile.destinations[0]) &&
+      isValidPostalCode(formData.commuterProfile.destinations[1])
     );
+
+  const isFinalSubmitDisabled = step === 4 && !isStep3Valid;
 
   const isCurrentStepValid = () => {
     if (step === 1) return isStep1Valid;
@@ -297,7 +295,11 @@ const submitQuiz = async () => {
         <div className="quiz-inner-content">{renderStep()}</div>
         <div className="quiz-actions">
           {step > 1 ? <button onClick={prevStep} className="btn-back">&lt; Back</button> : <div />}
-          <button onClick={step === 4 ? submitQuiz : nextStep} className="btn-next">
+          <button
+            onClick={step === 4 ? submitQuiz : nextStep}
+            className="btn-next"
+            disabled={isFinalSubmitDisabled}
+          >
             {step === 4 ? "Find My HDB Match" : "Next >"}
           </button>
         </div>
