@@ -66,6 +66,7 @@ public class RecommendationController {
 
             return ResponseEntity.ok(Map.of(
                 "status", "success",
+                "pipeline", "REAL_DB_MULTI_COMMUTER_HAVERSINE",
                 "results", recommendedBlocks
             ));
 
