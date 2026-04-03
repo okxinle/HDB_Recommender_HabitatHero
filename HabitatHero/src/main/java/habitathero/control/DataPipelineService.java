@@ -44,7 +44,11 @@ public class DataPipelineService {
         try {
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();
-            headers.set("x-api-key", "v2:5a244eb57abb2f7764779ca43c86ae26b2222a9e5458f522a5576a434a547599:D9iWv4WJNLtSbAI3MeDCL5RpntDtiRES"); 
+            String apiKey = System.getenv("DATAGOV_API_KEY");
+            if (apiKey == null || apiKey.isEmpty()) {
+                throw new IllegalStateException("DATAGOV_API_KEY environment variable not set");
+            }
+            headers.set("x-api-key", apiKey); 
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
             int offset = 0;

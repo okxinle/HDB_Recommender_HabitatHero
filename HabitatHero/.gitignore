@@ -1,2 +1,9 @@
 target/
 
+# Sensitive configuration files - DO NOT COMMIT
+src/main/resources/application.properties
+.env
+.env.local
+*.key
+*.pem
+
