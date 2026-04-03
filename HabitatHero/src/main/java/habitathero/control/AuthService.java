@@ -43,6 +43,18 @@ public class AuthService {
         return user;
     }
 
+    public UserAccount changePassword(UserAccount user, String oldPassword, String newPassword) {
+        if (user == null) {
+            throw new IllegalArgumentException("Unauthorized user");
+        }
+        if (!passwordEncoder.matches(oldPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("Current password is incorrect");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        return userRepository.save(user);
+    }
+
     public String generateToken(UserAccount user) {
         return jwtService.generateToken(user);
     }

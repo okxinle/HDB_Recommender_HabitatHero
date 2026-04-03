@@ -6,6 +6,9 @@ import { useNavigate } from "react-router-dom";
 function ProfilePage() {
   const [profile, setProfile] = useState(null);
   const [user, setUser] = useState(null);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ oldPassword: "", newPassword: "" });
+  const [passwordError, setPasswordError] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -56,6 +59,52 @@ function ProfilePage() {
     }
   };
 
+  const handlePasswordInputChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError("");
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    if (!passwordForm.oldPassword || !passwordForm.newPassword) {
+      setPasswordError("Please fill in both fields.");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:8080/api/auth/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          oldPassword: passwordForm.oldPassword,
+          newPassword: passwordForm.newPassword
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.status === "success") {
+        alert("Password updated successfully!");
+        setPasswordForm({ oldPassword: "", newPassword: "" });
+        setShowPasswordForm(false);
+      } else {
+        setPasswordError(data.message || "Failed to update password.");
+      }
+    } catch (error) {
+      setPasswordError("System error. Please try again later.");
+    }
+  };
+
   return (
     <div className="profile-page">
       <div className="profile-header">
@@ -96,10 +145,35 @@ function ProfilePage() {
             <span className="profile-label">Password</span>
             <div className="password-row">
               <span className="profile-value">********</span>
-              <button className="change-password-btn">
+              <button
+                className="change-password-btn"
+                onClick={() => setShowPasswordForm((prev) => !prev)}
+              >
                 Change Password
               </button>
             </div>
+            {showPasswordForm && (
+              <div style={{ marginTop: "12px", display: "grid", gap: "8px", maxWidth: "320px" }}>
+                <input
+                  type="password"
+                  name="oldPassword"
+                  placeholder="Old password"
+                  value={passwordForm.oldPassword}
+                  onChange={handlePasswordInputChange}
+                />
+                <input
+                  type="password"
+                  name="newPassword"
+                  placeholder="New password"
+                  value={passwordForm.newPassword}
+                  onChange={handlePasswordInputChange}
+                />
+                <button className="change-password-btn" onClick={handleChangePassword}>
+                  Update Password
+                </button>
+                {passwordError && <span style={{ color: "#b91c1c" }}>{passwordError}</span>}
+              </div>
+            )}
           </div>
         </div>
 

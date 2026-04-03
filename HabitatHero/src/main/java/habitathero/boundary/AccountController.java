@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -34,6 +35,19 @@ public class AccountController {
 
     public AccountController(AuthService authService) {
         this.authService = authService;
+    }
+
+    private UserAccount getAuthenticatedUser(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return null;
+        }
+        try {
+            String token = authHeader.substring(7);
+            String email = jwtService.extractEmail(token);
+            return userRepository.findByEmail(email).orElse(null);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     // 1. The Registration Endpoint
@@ -133,6 +147,31 @@ public class AccountController {
             return ResponseEntity.status(401).body(Map.of(
                 "message", "Invalid email or password. Attempts remaining: " + (5 - newAttempts)
             ));
+        }
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+        @RequestHeader("Authorization") String authHeader,
+        @RequestBody Map<String, String> request
+    ) {
+        UserAccount user = getAuthenticatedUser(authHeader);
+        if (user == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
+        }
+
+        String oldPassword = request.get("oldPassword");
+        String newPassword = request.get("newPassword");
+
+        if (oldPassword == null || oldPassword.isBlank() || newPassword == null || newPassword.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Old and new password are required"));
+        }
+
+        try {
+            authService.changePassword(user, oldPassword, newPassword);
+            return ResponseEntity.ok(Map.of("status", "success", "message", "Password updated successfully!"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 }
