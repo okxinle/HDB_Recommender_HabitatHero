@@ -1,6 +1,7 @@
 package habitathero.boundary;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,19 +41,23 @@ public class AccountController {
     public ResponseEntity<?> registerUser(@RequestBody Map<String, String> request) {
         String email = request.get("email");
         String password = request.get("password");
+        String name = request.get("name");
 
         try {
-            UserAccount newUser = authService.registerUser(email, password);
+            UserAccount newUser = authService.registerUser(email, password, name);
             String token = authService.generateToken(newUser);
+
+            Map<String, Object> userPayload = new HashMap<>();
+            userPayload.put("userId", newUser.getUserId());
+            userPayload.put("email", newUser.getEmail());
+            userPayload.put("name", newUser.getName());
+            userPayload.put("createdAt", newUser.getCreatedAt());
+            userPayload.put("isActive", newUser.isActive());
 
             return ResponseEntity.ok(Map.of(
                 "status", "success",
                 "token", token,
-                "user", Map.of(
-                    "userId", newUser.getUserId(),
-                    "email", newUser.getEmail(),
-                    "isActive", newUser.isActive()
-                )
+                "user", userPayload
             ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -97,14 +102,18 @@ public class AccountController {
             userRepository.save(user);
 
             String token = jwtService.generateToken(user);
+
+            Map<String, Object> userPayload = new HashMap<>();
+            userPayload.put("userId", user.getUserId());
+            userPayload.put("email", user.getEmail());
+            userPayload.put("name", user.getName());
+            userPayload.put("createdAt", user.getCreatedAt());
+            userPayload.put("isActive", user.isActive());
+
             return ResponseEntity.ok(Map.of(
                 "status", "success",
                 "token", token,
-                "user", Map.of(
-                    "userId", user.getUserId(),
-                    "email", user.getEmail(),
-                    "isActive", user.isActive()
-                )
+                "user", userPayload
             ));
         } else {
             // FAILED LOGIN: Increment attempts

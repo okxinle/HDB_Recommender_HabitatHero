@@ -1,5 +1,7 @@
 package habitathero.control;
 
+import java.time.LocalDateTime;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +22,7 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public UserAccount registerUser(String email, String password) {
+    public UserAccount registerUser(String email, String password, String name) {
         if (userRepository.findByEmail(email).isPresent()) {
             throw new IllegalArgumentException("Registration Invalid. Account already exists");
         }
@@ -28,6 +30,8 @@ public class AuthService {
         UserAccount newUser = new UserAccount();
         newUser.setEmail(email);
         newUser.setPasswordHash(passwordEncoder.encode(password));
+        newUser.setName(name);
+        newUser.setCreatedAt(LocalDateTime.now());
         return userRepository.save(newUser);
     }
 

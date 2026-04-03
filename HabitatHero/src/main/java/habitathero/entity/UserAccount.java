@@ -30,6 +30,12 @@ public class UserAccount {
     @Column(nullable = false)
     private String passwordHash;
 
+    @Column
+    private String name;
+
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
     // role column
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "varchar(20) default 'USER'")
@@ -55,6 +61,12 @@ public class UserAccount {
     
     public String getPasswordHash() { return passwordHash; }
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     
     public boolean isActive() { return isActive; }
     public void setActive(boolean active) { isActive = active; }
