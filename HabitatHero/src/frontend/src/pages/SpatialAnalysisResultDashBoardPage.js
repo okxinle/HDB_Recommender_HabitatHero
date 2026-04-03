@@ -3,7 +3,7 @@ import {MapContainer, TileLayer, Marker, Popup, Circle, Polygon
 } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import '../styles/ResultDetailPage.css';
+import '../styles/SpatialAnalysisResultDashBoardPage.css';
 
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -17,7 +17,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-function ResultDetailPage() {
+function SpatialAnalysisResultDashBoardPage() {
   const blockPosition = [1.3696, 103.8495];
 
   const reserveSite = [
@@ -117,4 +117,4 @@ function ResultDetailPage() {
   );
 }
 
-export default ResultDetailPage;
+export default SpatialAnalysisResultDashBoardPage;

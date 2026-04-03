@@ -1,14 +1,15 @@
 package habitathero.repository;
 
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
 import habitathero.entity.HDBBlock;
-import java.util.List;
 
-public interface IHDBRepository {
-
-    /**
-     * Returns all HDB blocks available in the data source.
-     *
-     * @return a list of all HDBBlock objects
-     */
-    List<HDBBlock> getAllBlocks();
+@Repository
+public interface IHDBRepository extends JpaRepository<HDBBlock, Integer> {
+    
+    // NEW: Helps the pipeline check if a building already exists
+    Optional<HDBBlock> findByBlockNumberAndStreetName(String blockNumber, String streetName);
 }

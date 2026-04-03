@@ -1,4 +1,4 @@
-import InputField from "../components/InputField";
+import InputField from "../../components/InputField";
 
 function CommuterAnalysis({ data, update, showErrors }) {
   // 1. Point to the renamed path

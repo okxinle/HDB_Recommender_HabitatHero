@@ -8,10 +8,10 @@ import CreateAccountPage from "./pages/CreateAccountPage";
 import LoginPage from './pages/LoginPage';
 import Footer from "./components/Footer";
 import QuizPage from "./pages/QuizPage";
-import ResultsPage from './pages/ResultsPage';
+import HDBResultDashBoardPage from './pages/HDBResultDashBoardPage';
 import ProfilePage from './pages/ProfilePage';
 import ResourcesPage from './pages/ResourcesPage';
-import ResultDetailPage from './pages/ResultDetailPage';
+import SpatialAnalysisResultDashBoardPage from './pages/SpatialAnalysisResultDashBoardPage';
 
 function App() {
   useEffect(() => {
@@ -32,10 +32,10 @@ function App() {
           <Route path="/signup" element={<CreateAccountPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/quiz" element={<QuizPage />} />
-          <Route path="/results" element={<ResultsPage />} />
+          <Route path="/results" element={<HDBResultDashBoardPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/result-detail" element={<ResultDetailPage />} />
+          <Route path="/result-detail" element={<SpatialAnalysisResultDashBoardPage />} />
         </Routes>
       </main>
 
