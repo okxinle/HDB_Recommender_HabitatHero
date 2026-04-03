@@ -6,6 +6,7 @@ import InputField from "../components/InputField";
 
 function CreateAccountPage() {
   const navigate = useNavigate();
+  const [errorMessage, setErrorMessage] = useState("");
 
   // 1. State for registration form data
   const [formData, setFormData] = useState({
@@ -22,18 +23,29 @@ function CreateAccountPage() {
   // 2. Handle Registration (UC-01)
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage("");
 
-    // --- TESTING LOGIC START ---
-    console.log("Mocking Registration for UC-01:", formData);
-    
-    // In a real scenario, you'd await fetch("/api/auth/register", ...) here.
-    // For testing, we simulate a successful 200 OK response.
-    
-    alert("Account created successfully! Please log in.");
-    
-    // Redirect to the Login Page as requested
-    navigate("/login"); 
-    // --- TESTING LOGIC END ---
+    try {
+      const response = await fetch("http://localhost:8080/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.status === "success") {
+        alert("Account created successfully! Please log in.");
+        navigate("/login");
+      } else {
+        setErrorMessage(data.message || "Registration failed. Please try again.");
+      }
+    } catch (error) {
+      setErrorMessage("System error. Please try again later.");
+    }
   };
 
   return (
@@ -48,6 +60,8 @@ function CreateAccountPage() {
             Already have an account?{" "}
             <Link to="/login" className="auth-switch-link">Log in</Link>
           </p>
+
+          {errorMessage && <p className="error-text" style={{ color: "red" }}>{errorMessage}</p>}
 
           <form className="create-form" onSubmit={handleSubmit}>
             <InputField
