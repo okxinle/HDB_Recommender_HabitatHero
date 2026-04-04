@@ -52,16 +52,6 @@ function HDBResultDashBoardPage() {
       .replace(/(^|\s|\/)\S/g, (char) => char.toUpperCase());
   };
 
-  const formatStreetName = (street) => {
-    if (!street) return "";
-
-    return street
-      .toLowerCase()
-      .replace(/(^\w|\s\w)/g, (char) => char.toUpperCase());
-  };
-
-  const submittedPreferences = location.state?.submittedPreferences || null;
-
   const stateRankedBlocks = Array.isArray(location.state?.rankedBlocks)
     ? location.state.rankedBlocks
     : null;
@@ -211,85 +201,6 @@ function HDBResultDashBoardPage() {
       </div>
 
       <div className="results-layout">
-      {submittedPreferences && (
-        <aside className="preferences-panel">
-          <div className="preferences-card">
-            <h2 className="preferences-title">Your Preferences</h2>
-            <hr className="preferences-divider" />
-
-            <div className="preferences-content">
-              <div className="preferences-section">
-                <p>
-                  <strong>Budget:</strong>{" "}
-                  {submittedPreferences.structuralConstraints?.budgetRange?.length === 2
-                    ? `Up to ${formatCurrency(
-                        submittedPreferences.structuralConstraints.budgetRange[1]
-                      )}`
-                    : "N/A"}
-                </p>
-
-                <p>
-                  <strong>Preferred Towns:</strong>{" "}
-                  {submittedPreferences.structuralConstraints?.preferredTowns?.length
-                    ? submittedPreferences.structuralConstraints.preferredTowns.join(", ")
-                    : "N/A"}
-                </p>
-
-                <p>
-                  <strong>Flat Type:</strong>{" "}
-                  {submittedPreferences.structuralConstraints?.preferredFlatType || "N/A"}
-                </p>
-
-                <p>
-                  <strong>Minimum Lease:</strong>{" "}
-                  {submittedPreferences.structuralConstraints?.minLeaseYears
-                    ? `${submittedPreferences.structuralConstraints.minLeaseYears} years`
-                    : "N/A"}
-                </p>
-              </div>
-
-              <div className="preferences-section">
-                <p>
-                  <strong>Solar Orientation:</strong>{" "}
-                  {submittedPreferences.softConstraints?.find(
-                    (item) => item.preferenceName === "solarOrientation"
-                  )?.mode || "N/A"}
-                </p>
-
-                <p>
-                  <strong>Acoustic Comfort:</strong>{" "}
-                  {submittedPreferences.softConstraints?.find(
-                    (item) => item.preferenceName === "acousticComfort"
-                  )?.mode || "N/A"}
-                </p>
-
-                <p>
-                  <strong>Convenience:</strong>{" "}
-                  {submittedPreferences.softConstraints?.find(
-                    (item) => item.preferenceName === "convenience"
-                  )?.mode || "N/A"}
-                </p>
-              </div>
-
-              <div className="preferences-section">
-                <p>
-                  <strong>Status:</strong>{" "}
-                  {submittedPreferences.commuterProfile?.enabled ? "Enabled" : "Disabled"}
-                </p>
-              </div>
-            </div>
-
-            <button
-              className="modify-btn"
-              onClick={() => navigate("/quiz?step=1")}
-            >
-              <Pencil size={14} style={{ marginRight: "8px" }} />
-              Modify Preferences
-            </button>
-          </div>
-        </aside>
-      )}
-
       <section className="results-panel">
         <div className="results-grid">
           {rankedBlocks.map((item, index) => {
