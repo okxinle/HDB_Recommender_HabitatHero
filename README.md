@@ -145,6 +145,52 @@ This final step matches our pricing records to the spatial map so they can be pl
 * **Auth:** Go to the Authorization tab -> Select "Bearer Token" -> Paste your JWT Admin token.
 * **Expected:** `200 OK`. The response payload will show `candidatesScanned`, `updatedBlocks`, and `unresolvedBlocks`. Check your terminal to watch the service batch-process the coordinates!
 
+## POI Data Ingestion (Functional Steps 1-6)
+
+Use this flow when you want live Singapore POI data for Convenience scoring.
+
+### Step 1: Start Backend
+Run the Spring Boot backend first so the admin API is reachable.
+
+### Step 2: Install Python Dependency
+From the `HabitatHero` folder:
+
+```bash
+pip install requests
+```
+
+### Step 3: Prepare a Valid Login
+The endpoint `/api/admin/pois/load` is protected, so the script must authenticate.
+Use any valid application account (email and password).
+
+### Step 4: Run POI Fetch + Load Script
+From the `HabitatHero` folder, run:
+
+```bash
+python fetch_sg_pois.py --chunk-size 500 --email <your_email> --password <your_password>
+```
+
+This script fetches OSM POIs for Singapore and loads them into `point_of_interest`.
+
+### Step 5: What Data Is Loaded
+The script ingests and maps these categories:
+- `amenity=school` -> `SCHOOL`
+- `amenity=food_court` or `amenity=hawker_centre` -> `HAWKER_CENTRE`
+- `shop=supermarket` -> `SUPERMARKET`
+- `leisure=park` -> `PARK`
+- `amenity=hospital` -> `HOSPITAL`
+- `leisure=playground` -> `PLAYGROUND`
+
+### Step 6: Verify in pgAdmin
+Refresh your server. You should see "point_of_interest" table.
+
+Run these SQL checks:
+
+```sql
+SELECT COUNT(*) FROM point_of_interest;
+SELECT category, COUNT(*) FROM point_of_interest GROUP BY category ORDER BY category;
+```
+
 ---
 
 ## Troubleshooting
