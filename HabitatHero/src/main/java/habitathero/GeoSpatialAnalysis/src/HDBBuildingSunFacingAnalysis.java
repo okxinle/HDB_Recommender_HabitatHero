@@ -43,11 +43,8 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
         JSONObject geomJson = getHDBBuildingGeom(postalCode);
         JSONObject output = new JSONObject();
 
-        if (geomJson == null || geomJson.isEmpty()) {
-            output.put("postalCode", postalCode);
-            output.put("status", "NOT_FOUND");
-            output.put("message", "Building geometry not found for postal code");
-            return output;
+        if (isInvalidPostalCode(geomJson)) {
+            return invalidPostalCodeResult(postalCode);
         }
 
         JSONArray coordinates = geomJson.optJSONArray("coordinates");
@@ -232,6 +229,19 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
             closeConnection();
             return null;
         }
+    }
+
+    private boolean isInvalidPostalCode(JSONObject geomJson) {
+        return geomJson == null || geomJson.isEmpty();
+    }
+
+    private JSONObject invalidPostalCodeResult(String postalCode) {
+        System.out.println("ERROR: Invalid postal code");
+        JSONObject output = new JSONObject();
+        output.put("postalCode", postalCode);
+        output.put("status", "INVALID_INPUT");
+        output.put("error", "Invalid postal code: unable to resolve coordinates");
+        return output;
     }
 
     private JSONArray getOuterRing(JSONArray coordinates) {

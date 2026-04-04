@@ -22,6 +22,9 @@ public class TransportLineSQLHandler extends SQLDbConnect {
     public JSONObject calMinDist(String postalCode) {
         System.out.println("Calculating minimum distance for postal code " + postalCode);
         Coordinate coords = HDBBuildingMgr.getInstance().postalCodeToCoordinate(postalCode);
+        if (isInvalidCoordinate(coords)) {
+            return invalidPostalCodeResult(postalCode, null);
+        }
         return calMinDist(coords);
     }
 
@@ -84,6 +87,9 @@ public class TransportLineSQLHandler extends SQLDbConnect {
     public JSONObject calMinDist(String postalCode, double radius) {
         System.out.println("Calculating minimum distance for postal code " + postalCode + " with radius " + radius);
         Coordinate coords = HDBBuildingMgr.getInstance().postalCodeToCoordinate(postalCode);
+        if (isInvalidCoordinate(coords)) {
+            return invalidPostalCodeResult(postalCode, radius);
+        }
         return calMinDist(coords, radius);
     }
 
@@ -150,6 +156,22 @@ public class TransportLineSQLHandler extends SQLDbConnect {
         }
 
         result.put("search_radius", radius);
+        return result;
+    }
+
+    private boolean isInvalidCoordinate(Coordinate coords) {
+        return coords == null || (coords.getLatitude() == -1 && coords.getLongitude() == -1);
+    }
+
+    private JSONObject invalidPostalCodeResult(String postalCode, Double radius) {
+        System.out.println("ERROR: Invalid postal code");
+        JSONObject result = new JSONObject();
+        result.put("status", "INVALID_INPUT");
+        result.put("error", "Invalid postal code: unable to resolve coordinates");
+        result.put("postalCode", postalCode == null ? "" : postalCode);
+        if (radius != null) {
+            result.put("search_radius", radius);
+        }
         return result;
     }
 
