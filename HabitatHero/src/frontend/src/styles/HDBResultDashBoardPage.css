@@ -115,6 +115,10 @@
   gap: 6px;
 }
 
+.details-link {
+  text-decoration: none;
+}
+
 .back-btn {
   font-family: inherit;
   margin-top: 20px;

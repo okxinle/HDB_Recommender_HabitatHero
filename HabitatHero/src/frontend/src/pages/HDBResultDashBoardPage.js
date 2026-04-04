@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { SearchX, Pencil, ArrowRight } from 'lucide-react';
+import { SearchX, ArrowRight } from 'lucide-react';
 import '../styles/HDBResultDashBoardPage.css';
 
 const TEMP_RESULTS_KEY = 'temporaryGuestResults';
@@ -254,10 +254,12 @@ function HDBResultDashBoardPage() {
                     >
                       {formatMatchScore(globalMatchIndex)}
                     </div>
+                    <Link to={`/result-detail/blkid-${blockId}`} state={{ block }} className='details-link'>
                     <button className="view-details-btn">
                       View Details
                       <ArrowRight size={14} />
                     </button>
+                  </Link>
                   </div>
                 </div>
 
