@@ -57,10 +57,9 @@ public class RecommendationController {
     @PostMapping("/recommend")
     public ResponseEntity<?> recommend(@RequestBody RecommendationRequest request, Authentication authentication) {
         try {
-            UserProfile profile = request;
-            applyPostalCodeDestinations(request, profile);
+            applyPostalCodeDestinations(request, request);
 
-            List<HDBBlock> recommendedBlocks = engine.generateRecommendations(profile);
+            List<HDBBlock> recommendedBlocks = engine.generateRecommendations(request);
 
             // Persist only for authenticated members.
             if (authentication != null && authentication.isAuthenticated() && authentication.getPrincipal() instanceof UserAccount userAccount) {

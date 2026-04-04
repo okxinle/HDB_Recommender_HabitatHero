@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -15,8 +16,10 @@ import habitathero.control.DataPipelineService;
 import habitathero.control.HdbSpatialImportService;
 import habitathero.entity.AuditLog;
 import habitathero.entity.HDBBlock;
+import habitathero.entity.PointOfInterest;
 import habitathero.repository.AuditLogRepository;
 import habitathero.repository.IHDBRepository;
+import habitathero.repository.PoiRepository;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -44,6 +47,9 @@ public class SystemAdminController {
 
     @Autowired
     private AuditLogRepository auditLogRepository;
+
+    @Autowired
+    private PoiRepository poiRepository;
 
     // Headless API to manually trigger the sync (useful for testing)
     @PostMapping("/trigger-sync")
@@ -91,6 +97,34 @@ public class SystemAdminController {
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
                 "error", "hdb_building initialization failed: " + e.getMessage()
+            ));
+        }
+    }
+
+    @PostMapping("/pois/load")
+    public ResponseEntity<?> loadPois(@RequestBody List<PointOfInterest> pois) {
+        if (pois == null || pois.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "status", "error",
+                "message", "POI payload must contain at least one item."
+            ));
+        }
+
+        try {
+            List<PointOfInterest> saved = poiRepository.saveAll(pois);
+            return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "savedCount", saved.size()
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "status", "error",
+                "message", e.getMessage()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "status", "error",
+                "message", "Failed to load POIs: " + e.getMessage()
             ));
         }
     }

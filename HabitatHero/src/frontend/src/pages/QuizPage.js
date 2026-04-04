@@ -31,6 +31,18 @@ const buildBackendPayload = (formData, preferredTowns) => {
   const [minBudget = 0, maxBudget = 0] = formData.structuralConstraints.budgetRange || [];
   const postalCodeA = (formData.commuterProfile.destinations[0] || "").trim();
   const postalCodeB = (formData.commuterProfile.destinations[1] || "").trim();
+  const convenienceConstraint = formData.softConstraints.find(
+    (constraint) => constraint.preferenceName === "convenience"
+  ) || { mode: "ignore", weight: 0, selectedAmenities: [], parentsAddress: "" };
+
+  const convenienceMode = String(convenienceConstraint.mode || "ignore").toUpperCase();
+  const convenienceWeight = convenienceMode === "WEIGHTED"
+    ? Number(convenienceConstraint.weight || 0)
+    : 0;
+  const selectedAmenities = Array.isArray(convenienceConstraint.selectedAmenities)
+    ? convenienceConstraint.selectedAmenities
+    : [];
+  const parentsPostalCode = (convenienceConstraint.parentsAddress || "").trim();
 
   return {
     userId: getCurrentUserId(),
@@ -47,6 +59,10 @@ const buildBackendPayload = (formData, preferredTowns) => {
     },
     postalCodeA,
     postalCodeB,
+    convenienceMode,
+    convenienceWeight,
+    selectedAmenities,
+    parentsPostalCode,
     softConstraints: formData.softConstraints.map((constraint) => ({
       factorName: PREFERENCE_NAME_MAP[constraint.preferenceName] || constraint.preferenceName,
       priorityWeight: constraint.mode === "weighted" ? constraint.weight : 0,
