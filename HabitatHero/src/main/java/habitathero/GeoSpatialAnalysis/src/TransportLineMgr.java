@@ -10,7 +10,7 @@ public class TransportLineMgr {
 
     public static void main(String[] args) {
         TransportLineMgr tlMgr = TransportLineMgr.getInstance();
-        tlMgr.getNoiseLevel("670180");
+        tlMgr.getNoiseLevel("670180000");
     }
 
     // singleton initalization of TransportLineMgr
@@ -38,11 +38,11 @@ public class TransportLineMgr {
         }
 
         System.out.println("Noise result missing for postal code " + postalCode);
-        if (isInvalidPostalCode(postalCode)) {
-            return invalidPostalCodeResult(postalCode, null);
+        JSONObject computedResult = calNoiseLevel(postalCode);
+        if (isInvalidAnalysisResult(computedResult)) {
+            return computedResult;
         }
-
-        return calNoiseLevel(postalCode);
+        return computedResult;
     }
 
     public JSONObject getNoiseLevel(String postalCode, double radius) {
@@ -60,11 +60,11 @@ public class TransportLineMgr {
         }
 
         System.out.println("Noise result missing for postal code " + postalCode + " with radius " + radius);
-        if (isInvalidPostalCode(postalCode)) {
-            return invalidPostalCodeResult(postalCode, radius);
+        JSONObject computedResult = calNoiseLevel(postalCode, radius);
+        if (isInvalidAnalysisResult(computedResult)) {
+            return computedResult;
         }
-
-        return calNoiseLevel(postalCode, radius);
+        return computedResult;
     }
 
     private JSONObject calNoiseLevel(String postalCode) {
@@ -113,23 +113,6 @@ public class TransportLineMgr {
         return result != null && !result.isEmpty()
                 && !"NOT_FOUND".equalsIgnoreCase(result.optString("status", ""))
                 && !"INVALID_INPUT".equalsIgnoreCase(result.optString("status", ""));
-    }
-
-    private boolean isInvalidPostalCode(String postalCode) {
-        Coordinate coords = HDBBuildingMgr.getInstance().postalCodeToCoordinate(postalCode);
-        return coords == null || (coords.getLatitude() == -1 && coords.getLongitude() == -1);
-    }
-
-    private JSONObject invalidPostalCodeResult(String postalCode, Double radius) {
-        System.out.println("ERROR: Invalid postalCode");
-        JSONObject result = new JSONObject();
-        result.put("status", "INVALID_INPUT");
-        result.put("error", "Invalid postal code: unable to resolve coordinates");
-        result.put("postalCode", postalCode == null ? "" : postalCode);
-        if (radius != null) {
-            result.put("search_radius", radius);
-        }
-        return result;
     }
 
     private boolean isInvalidAnalysisResult(JSONObject result) {

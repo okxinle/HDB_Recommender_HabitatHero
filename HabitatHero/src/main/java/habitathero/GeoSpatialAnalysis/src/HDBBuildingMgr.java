@@ -9,7 +9,7 @@ public class HDBBuildingMgr {
     private HDBBuildingSunFacingResultSQLHandler hdbSunFacingResultSQLHandler;
 
     public static void main(String[] args) {
-        HDBBuildingMgr.getInstance().getSunFacing("670180");
+        HDBBuildingMgr.getInstance().getSunFacing("670180000");
     }
 
     // singleton initalization
@@ -34,11 +34,10 @@ public class HDBBuildingMgr {
             return storedResult;
         }
 
-        if (isInvalidPostalCode(postalCode)) {
-            return invalidPostalCodeResult(postalCode);
-        }
-
         JSONObject computedResult = calSunFacing(postalCode);
+        if (isInvalidAnalysisResult(computedResult)) {
+            return computedResult;
+        }
         hdbSunFacingResultSQLHandler.saveSunFacingAnalysis(computedResult);
         return computedResult;
     }
@@ -53,11 +52,10 @@ public class HDBBuildingMgr {
             return storedResult;
         }
 
-        if (isInvalidPostalCode(postalCode)) {
-            return invalidPostalCodeResult(postalCode);
-        }
-
         JSONObject computedResult = calSunFacing(postalCode, sunAzimuth);
+        if (isInvalidAnalysisResult(computedResult)) {
+            return computedResult;
+        }
         hdbSunFacingResultSQLHandler.saveSunFacingAnalysis(computedResult);
         return computedResult;
     }
@@ -72,11 +70,10 @@ public class HDBBuildingMgr {
             return storedResult;
         }
 
-        if (isInvalidPostalCode(postalCode)) {
-            return invalidPostalCodeResult(postalCode);
-        }
-
         JSONObject computedResult = calSunFacing(postalCode, eastAzimuth, westAzimuth);
+        if (isInvalidAnalysisResult(computedResult)) {
+            return computedResult;
+        }
         hdbSunFacingResultSQLHandler.saveSunFacingAnalysis(computedResult);
         return computedResult;
     }
@@ -103,18 +100,16 @@ public class HDBBuildingMgr {
                 && !"INVALID_INPUT".equalsIgnoreCase(result.optString("status", ""));
     }
 
-    private boolean isInvalidPostalCode(String postalCode) {
-        Coordinate coords = postalCodeToCoordinate(postalCode);
-        return coords == null || (coords.getLatitude() == -1 && coords.getLongitude() == -1);
-    }
+    private boolean isInvalidAnalysisResult(JSONObject result) {
+        if (result == null || result.isEmpty()) {
+            return true;
+        }
 
-    private JSONObject invalidPostalCodeResult(String postalCode) {
-        System.out.println("ERROR: Invalid postalCode");
-        JSONObject result = new JSONObject();
-        result.put("status", "INVALID_INPUT");
-        result.put("error", "Invalid postal code: unable to resolve coordinates");
-        result.put("postalCode", postalCode == null ? "" : postalCode);
-        return result;
+        String status = result.optString("status", "");
+        return "INVALID_INPUT".equalsIgnoreCase(status)
+                || "NOT_FOUND".equalsIgnoreCase(status)
+                || "INVALID_GEOMETRY".equalsIgnoreCase(status)
+                || result.has("error");
     }
 
     private boolean matchesAzimuths(JSONObject result, double expectedEast, double expectedWest) {

@@ -5,14 +5,15 @@ import org.json.JSONObject;
 public class LandUseMgr {
     private static LandUseMgr instance;
     private LandUseCheckDevelopment landUseChkDev;
+    private LandUseFutureDevRiskResultSQLHandler landUseResultSQLHandler;
 
     public static void main(String[] args) {
-        //JSONObject result = LandUseMgr.getInstance().getFutureDevRisk(670180, 600);
-        //System.out.println("Result: " + result.toString());
+        LandUseMgr.getInstance().getFutureDevRisk("670180000", 600);
     }
 
     private LandUseMgr() {
         landUseChkDev = LandUseCheckDevelopment.getInstance();
+        landUseResultSQLHandler = LandUseFutureDevRiskResultSQLHandler.getInstance();
     }
 
     public static LandUseMgr getInstance() {
@@ -23,13 +24,40 @@ public class LandUseMgr {
     }
 
     public JSONObject getFutureDevRisk(String postalCode){
-        System.out.println("Starting future development risk flow for postal code " + postalCode + " with default distance");
-        return calFutureDevRisk(postalCode);
+        System.out.println("Starting future development risk lookup for postal code " + postalCode);
+        JSONObject storedResult = landUseResultSQLHandler.retrieveFutureDevRiskResult(postalCode);
+        if (isUsableStoredResult(storedResult)) {
+            System.out.println("Using cached future development risk result for postal code " + postalCode);
+            return storedResult;
+        }
+
+        System.out.println("Cache miss for future development risk result for postal code " + postalCode);
+        JSONObject computedResult = calFutureDevRisk(postalCode);
+        if (isInvalidAnalysisResult(computedResult)) {
+            return computedResult;
+        }
+        landUseResultSQLHandler.saveFutureDevRiskResult(computedResult);
+        return computedResult;
     }
 
     public JSONObject getFutureDevRisk(String postalCode, double distance){
-        System.out.println("Starting future development risk flow for postal code " + postalCode + " with distance " + distance);
-        return calFutureDevRisk(postalCode, distance);
+        System.out.println("Starting future development risk lookup for postal code " + postalCode + " with distance " + distance);
+        JSONObject storedResult = landUseResultSQLHandler.retrieveFutureDevRiskResult(postalCode);
+        if (isUsableStoredResult(storedResult)) {
+            double storedDistance = storedResult.optDouble("search_distance", Double.NaN);
+            if (Double.isFinite(storedDistance) && Math.abs(storedDistance - distance) < 1e-9) {
+                System.out.println("Using cached future development risk result for postal code " + postalCode + " with distance " + distance);
+                return storedResult;
+            }
+        }
+
+        System.out.println("Cache miss for future development risk result for postal code " + postalCode + " with distance " + distance);
+        JSONObject computedResult = calFutureDevRisk(postalCode, distance);
+        if (isInvalidAnalysisResult(computedResult)) {
+            return computedResult;
+        }
+        landUseResultSQLHandler.saveFutureDevRiskResult(computedResult);
+        return computedResult;
     }
 
     private JSONObject calFutureDevRisk(String postalCode){
@@ -38,6 +66,21 @@ public class LandUseMgr {
 
     private JSONObject calFutureDevRisk(String postalCode, double distance){
         return landUseChkDev.calFutureDevRisk(postalCode, distance);
+    }
+
+    private boolean isUsableStoredResult(JSONObject result) {
+        return result != null && !result.isEmpty()
+                && !"NOT_FOUND".equalsIgnoreCase(result.optString("status", ""))
+                && !"INVALID_INPUT".equalsIgnoreCase(result.optString("status", ""));
+    }
+
+    private boolean isInvalidAnalysisResult(JSONObject result) {
+        if (result == null || result.isEmpty()) {
+            return true;
+        }
+
+        String status = result.optString("status", "");
+        return "INVALID_INPUT".equalsIgnoreCase(status) || result.has("error");
     }
 
 }

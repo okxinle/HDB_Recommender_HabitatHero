@@ -26,11 +26,16 @@ public class LandUseCheckDevelopment extends SQLDbConnect {
     }
 
     public JSONObject calFutureDevRisk(String postalCode, double distance) {
+        System.out.println("Calculating future development risk for postal code " + postalCode + " with distance " + distance);
         Coordinate coords = HDBBuildingMgr.getInstance().postalCodeToCoordinate(postalCode);
-        return calFutureDevRisk(coords, distance);
+        if (coords == null || (coords.getLatitude() == -1 && coords.getLongitude() == -1)) {
+            return invalidPostalCodeResult(postalCode, distance);
+        }
+
+        return calFutureDevRisk(postalCode, coords, distance);
     }
 
-    private JSONObject calFutureDevRisk(Coordinate coords, double distance) {
+    private JSONObject calFutureDevRisk(String postalCode, Coordinate coords, double distance) {
         double longitude = coords.getLongitude();
         double latitude = coords.getLatitude();
         JSONObject result = new JSONObject();
@@ -73,7 +78,7 @@ public class LandUseCheckDevelopment extends SQLDbConnect {
 
             ResultSet rs = pstmt.executeQuery();
 
-            System.out.printf("\nFuture developments within distance: %f\n", distance);
+            System.out.printf("Future developments within distance: %.2f m%n", distance);
 
             while (rs.next()) {
                 int objectId = rs.getInt("OBJECTID");
@@ -87,10 +92,14 @@ public class LandUseCheckDevelopment extends SQLDbConnect {
                 development.put("distance_meters", cal_distance);
                 development.put("geom", geojson_geom);
                 developments.put(development);
+            }
 
-                System.out.println("\nOBJECTID: " + objectId);
-                System.out.println("GPR: " + gpr);
-                System.out.println("Centroid distance (m): " + cal_distance);
+            System.out.println("Future development risk result contains " + developments.length() + " development(s)");
+
+            if (developments.isEmpty()) {
+                result.put("message", "No future development found within distance");
+            } else {
+                result.put("message", "Future development risk calculated successfully");
             }
 
             rs.close();
@@ -106,6 +115,19 @@ public class LandUseCheckDevelopment extends SQLDbConnect {
         result.put("search_distance", distance);
         result.put("latitude", latitude);
         result.put("longitude", longitude);
+        result.put("developmentCount", developments.length());
+        result.put("status", "OK");
+        result.put("postalCode", postalCode);
+        return result;
+    }
+
+    private JSONObject invalidPostalCodeResult(String postalCode, double distance) {
+        System.out.println("ERROR: Invalid postal code");
+        JSONObject result = new JSONObject();
+        result.put("postalCode", postalCode == null ? "" : postalCode);
+        result.put("status", "INVALID_INPUT");
+        result.put("message", "Invalid postal code: unable to resolve coordinates");
+        result.put("search_distance", distance);
         return result;
     }
 
