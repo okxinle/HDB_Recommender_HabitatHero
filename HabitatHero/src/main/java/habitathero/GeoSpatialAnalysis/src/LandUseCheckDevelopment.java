@@ -6,13 +6,31 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class LandUseCheckDevelopment extends SQLDbConnect {
+    private static LandUseCheckDevelopment instance;
+    private static final double DEFAULT_DISTANCE = 100;
 
     // SymbolLineMgr singleton call this class constructor only once
-    public LandUseCheckDevelopment() {
+    private LandUseCheckDevelopment() {
         super();
     }
 
-    public JSONObject calFutureDevRisk(Coordinate coords, double distance) {
+    public static LandUseCheckDevelopment getInstance() {
+        if (instance == null) {
+            instance = new LandUseCheckDevelopment();
+        }
+        return instance;
+    }
+
+    public JSONObject calFutureDevRisk(String postalCode) {
+        return calFutureDevRisk(postalCode, DEFAULT_DISTANCE);
+    }
+
+    public JSONObject calFutureDevRisk(String postalCode, double distance) {
+        Coordinate coords = HDBBuildingMgr.getInstance().postalCodeToCoordinate(postalCode);
+        return calFutureDevRisk(coords, distance);
+    }
+
+    private JSONObject calFutureDevRisk(Coordinate coords, double distance) {
         double longitude = coords.getLongitude();
         double latitude = coords.getLatitude();
         JSONObject result = new JSONObject();
@@ -27,7 +45,7 @@ public class LandUseCheckDevelopment extends SQLDbConnect {
                             ref.ref_point
                         ) AS distance_meters,
                         ST_AsGeoJSON(geom) AS geojson_geom
-                    FROM land_use,
+                    FROM land_use_dataset,
                     (
                         SELECT
                             ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography AS ref_point,

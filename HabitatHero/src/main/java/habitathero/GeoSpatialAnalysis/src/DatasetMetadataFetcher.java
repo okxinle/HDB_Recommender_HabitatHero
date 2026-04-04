@@ -7,6 +7,17 @@ import java.net.URI;
 import org.json.JSONObject;
 
 public class DatasetMetadataFetcher {
+    private static DatasetMetadataFetcher instance;
+
+    private DatasetMetadataFetcher() {
+    }
+
+    public static DatasetMetadataFetcher getInstance() {
+        if (instance == null) {
+            instance = new DatasetMetadataFetcher();
+        }
+        return instance;
+    }
 
     public JSONObject getMetadata(String datasetId) {
         try {

@@ -8,13 +8,21 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 
 public class LandUseGeoJsonImporter extends SQLDbConnect {
+    private static LandUseGeoJsonImporter instance;
 
     // SymbolLineMgr singleton call this class constructor only once
-    public LandUseGeoJsonImporter() {
+    private LandUseGeoJsonImporter() {
         super();
     }
 
-    public void importGeoJsonToSQLDb(String landUseGeoJsonDbPath) {
+    public static LandUseGeoJsonImporter getInstance() {
+        if (instance == null) {
+            instance = new LandUseGeoJsonImporter();
+        }
+        return instance;
+    }
+
+    public boolean importGeoJsonToSQLDb(String landUseGeoJsonDbPath) {
         try {
             // connect to postgres api to access Database
             super.connectSQL();
@@ -26,7 +34,7 @@ public class LandUseGeoJsonImporter extends SQLDbConnect {
 
             // format for SQL command to create/update row entries from geojson file
             String sql = """
-                INSERT INTO Land_Use (
+                INSERT INTO Land_Use_Dataset (
                     objectid,
                     lu_desc,
                     lu_text,
@@ -99,9 +107,11 @@ public class LandUseGeoJsonImporter extends SQLDbConnect {
             super.closeConnection();
 
             System.out.println("Land Use GeoJSON successfully imported");
+            return true;
 
         } catch (Exception e) {
             e.printStackTrace();
+            return false;
         }
     }
 }

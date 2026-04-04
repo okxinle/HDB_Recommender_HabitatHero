@@ -8,13 +8,21 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 
 public class TransportLineGeoJsonImporter extends SQLDbConnect {
+    private static TransportLineGeoJsonImporter instance;
 
     // TransportLineMgr singleton call this class constructor only once
-    public TransportLineGeoJsonImporter() {
+    private TransportLineGeoJsonImporter() {
         super();
     }
 
-    public void importGeoJsonToSQLDb(String transportLineGeoJsonPath) {
+    public static TransportLineGeoJsonImporter getInstance(){
+        if (instance == null){
+            instance = new TransportLineGeoJsonImporter();
+        }
+        return instance;
+    }
+
+    public boolean importGeoJsonToSQLDb(String transportLineGeoJsonPath) {
         try {
             // connect to postgres api to access Database
             super.connectSQL();
@@ -25,7 +33,7 @@ public class TransportLineGeoJsonImporter extends SQLDbConnect {
             JSONArray features = geojson.getJSONArray("features");
 
             // format for SQL command to create/update row entries from geojson file
-            String sql = "INSERT INTO Transport_Line " +
+            String sql = "INSERT INTO Transport_Line_Dataset " +
                     "(objectid, grnd_level, rail_type, inc_crc, fmel_upd_d, shape_len, geom) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ST_SetSRID(ST_GeomFromGeoJSON(?),4326)) " +
                     "ON CONFLICT (objectid) DO UPDATE SET " +
@@ -69,9 +77,11 @@ public class TransportLineGeoJsonImporter extends SQLDbConnect {
             super.closeConnection();
 
             System.out.println("Rail GeoJSON successfully imported.");
+            return true;
 
         } catch (Exception e) {
             e.printStackTrace();
+            return false;
         }
     }
 }

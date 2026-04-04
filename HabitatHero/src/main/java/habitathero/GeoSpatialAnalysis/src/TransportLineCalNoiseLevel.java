@@ -5,9 +5,21 @@ import org.json.JSONObject;
 public class TransportLineCalNoiseLevel {
     private static final int mrtAvgSpl = 85;// Average sound pressure level in dbA of mrt train
     private static final int lrtAvgSpl = 67;// Average soud pressure level in dbA of lrt train
+    private static TransportLineCalNoiseLevel instance;
+
+    private TransportLineCalNoiseLevel() {
+    }
+
+    public static TransportLineCalNoiseLevel getInstance(){
+        if(instance == null){
+            instance = new TransportLineCalNoiseLevel();
+        }
+        return instance;
+    }
 
 
     public JSONObject calNoiseLevel(JSONObject transportLineMinDistResult) {
+        System.out.println("Calculating noise level for transport result");
         if (transportLineMinDistResult.has("error")) {
             System.out.println("Error calculating transport distance: " + transportLineMinDistResult.getString("error"));
             JSONObject errorResult = new JSONObject();
@@ -36,6 +48,7 @@ public class TransportLineCalNoiseLevel {
             result.put(key, transportLineMinDistResult.get(key));
         }
 
+        System.out.printf("Calculated noise level: %f\n", splNew);
         return result;
     }
 }

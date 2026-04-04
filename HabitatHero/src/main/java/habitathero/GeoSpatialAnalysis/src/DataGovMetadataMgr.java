@@ -4,7 +4,7 @@ import org.json.JSONObject;
 
 // Service to manage metadata of dataset from DataGov and dataset metadata SQL
 public class DataGovMetadataMgr {
-    public static DataGovMetadataMgr instance;
+    private static DataGovMetadataMgr instance;
     private DatasetMetadataSQLHandler datasetMetadataSQLHandler; 
     private DatasetMetadataFetcher datasetMetadataFetcher;
 
@@ -20,9 +20,9 @@ public class DataGovMetadataMgr {
         return instance;
     }
 
-    public DataGovMetadataMgr(){
-        datasetMetadataSQLHandler = new DatasetMetadataSQLHandler();
-        datasetMetadataFetcher = new DatasetMetadataFetcher();
+    private DataGovMetadataMgr(){
+        datasetMetadataSQLHandler = DatasetMetadataSQLHandler.getInstance();
+        datasetMetadataFetcher = DatasetMetadataFetcher.getInstance();
     }
 
     public JSONObject fetchAPIMetadata(String dataset_id) {

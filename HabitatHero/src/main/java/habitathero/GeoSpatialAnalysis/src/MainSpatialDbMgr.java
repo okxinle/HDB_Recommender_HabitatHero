@@ -1,6 +1,29 @@
 package habitathero.GeoSpatialAnalysis.src;
 
 public class MainSpatialDbMgr {
+    private static MainSpatialDbMgr instance;
+    private HDBBuildingDbMgr hdbBuildingDbMgr;
+    private LandUseDbMgr landUseDbMgr;
+    private TransportLineDbMgr transportLineDbMgr;
+    private TransportLineCalResultSQLHandler transportLineCalResultSQLHandler;
+    private DataGovMetadataMgr dataGovMetadataMgr;
+    private DataGovAPIHandler dataGovAPIHandler;
+
+    private MainSpatialDbMgr() {
+        this.hdbBuildingDbMgr = HDBBuildingDbMgr.getInstance();
+        this.landUseDbMgr = LandUseDbMgr.getInstance();
+        this.transportLineDbMgr = TransportLineDbMgr.getInstance();
+        this.transportLineCalResultSQLHandler = TransportLineCalResultSQLHandler.getInstance();
+        this.dataGovMetadataMgr = DataGovMetadataMgr.getInstance();
+        this.dataGovAPIHandler = DataGovAPIHandler.getInstance();
+    }
+
+    public static MainSpatialDbMgr getInstance() {
+        if (instance == null) {
+            instance = new MainSpatialDbMgr();
+        }
+        return instance;
+    }
 
     // ============ TABLE CREATION OPERATIONS ============
 
@@ -15,6 +38,7 @@ public class MainSpatialDbMgr {
             createHDBBuildingTable();
             createLandUseTable();
             createTransportLineTable();
+            createTransportLineCalResultTable();
             createMetadataTable();
 
             System.out.println("[SUCCESS] All database tables initialized successfully.");
@@ -26,26 +50,27 @@ public class MainSpatialDbMgr {
 
     public void createHDBBuildingTable() {
         System.out.println("[INIT] Creating HDB_Building table...");
-        HDBBuildingMgr hdbMgr = HDBBuildingMgr.getInstance();
-        hdbMgr.createSQLTable();
+        hdbBuildingDbMgr.createSQLTable();
     }
 
     public void createLandUseTable() {
         System.out.println("[INIT] Creating LandUse table...");
-        LandUseMgr landUseMgr = LandUseMgr.getInstance();
-        landUseMgr.createSQLTable();
+        landUseDbMgr.createSQLTable();
     }
 
     public void createTransportLineTable() {
         System.out.println("[INIT] Creating TransportLine table...");
-        TransportLineMgr transportMgr = TransportLineMgr.getInstance();
-        transportMgr.createSQLTable();
+        transportLineDbMgr.createSQLTable();
+    }
+
+    public void createTransportLineCalResultTable() {
+        System.out.println("[INIT] Creating TransportLine Cal Result table...");
+        transportLineCalResultSQLHandler.createSQLTable();
     }
 
     public void createMetadataTable() {
         System.out.println("[INIT] Creating Metadata table...");
-        DataGovMetadataMgr metadataMgr = DataGovMetadataMgr.getInstance();
-        metadataMgr.createSQLTable();
+        dataGovMetadataMgr.createSQLTable();
     }
 
     // ============ DATA IMPORT OPERATIONS ============
@@ -70,20 +95,17 @@ public class MainSpatialDbMgr {
 
     public void importHDBBuildingGeoJson(String filePath) {
         System.out.println("[IMPORT] Importing HDB Building GeoJSON from: " + filePath);
-        HDBBuildingMgr hdbMgr = HDBBuildingMgr.getInstance();
-        hdbMgr.importGeoJsonToSQLDb();
+        hdbBuildingDbMgr.importGeoJsonToSQLDb();
     }
 
     public void importLandUseGeoJson(String filePath) {
         System.out.println("[IMPORT] Importing LandUse GeoJSON from: " + filePath);
-        LandUseMgr landUseMgr = LandUseMgr.getInstance();
-        landUseMgr.importGeoJsonToSQLDb();
+        landUseDbMgr.importGeoJsonToSQLDb();
     }
 
     public void importTransportLineGeoJson(String filePath) {
         System.out.println("[IMPORT] Importing TransportLine GeoJSON from: " + filePath);
-        TransportLineMgr transportMgr = TransportLineMgr.getInstance();
-        transportMgr.importGeoJsonToSQLDb();
+        transportLineDbMgr.importGeoJsonToSQLDb();
     }
 
     // ============ DATA GOV API OPERATIONS (Download & Update) ============
@@ -96,7 +118,7 @@ public class MainSpatialDbMgr {
         System.out.println("[API] Downloading dataset " + datasetId + " from DataGov API...");
 
         try {
-            Boolean result = DataGovAPIHandler.getInstance().pollDownloadAndSave(datasetId, localFilePath);
+            Boolean result = dataGovAPIHandler.pollDownloadAndSave(datasetId, localFilePath);
 
             if (result != null && result) {
                 System.out.println("[SUCCESS] Dataset " + datasetId + " downloaded and saved to: " + localFilePath);
@@ -120,7 +142,7 @@ public class MainSpatialDbMgr {
         System.out.println("[API] Force downloading dataset " + datasetId + " from DataGov API...");
 
         try {
-            Boolean result = DataGovAPIHandler.getInstance().pollForcedDownloadAndSave(datasetId, localFilePath);
+            Boolean result = dataGovAPIHandler.pollForcedDownloadAndSave(datasetId, localFilePath);
 
             if (result != null && result) {
                 System.out
@@ -144,7 +166,7 @@ public class MainSpatialDbMgr {
         System.out.println("[API] Checking if dataset " + datasetId + " is outdated...");
 
         try {
-            Boolean isCurrent = DataGovAPIHandler.getInstance().checkAPIDataCurrency(datasetId);
+            Boolean isCurrent = dataGovAPIHandler.checkAPIDataCurrency(datasetId);
 
             if (isCurrent == null) {
                 System.out.println("[INFO] Could not determine currency status for dataset " + datasetId);
@@ -200,12 +222,11 @@ public class MainSpatialDbMgr {
      */
     private void refreshHDBBuildingGeoJsonFromAPI() {
         System.out.println("\n--- Processing HDB Building ---");
-        HDBBuildingMgr hdbMgr = HDBBuildingMgr.getInstance();
 
         try {
-            hdbMgr.downloadGeoJson();
+            hdbBuildingDbMgr.downloadGeoJson();
             System.out.println("[IMPORT] Re-importing HDB Building data after download...");
-            hdbMgr.importGeoJsonToSQLDb();
+            hdbBuildingDbMgr.importGeoJsonToSQLDb();
             System.out.println("[SUCCESS] HDB Building data refreshed");
         } catch (Exception e) {
             System.out.println("[ERROR] Failed to refresh HDB Building: " + e.getMessage());
@@ -218,12 +239,11 @@ public class MainSpatialDbMgr {
      */
     private void refreshLandUseGeoJsonFromAPI() {
         System.out.println("\n--- Processing Land Use ---");
-        LandUseMgr landUseMgr = LandUseMgr.getInstance();
 
         try {
-            landUseMgr.downloadGeoJson();
+            landUseDbMgr.downloadGeoJson();
             System.out.println("[IMPORT] Re-importing Land Use data after download...");
-            landUseMgr.importGeoJsonToSQLDb();
+            landUseDbMgr.importGeoJsonToSQLDb();
             System.out.println("[SUCCESS] Land Use data refreshed");
         } catch (Exception e) {
             System.out.println("[ERROR] Failed to refresh Land Use: " + e.getMessage());
@@ -236,13 +256,12 @@ public class MainSpatialDbMgr {
      */
     private void refreshTransportLineGeoJsonFromAPI() {
         System.out.println("\n--- Processing Transport Line ---");
-        TransportLineMgr transportMgr = TransportLineMgr.getInstance();
 
         try {
             System.out.println("[API] Transport Line data is outdated, downloading...");
-            transportMgr.downloadGeoJson();
+            transportLineDbMgr.downloadGeoJson();
             System.out.println("[IMPORT] Re-importing Transport Line data after download...");
-            transportMgr.importGeoJsonToSQLDb();
+            transportLineDbMgr.importGeoJsonToSQLDb();
             System.out.println("[SUCCESS] Transport Line data refreshed");
 
         } catch (Exception e) {
