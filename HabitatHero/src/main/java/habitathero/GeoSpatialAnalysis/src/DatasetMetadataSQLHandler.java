@@ -8,9 +8,17 @@ import java.time.OffsetDateTime;
 import org.json.JSONObject;
 
 public class DatasetMetadataSQLHandler extends SQLDbConnect {
+    private static DatasetMetadataSQLHandler instance;
 
-    public DatasetMetadataSQLHandler() {
+    private DatasetMetadataSQLHandler() {
         super();
+    }
+
+    public static DatasetMetadataSQLHandler getInstance() {
+        if (instance == null) {
+            instance = new DatasetMetadataSQLHandler();
+        }
+        return instance;
     }
 
     public void createSQLTable() {

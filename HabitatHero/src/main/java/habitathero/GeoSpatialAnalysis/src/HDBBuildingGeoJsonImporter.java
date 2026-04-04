@@ -8,12 +8,21 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 
 public class HDBBuildingGeoJsonImporter extends SQLDbConnect {
+    private static HDBBuildingGeoJsonImporter instance;
+
     // HDBBuildingMgr singleton call this class constructor only once
-    public HDBBuildingGeoJsonImporter() {
+    private HDBBuildingGeoJsonImporter() {
         super();
     }
 
-    public void importGeoJsonToSQLDb(String HDBBuildingGeoJsonDbPath) {
+    public static HDBBuildingGeoJsonImporter getInstance() {
+        if (instance == null) {
+            instance = new HDBBuildingGeoJsonImporter();
+        }
+        return instance;
+    }
+
+    public boolean importGeoJsonToSQLDb(String HDBBuildingGeoJsonDbPath) {
         try {
             // connect to postgres api to access Database
             super.connectSQL();
@@ -24,7 +33,7 @@ public class HDBBuildingGeoJsonImporter extends SQLDbConnect {
             JSONArray features = geojson.getJSONArray("features");
 
             // format for SQL command to create row entires from geojson file
-            String sql = "INSERT INTO HDB_Building " +
+            String sql = "INSERT INTO HDB_Building_Dataset " +
             "(objectid, blk_no, st_cod, entityid, postal_cod, inc_crc, fmel_upd_d, shape_area, shape_len, geom) " +
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ST_SetSRID(ST_GeomFromGeoJSON(?),4326)) " +
             "ON CONFLICT (objectid) DO UPDATE SET " +
@@ -77,9 +86,11 @@ public class HDBBuildingGeoJsonImporter extends SQLDbConnect {
             super.closeConnection();
 
             System.out.println("HDBBuilding GeoJSON successfully imported.");
+            return true;
 
         } catch (Exception e) {
             e.printStackTrace();
+            return false;
         }
     }
 }

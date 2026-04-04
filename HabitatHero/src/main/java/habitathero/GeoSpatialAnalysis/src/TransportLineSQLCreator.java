@@ -4,16 +4,24 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 
 public class TransportLineSQLCreator extends SQLDbConnect {
+    private static TransportLineSQLCreator instance;
 
     // TransportLineMgr singleton call this class constructor only once
-    public TransportLineSQLCreator() {
+    private TransportLineSQLCreator() {
         super();
     }
 
-    public void createSQLTable() {
-        String checkSql = "SELECT to_regclass('public.Transport_Line')";
+    public static TransportLineSQLCreator getInstance(){
+        if(instance == null){
+            instance = new TransportLineSQLCreator();
+        }
+        return instance;
+    }
+
+    public boolean createSQLTable() {
+        String checkSql = "SELECT to_regclass('public.Transport_Line_Dataset')";
         String createTableSQL = """
-                CREATE TABLE IF NOT EXISTS Transport_Line (
+                CREATE TABLE IF NOT EXISTS Transport_Line_Dataset (
                     OBJECTID INTEGER PRIMARY KEY,
                     GRND_LEVEL VARCHAR(50),
                     RAIL_TYPE VARCHAR(50),
@@ -33,10 +41,12 @@ public class TransportLineSQLCreator extends SQLDbConnect {
                 if (rs.next()) {
                     String tableName = rs.getString(1); // get first column
                     if (tableName != null) {
-                        System.out.println("transport_line table exists: " + tableName);
-                        return;
+                        System.out.println("transport_line_dataset table exists: " + tableName);
+                        stmt.close();
+                        super.closeConnection();
+                        return true;
                     } else {
-                        System.out.println("transport_line table does not exist");
+                        System.out.println("transport_line_dataset table does not exist");
                     }
                 }
             }
@@ -46,10 +56,12 @@ public class TransportLineSQLCreator extends SQLDbConnect {
             stmt.close();
             super.closeConnection();
 
-            System.out.println("transport_line table created successfully.");
+            System.out.println("transport_line_dataset table created successfully.");
+            return true;
 
         } catch (Exception e) {
             e.printStackTrace();
+            return false;
         }
     }
 }

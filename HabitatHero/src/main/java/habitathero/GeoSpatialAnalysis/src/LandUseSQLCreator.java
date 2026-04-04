@@ -4,18 +4,26 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 
 public class LandUseSQLCreator extends SQLDbConnect {
+    private static LandUseSQLCreator instance;
 
     // SymbolLineMgr singleton call this class constructor only once
-    public LandUseSQLCreator() {
+    private LandUseSQLCreator() {
         super();
     }
 
-    public void createSQLTable() {
+    public static LandUseSQLCreator getInstance() {
+        if (instance == null) {
+            instance = new LandUseSQLCreator();
+        }
+        return instance;
+    }
 
-        String checkSql = "SELECT to_regclass('public.land_use')";
+    public boolean createSQLTable() {
+
+        String checkSql = "SELECT to_regclass('public.land_use_dataset')";
     
         String createTableSQL = """
-            CREATE TABLE IF NOT EXISTS Land_Use (
+            CREATE TABLE IF NOT EXISTS Land_Use_Dataset (
                 objectid INTEGER PRIMARY KEY,
                 lu_desc TEXT,
                 lu_text TEXT,
@@ -39,10 +47,12 @@ public class LandUseSQLCreator extends SQLDbConnect {
                 if (rs.next()) {
                     String tableName = rs.getString(1);
                     if (tableName != null) {
-                        System.out.println("land_use table exists: " + tableName);
-                        return;
+                        System.out.println("land_use_dataset table exists: " + tableName);
+                        stmt.close();
+                        super.closeConnection();
+                        return true;
                     } else {
-                        System.out.println("land_use table does not exist");
+                        System.out.println("land_use_dataset table does not exist");
                     }
                 }
             }
@@ -53,10 +63,12 @@ public class LandUseSQLCreator extends SQLDbConnect {
             stmt.close();
             super.closeConnection();
     
-            System.out.println("land_use table created successfully.");
+            System.out.println("land_use_dataset table created successfully.");
+            return true;
     
         } catch (Exception e) {
             e.printStackTrace();
+            return false;
         }
     }
 }

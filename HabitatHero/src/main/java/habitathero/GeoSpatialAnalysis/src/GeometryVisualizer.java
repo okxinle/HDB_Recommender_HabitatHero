@@ -9,6 +9,17 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class GeometryVisualizer {
+    private static GeometryVisualizer instance;
+
+    private GeometryVisualizer() {
+    }
+
+    public static GeometryVisualizer getInstance() {
+        if (instance == null) {
+            instance = new GeometryVisualizer();
+        }
+        return instance;
+    }
 
     // Method to visualize geometry from JSONObject
     public static void visualize(JSONObject geomJson, String outputFileName) {
