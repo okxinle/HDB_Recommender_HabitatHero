@@ -255,7 +255,7 @@ public class RecommendationEngine {
         }
 
         try {
-            return hdbBuildingMgr.calSunFacing(postalCode);
+            return hdbBuildingMgr.getSunFacing(postalCode);
         } catch (Exception ignored) {
             return null;
         }
@@ -266,13 +266,9 @@ public class RecommendationEngine {
 
         try {
             if (postalCode != null) {
-                return transportLineMgr.calNoiseLevel(postalCode);
+                return transportLineMgr.getNoiseLevel(postalCode);
             }
 
-            if (block.getCoordinates() != null) {
-                Coordinate coords = new Coordinate(block.getCoordinates().getLat(), block.getCoordinates().getLng());
-                return transportLineMgr.calNoiseLevel(coords);
-            }
         } catch (Exception ignored) {
             return null;
         }

@@ -24,6 +24,10 @@ public class LandUseDbMgr {
         return instance;
     }
 
+    public boolean forceDownloadGeoJson(){
+        return landUseGJDownloader.forceDownloadGeoJson(DATASET_ID, LOCALFILEPATH);
+    }
+
     public Boolean downloadGeoJson() {
         return landUseGJDownloader.downloadGeoJson(DATASET_ID, LOCALFILEPATH);
     }

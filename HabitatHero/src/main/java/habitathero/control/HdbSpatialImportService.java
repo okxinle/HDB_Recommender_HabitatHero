@@ -17,7 +17,7 @@ import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import habitathero.GeoSpatialAnalysis.src.HDBBuildingMgr;
+import habitathero.GeoSpatialAnalysis.src.HDBBuildingDbMgr;
 
 @Service
 public class HdbSpatialImportService {
@@ -31,9 +31,9 @@ public class HdbSpatialImportService {
     }
 
     public ImportResult initializeAndImportHdbBuilding() {
-        HDBBuildingMgr mgr = HDBBuildingMgr.getInstance();
+        HDBBuildingDbMgr mgr = HDBBuildingDbMgr.getInstance();
 
-        Path datasetFile = Path.of(System.getProperty("user.dir"), HDBBuildingMgr.getLocalFilePath());
+        Path datasetFile = Path.of(System.getProperty("user.dir"), HDBBuildingDbMgr.getLocalFilePath());
         Path datasetDir = datasetFile.getParent();
 
         try {
@@ -61,7 +61,7 @@ public class HdbSpatialImportService {
         return importIntoLookupTable(downloaded, datasetFile);
     }
 
-    private ImportResult importWithPostgis(HDBBuildingMgr mgr, boolean downloaded, Path datasetFile) {
+    private ImportResult importWithPostgis(HDBBuildingDbMgr mgr, boolean downloaded, Path datasetFile) {
         log.info("Initializing hdb_building table (if missing)...");
         mgr.createSQLTable();
         ensureTableExists("public.hdb_building", "hdb_building table was not created.");

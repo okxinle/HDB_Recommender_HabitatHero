@@ -13,4 +13,8 @@ public class TransportLineGeoJsonDownloader {
     public Boolean downloadGeoJson(String datasetid, String localfilepath) {
         return DataGovAPIHandler.getInstance().pollDownloadAndSave(datasetid, localfilepath);
     }
+
+    public Boolean forceDownloadGeoJson(String datasetid, String localfilepath){
+        return DataGovAPIHandler.getInstance().pollForcedDownloadAndSave(datasetid, localfilepath);
+    }
 }

@@ -24,6 +24,10 @@ public class TransportLineDbMgr {
         return instance;
     }
 
+    public boolean forceDownloadGeoJson(){
+        return tlGJDownloader.forceDownloadGeoJson(DATASET_ID, LOCALFILEPATH);
+    }
+
     public Boolean downloadGeoJson() {
         return tlGJDownloader.downloadGeoJson(DATASET_ID, LOCALFILEPATH);
     }
