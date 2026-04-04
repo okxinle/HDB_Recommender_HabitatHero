@@ -14,6 +14,9 @@ import org.json.JSONObject;
 public class DataGovAPIHandler {
     public static DataGovAPIHandler instance;
 
+    private DataGovAPIHandler() {
+    }
+
     public static void main() {
         try {
             // DataGovAPI.getInstance().pollDownload("d_16b157c52ed637edd6ba1232e026258d");

@@ -1,8 +1,19 @@
 package habitathero.GeoSpatialAnalysis.src;
 
 public class HDBBuildingGeoJsonDownloader {
+    private static HDBBuildingGeoJsonDownloader instance;
 
-    public void downloadGeoJson(String datasetid, String localfilepath) {
-        DataGovAPIHandler.getInstance().pollDownloadAndSave(datasetid, localfilepath);
+    private HDBBuildingGeoJsonDownloader() {
+    }
+
+    public static HDBBuildingGeoJsonDownloader getInstance() {
+        if (instance == null) {
+            instance = new HDBBuildingGeoJsonDownloader();
+        }
+        return instance;
+    }
+
+    public Boolean downloadGeoJson(String datasetid, String localfilepath) {
+        return DataGovAPIHandler.getInstance().pollDownloadAndSave(datasetid, localfilepath);
     }
 }

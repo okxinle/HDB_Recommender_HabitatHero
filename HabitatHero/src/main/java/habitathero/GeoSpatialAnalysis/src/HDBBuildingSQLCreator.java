@@ -4,16 +4,24 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 
 public class HDBBuildingSQLCreator extends SQLDbConnect {
+    private static HDBBuildingSQLCreator instance;
 
     // TransportLineMgr singleton call this class constructor only once
-    public HDBBuildingSQLCreator() {
+    private HDBBuildingSQLCreator() {
         super();
     }
 
-    public void createSQLTable() {
-        String checkSql = "SELECT to_regclass('public.hdb_building')";
+    public static HDBBuildingSQLCreator getInstance() {
+        if (instance == null) {
+            instance = new HDBBuildingSQLCreator();
+        }
+        return instance;
+    }
+
+    public boolean createSQLTable() {
+        String checkSql = "SELECT to_regclass('public.hdb_building_dataset')";
         String createTableSQL = """
-                CREATE TABLE IF NOT EXISTS HDB_Building (
+                CREATE TABLE IF NOT EXISTS HDB_Building_Dataset (
                     OBJECTID INTEGER PRIMARY KEY,
                     BLK_NO VARCHAR(20),
                     ST_COD VARCHAR(20),
@@ -36,10 +44,12 @@ public class HDBBuildingSQLCreator extends SQLDbConnect {
                 if (rs.next()) {
                     String tableName = rs.getString(1); // get first column
                     if (tableName != null) {
-                        System.out.println("hdb_building table exists: " + tableName);
-                        return;
+                        System.out.println("hdb_building_dataset table exists: " + tableName);
+                        stmt.close();
+                        super.closeConnection();
+                        return true;
                     } else {
-                        System.out.println("hdb_building table does not exist");
+                        System.out.println("hdb_building_dataset table does not exist");
                     }
                 }
             }
@@ -49,11 +59,12 @@ public class HDBBuildingSQLCreator extends SQLDbConnect {
             stmt.close();
             super.closeConnection();
 
-            System.out.println("hdb_building table created successfully.");
+            System.out.println("hdb_building_dataset table created successfully.");
+            return true;
 
         } catch (Exception e) {
             e.printStackTrace();
-            throw new IllegalStateException("Failed to create hdb_building table.", e);
+            return false;
         }
     }
 }

@@ -7,19 +7,29 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
+    private static HDBBuildingSunFacingAnalysis instance;
     private static final double DEFAULT_EAST_AZIMUTH = 90.0;
     private static final double DEFAULT_WEST_AZIMUTH = 270.0;
 
-    public HDBBuildingSunFacingAnalysis() {
+    private HDBBuildingSunFacingAnalysis() {
         super();
     }
 
+    public static HDBBuildingSunFacingAnalysis getInstance() {
+        if (instance == null) {
+            instance = new HDBBuildingSunFacingAnalysis();
+        }
+        return instance;
+    }
+
     public JSONObject calSunFacing(String postalCode) {
+        System.out.println("Preparing default azimuth analysis for postal code " + postalCode);
         // default base case uses traditional east / west azimuths
         return calSunFacing(postalCode, DEFAULT_EAST_AZIMUTH, DEFAULT_WEST_AZIMUTH);
     }
 
     public JSONObject calSunFacing(String postalCode, double sunAzimuth) {
+        System.out.println("Preparing sun azimuth analysis for postal code " + postalCode + " with sun azimuth " + sunAzimuth);
         double eastAzimuth = normalizeAzimuth(sunAzimuth);
         double westAzimuth = normalizeAzimuth(sunAzimuth + 180.0);
         JSONObject ringMeta = calSunFacing(postalCode, eastAzimuth, westAzimuth);
@@ -29,6 +39,7 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
     }
 
     public JSONObject calSunFacing(String postalCode, double eastAzimuth, double westAzimuth) {
+        System.out.println("Running geometry-based sun-facing computation for postal code " + postalCode + " with east azimuth " + eastAzimuth + " and west azimuth " + westAzimuth);
         JSONObject geomJson = getHDBBuildingGeom(postalCode);
         JSONObject output = new JSONObject();
 
@@ -77,13 +88,13 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
             output.put("dominant", "BALANCED");
         }
 
-        // Full 360° sweep with 1-degree steps to get absolute worst/best case for comparison basis
-        JSONObject fullSweep = calSunFacingRange(postalCode, 0.0, 360.0, 1.0);
+        // Reuse the same ring/perimeter to avoid repeated geometry fetches.
+        JSONObject fullSweep = calSunFacingRange(ring, perimeter, 0.0, 360.0, 1.0);
         double minScoreAbsolute = fullSweep.optDouble("minScore", 0.0);
         double maxScoreAbsolute = fullSweep.optDouble("maxScore", 0.0);
 
         // Sunlight index for day arc between east and west (limited range)
-        JSONObject rangeIndex = calSunFacingRange(postalCode, eastAzimuth, westAzimuth, 10.0);
+        JSONObject rangeIndex = calSunFacingRange(ring, perimeter, eastAzimuth, westAzimuth, 10.0);
         double sunlightIndex = rangeIndex.optDouble("sunlightIndex", 0.0);
         double sunAverage = rangeIndex.optDouble("averageScore", 0.0);
 
@@ -134,6 +145,17 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
             return output;
         }
 
+        return calSunFacingRange(ring, perimeter, startAzimuth, endAzimuth, stepDegrees);
+    }
+
+    private JSONObject calSunFacingRange(JSONArray ring, double perimeter, double startAzimuth, double endAzimuth, double stepDegrees) {
+        JSONObject output = new JSONObject();
+
+        if (ring == null || ring.length() < 4 || perimeter <= 0.0) {
+            output.put("status", "INVALID_GEOMETRY");
+            return output;
+        }
+
         double sum = 0.0;
         double minScore = Double.POSITIVE_INFINITY;
         double maxScore = Double.NEGATIVE_INFINITY;
@@ -179,8 +201,9 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
         return output;
     }
 
-    public JSONObject getHDBBuildingGeom(String postalCode) {
-        String sql = "SELECT ST_AsGeoJSON(geom) AS geojson FROM hdb_building WHERE postal_cod = ? LIMIT 1";
+    private JSONObject getHDBBuildingGeom(String postalCode) {
+        System.out.println("Fetching building geometry from database");
+        String sql = "SELECT ST_AsGeoJSON(geom) AS geojson FROM hdb_building_dataset WHERE postal_cod = ? LIMIT 1";
         try {
             connectSQL();
             PreparedStatement ps = conn.prepareStatement(sql);
@@ -380,7 +403,7 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
     }
 
     // Direct azimuth point score without range integration (to diagnose orientation issues)
-    public JSONObject calSunFacingPointOnly(String postalCode, double azimuth) {
+    private JSONObject calSunFacingPointOnly(String postalCode, double azimuth) {
         JSONObject geomJson = getHDBBuildingGeom(postalCode);
         JSONObject output = new JSONObject();
 
@@ -416,36 +439,13 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
         return output;
     }
 
-    // Temporary method for visualizing fetched geometry and outer ring graphically
-    public void visualizeGeometry(String postalCode) {
-        System.out.println("[CHECKPOINT] Visualizing geometry for postal code: " + postalCode);
-        JSONObject geomJson = getHDBBuildingGeom(postalCode);
-        if (geomJson == null) {
-            System.out.println("[ERROR] No geometry found for visualization");
-            return;
-        }
-
-        // Visualize full geometry
-        GeometryVisualizer.visualize(geomJson, "geometry_visualization_" + postalCode);
-
-        // Extract and visualize outer ring separately
-        JSONArray coordinates = geomJson.optJSONArray("coordinates");
-        if (coordinates != null && coordinates.length() > 0) {
-            JSONArray ring = getOuterRing(coordinates);
-            if (ring != null && ring.length() >= 4) {
-                GeometryVisualizer.visualizeOuterRing(ring, "geometry_visualization_" + postalCode);
-            }
-        }
-    }
 
     public static void main(String[] args) {
         String postalCode = args.length > 0 ? args[0] : "670180";
-        HDBBuildingSunFacingAnalysis analyzer = new HDBBuildingSunFacingAnalysis();
+        HDBBuildingSunFacingAnalysis analyzer = HDBBuildingSunFacingAnalysis.getInstance();
 
         System.out.println("Sun-facing analysis for postal code: " + postalCode);
         System.out.println();
-        // Visualize geometry
-        analyzer.visualizeGeometry(postalCode);
         System.out.println();
         JSONObject resultDefault = analyzer.calSunFacing(postalCode);
         System.out.println("Default (E=90,W=270): " + resultDefault.toString());

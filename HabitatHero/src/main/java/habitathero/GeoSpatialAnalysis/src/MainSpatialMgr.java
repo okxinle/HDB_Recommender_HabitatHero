@@ -3,50 +3,60 @@ package habitathero.GeoSpatialAnalysis.src;
 import org.json.JSONObject;
 
 public class MainSpatialMgr {
-
     public static void main(String[] args) {
-        MainSpatialMgr mgr = new MainSpatialMgr();
+        MainSpatialMgr mgr = MainSpatialMgr.getInstance();
         Coordinate coords = mgr.postalCodeToCoordinate("670180");
         System.out.printf("Coordinate: %f, %f\n", coords.getLatitude(), coords.getLongitude());
     }
+    
+    private static MainSpatialMgr instance;
+    private HDBBuildingMgr hdbBuildingMgr;
+    private TransportLineMgr transportLineMgr;
+    private LandUseMgr landUseMgr;
 
-    public JSONObject calNoiseLevel(String postalCode) {
-        // convert postal code to coordinate
-        Coordinate coords = this.postalCodeToCoordinate(postalCode);
-        return this.calNoiseLevel(coords);
+    private MainSpatialMgr() {
+        this.hdbBuildingMgr = HDBBuildingMgr.getInstance();
+        this.transportLineMgr = TransportLineMgr.getInstance();
+        this.landUseMgr = LandUseMgr.getInstance();
     }
 
-    public JSONObject calNoiseLevel(Coordinate coords){
-        return TransportLineMgr.getInstance().calNoiseLevel(coords);
+    public static MainSpatialMgr getInstance() {
+        if (instance == null) {
+            instance = new MainSpatialMgr();
+        }
+        return instance;
     }
 
-    public JSONObject calSunFacing(String postal_code) {
+    public JSONObject getNoiseLevel(String postalCode) {
+        return transportLineMgr.getNoiseLevel(postalCode);
+    }
+
+    public JSONObject getSunFacing(String postal_code) {
         // Get complete sun facing analysis with all metrics
-        return HDBBuildingMgr.getInstance().calSunFacing(postal_code);
+        return hdbBuildingMgr.getSunFacing(postal_code);
     }
 
-    public JSONObject calSunFacing(String postal_code, double customAzimuth) {
+    public JSONObject getSunFacing(String postal_code, double customAzimuth) {
         // Get sun facing analysis for custom azimuth
-        return HDBBuildingMgr.getInstance().calSunFacing(postal_code,customAzimuth);
+        return hdbBuildingMgr.getSunFacing(postal_code, customAzimuth);
     }
 
-    public JSONObject calSunFacing(String postalCode, double eastAzimuth, double westAzimuth) {
+    public JSONObject getSunFacing(String postalCode, double eastAzimuth, double westAzimuth) {
         // Get sun facing analysis for two custom azimuth
-        return HDBBuildingMgr.getInstance().calSunFacing(postalCode, eastAzimuth, westAzimuth);
+        return hdbBuildingMgr.getSunFacing(postalCode, eastAzimuth, westAzimuth);
     }
 
-    public JSONObject calFutureDevelopmentRisk(Coordinate coords, double distance) {
-        return LandUseMgr.getInstance().calFutureDevRisk(coords, distance);
+    public JSONObject getFutureDevelopmentRisk(String postalCode, double distance){
+        return landUseMgr.getFutureDevRisk(postalCode, distance);
     }
 
-    public JSONObject calFutureDevelopmentRisk(String postalCode, double distance){
-        // convert postal code to coordinate
-        return LandUseMgr.getInstance().calFutureDevRisk(postalCode, distance);
+    public JSONObject getFutureDevelopmentRisk(String postalCode){
+        return landUseMgr.getFutureDevRisk(postalCode);
     }
 
     //only used internally within class
     private Coordinate postalCodeToCoordinate(String postal_code) {
-        return HDBBuildingMgr.getInstance().postalCodeToCoordinate(postal_code);
+        return hdbBuildingMgr.postalCodeToCoordinate(postal_code);
     }
 
     // Comprehensive analysis integrating all managers and analyzers
@@ -61,7 +71,7 @@ public class MainSpatialMgr {
             comprehensive.put("longitude", coords.getLongitude());
             
             // Noise level analysis (TransportLineMgr integration)
-            JSONObject noiseResult = calNoiseLevel(postal_code);
+            JSONObject noiseResult = getNoiseLevel(postal_code);
             if (noiseResult.has("error")) {
                 comprehensive.put("noiseLevel_dBA", "Error: " + noiseResult.getString("error"));
             } else {
@@ -69,11 +79,11 @@ public class MainSpatialMgr {
             }
             
             // Sun exposure analysis (HDBBuildingSunFacingAnalysis integration)
-            JSONObject sunAnalysis = calSunFacing(postal_code);
+            JSONObject sunAnalysis = getSunFacing(postal_code);
             comprehensive.put("sunExposure", sunAnalysis);
             
             // Future development risk (LandUseMgr integration)
-            JSONObject devRisk = calFutureDevelopmentRisk(postal_code, 500.0);  // 500m radius
+            JSONObject devRisk = getFutureDevelopmentRisk(postal_code, 500.0);  // 500m radius
             comprehensive.put("futureDevRisk_500m", devRisk);
             
             comprehensive.put("status", "OK");

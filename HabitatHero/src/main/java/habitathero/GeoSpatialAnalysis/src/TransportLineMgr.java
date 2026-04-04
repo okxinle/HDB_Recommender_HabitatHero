@@ -3,29 +3,21 @@ package habitathero.GeoSpatialAnalysis.src;
 import org.json.JSONObject;
 
 public class TransportLineMgr {
-    private static final String DATASET_ID = "d_222bfc84eb86c7c11994d02f8939da8d";
-    private static final String LOCALFILEPATH = "dataset/MasterPlan2019RailLinelayer.geojson";
-    
     private static TransportLineMgr instance;
-    private TransportLineGeoJsonDownloader tlGJDownloader;
-    private TransportLineGeoJsonImporter tlDbImporter;
-    private TransportLineSQLCreator tlSQLCreator;
     private TransportLineCalMinDist tlCalMinDist;
     private TransportLineCalNoiseLevel tlCalNoiseLevel;
+    private TransportLineCalResultSQLHandler tlCalResultSQLHandler;
 
     public static void main(String[] args) {
         TransportLineMgr tlMgr = TransportLineMgr.getInstance();
-        tlMgr.calNoiseLevel("670180");
-        
+        tlMgr.getNoiseLevel("670180");
     }
 
     // singleton initalization of TransportLineMgr
     private TransportLineMgr() {
-        tlDbImporter = new TransportLineGeoJsonImporter();
-        tlSQLCreator = new TransportLineSQLCreator();
-        tlCalMinDist = new TransportLineCalMinDist();
-        tlGJDownloader = new TransportLineGeoJsonDownloader();
-        tlCalNoiseLevel = new TransportLineCalNoiseLevel();
+        tlCalMinDist = TransportLineCalMinDist.getInstance();
+        tlCalNoiseLevel = TransportLineCalNoiseLevel.getInstance();
+        tlCalResultSQLHandler = TransportLineCalResultSQLHandler.getInstance();
     }
 
     // call to create TransportLineMgr
@@ -36,60 +28,117 @@ public class TransportLineMgr {
         return instance;
     }
 
-    public boolean getAllTransportLineData() {
-        return true;
+    public JSONObject getNoiseLevel(String postalCode) {
+        System.out.println("Starting noise analysis flow for postal code " + postalCode);
+        JSONObject storedResult = tlCalResultSQLHandler.retrieveTransportLineCalResult(postalCode);
+        
+        if (isUsableStoredResult(storedResult)) {
+            System.out.println("Using stored noise result for postal code " + postalCode);
+            return storedResult;
+        }
+
+        System.out.println("Noise result missing for postal code " + postalCode);
+        if (isInvalidPostalCode(postalCode)) {
+            return invalidPostalCodeResult(postalCode, null);
+        }
+
+        return calNoiseLevel(postalCode);
     }
 
-    public void downloadGeoJson() {
-        tlGJDownloader.downloadGeoJson(DATASET_ID, LOCALFILEPATH);
+    public JSONObject getNoiseLevel(String postalCode, double radius) {
+        System.out.println("Starting noise analysis flow for postal code " + postalCode + " with radius " + radius);
+        JSONObject storedResult = tlCalResultSQLHandler.retrieveTransportLineCalResult(postalCode);
+
+        if (isUsableStoredResult(storedResult) && storedResult.has("search_radius")) {
+            
+            double storedRadius = storedResult.optDouble("search_radius", Double.NaN);
+
+            if (Double.isFinite(storedRadius) && Math.abs(storedRadius - radius) < 1e-9) {
+                System.out.println("Using stored noise result for postal code " + postalCode + " with radius " + radius);
+                return storedResult;
+            }
+        }
+
+        System.out.println("Noise result missing for postal code " + postalCode + " with radius " + radius);
+        if (isInvalidPostalCode(postalCode)) {
+            return invalidPostalCodeResult(postalCode, radius);
+        }
+
+        return calNoiseLevel(postalCode, radius);
     }
 
-    public void importGeoJsonToSQLDb() {
-        tlDbImporter.importGeoJsonToSQLDb(LOCALFILEPATH);
-    }
-    
-    public Boolean checkCurrency(){
-        return DataGovAPIHandler.getInstance().checkAPIDataCurrency(DATASET_ID);
-    }
-
-    public void createSQLTable() {
-        tlSQLCreator.createSQLTable();
-    }
-
-    public JSONObject calMinDistToLine(Coordinate coords) {
-        return tlCalMinDist.calMinDist(coords);
-    }
-
-    public JSONObject calMinDistToLine(String postalCode) {
-        return tlCalMinDist.calMinDist(postalCode);
-    }
-
-    public JSONObject calNoiseLevel(Coordinate coords){
-        JSONObject minDistResult = calMinDistToLine(coords);
-        return tlCalNoiseLevel.calNoiseLevel(minDistResult);
-    }
-
-    public JSONObject calNoiseLevel(String postalCode){
+    private JSONObject calNoiseLevel(String postalCode) {
         JSONObject minDistResult = calMinDistToLine(postalCode);
-        return tlCalNoiseLevel.calNoiseLevel(minDistResult);
+        if (isInvalidAnalysisResult(minDistResult)) {
+            return minDistResult;
+        }
+
+        JSONObject noiseResult = tlCalNoiseLevel.calNoiseLevel(minDistResult);
+        if (isInvalidAnalysisResult(noiseResult)) {
+            return noiseResult;
+        }
+
+        tlCalResultSQLHandler.saveTransportLineCalResult(noiseResult);
+        return noiseResult;
     }
 
-    public JSONObject calMinDistToLine(Coordinate coords, double radius) {
-        return tlCalMinDist.calMinDist(coords, radius);
-    }
-
-    public JSONObject calMinDistToLine(String postalCode, double radius) {
-        return tlCalMinDist.calMinDist(postalCode, radius);
-    }
-
-    public JSONObject calNoiseLevel(Coordinate coords, double radius){
-        JSONObject minDistResult = calMinDistToLine(coords, radius);
-        return tlCalNoiseLevel.calNoiseLevel(minDistResult);
-    }
-
-    public JSONObject calNoiseLevel(String postalCode, double radius){
+    private JSONObject calNoiseLevel(String postalCode, double radius) {
         JSONObject minDistResult = calMinDistToLine(postalCode, radius);
-        return tlCalNoiseLevel.calNoiseLevel(minDistResult);
+        if (isInvalidAnalysisResult(minDistResult)) {
+            return minDistResult;
+        }
+
+        JSONObject noiseResult = tlCalNoiseLevel.calNoiseLevel(minDistResult);
+        if (isInvalidAnalysisResult(noiseResult)) {
+            return noiseResult;
+        }
+
+        tlCalResultSQLHandler.saveTransportLineCalResult(noiseResult);
+        return noiseResult;
+    }
+
+    private JSONObject calMinDistToLine(String postalCode) {
+        JSONObject result = tlCalMinDist.calMinDist(postalCode);
+        result.put("postalCode", postalCode);
+        return result;
+    }
+
+    private JSONObject calMinDistToLine(String postalCode, double radius) {
+        JSONObject result = tlCalMinDist.calMinDist(postalCode, radius);
+        result.put("postalCode", postalCode);
+        return result;
+    }
+
+    private boolean isUsableStoredResult(JSONObject result) {
+        return result != null && !result.isEmpty()
+                && !"NOT_FOUND".equalsIgnoreCase(result.optString("status", ""))
+                && !"INVALID_INPUT".equalsIgnoreCase(result.optString("status", ""));
+    }
+
+    private boolean isInvalidPostalCode(String postalCode) {
+        Coordinate coords = HDBBuildingMgr.getInstance().postalCodeToCoordinate(postalCode);
+        return coords == null || (coords.getLatitude() == -1 && coords.getLongitude() == -1);
+    }
+
+    private JSONObject invalidPostalCodeResult(String postalCode, Double radius) {
+        System.out.println("ERROR: Invalid postalCode");
+        JSONObject result = new JSONObject();
+        result.put("status", "INVALID_INPUT");
+        result.put("error", "Invalid postal code: unable to resolve coordinates");
+        result.put("postalCode", postalCode == null ? "" : postalCode);
+        if (radius != null) {
+            result.put("search_radius", radius);
+        }
+        return result;
+    }
+
+    private boolean isInvalidAnalysisResult(JSONObject result) {
+        if (result == null || result.isEmpty()) {
+            return true;
+        }
+
+        String status = result.optString("status", "");
+        return "INVALID_INPUT".equalsIgnoreCase(status) || result.has("error");
     }
 
 }
