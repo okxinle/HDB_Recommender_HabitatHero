@@ -2,6 +2,7 @@ import "../styles/ProfilePage.css";
 import { User, Mail, Lock, Calendar } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import InputField from "../components/InputField";
 
 function ProfilePage() {
   const [profile, setProfile] = useState(null);
@@ -152,23 +153,25 @@ function ProfilePage() {
                 Change Password
               </button>
             </div>
-            {showPasswordForm && (
-              <div style={{ marginTop: "12px", display: "grid", gap: "8px", maxWidth: "320px" }}>
-                <input
-                  type="password"
-                  name="oldPassword"
-                  placeholder="Old password"
-                  value={passwordForm.oldPassword}
-                  onChange={handlePasswordInputChange}
-                />
-                <input
-                  type="password"
-                  name="newPassword"
-                  placeholder="New password"
-                  value={passwordForm.newPassword}
-                  onChange={handlePasswordInputChange}
-                />
-                <button className="change-password-btn" onClick={handleChangePassword}>
+            {showPasswordForm && 
+            (
+              <div>
+                <InputField
+                label="Current Password"
+                type="password"
+                name="oldPassword"
+                value={passwordForm.oldPassword}
+                onChange={handlePasswordInputChange}
+              />
+
+              <InputField
+                label="New Password"
+                type="password"
+                name="newPassword"
+                value={passwordForm.newPassword}
+                onChange={handlePasswordInputChange}
+              />
+                <button className="update-password-btn" onClick={handleChangePassword}>
                   Update Password
                 </button>
                 {passwordError && <span style={{ color: "#b91c1c" }}>{passwordError}</span>}
