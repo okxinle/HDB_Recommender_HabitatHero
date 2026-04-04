@@ -140,6 +140,7 @@ const initialFormData = {
 function QuizPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [attemptedNext, setAttemptedNext] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState(initialFormData);
@@ -212,6 +213,10 @@ function QuizPage() {
   };
 
   const submitQuiz = async () => {
+    if (isLoading) return;
+
+    setIsLoading(true);
+
     try {
       const finalTowns = new Set(formData.structuralConstraints.preferredTowns);
 
@@ -336,6 +341,8 @@ function QuizPage() {
     } catch (error) {
       console.error("error submitting quiz:", error);
       alert(error?.message || "unable to submit your quiz right now. please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -374,9 +381,11 @@ function QuizPage() {
           <button
             onClick={step === 4 ? submitQuiz : nextStep}
             className="btn-next"
-            disabled={isFinalSubmitDisabled}
+            disabled={isFinalSubmitDisabled || (step === 4 && isLoading)}
           >
-            {step === 4 ? "Find My HDB Match" : "Next >"}
+            {step === 4
+              ? (isLoading ? "Analyzing blocks..." : "Find My HDB Match")
+              : "Next >"}
           </button>
         </div>
       </div>
