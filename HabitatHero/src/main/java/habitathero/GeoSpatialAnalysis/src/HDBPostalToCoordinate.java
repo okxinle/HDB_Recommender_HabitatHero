@@ -53,25 +53,4 @@ public class HDBPostalToCoordinate extends SQLDbConnect {
         }
         return coords;
     }
-
-    private boolean populateCoordsWithQuery(Coordinate coords, String sql, String postalCode) {
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, postalCode);
-
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    double longitude = rs.getDouble("longitude");
-                    double latitude = rs.getDouble("latitude");
-                    coords.setLatitude(latitude);
-                    coords.setLongitude(longitude);
-
-                    System.out.printf("Coordinates: %f , %f\n", latitude, longitude);
-                    return true;
-                }
-            }
-        } catch (Exception ignored) {
-            // Try fallback source if primary source is unavailable.
-        }
-        return false;
-    }
 }
