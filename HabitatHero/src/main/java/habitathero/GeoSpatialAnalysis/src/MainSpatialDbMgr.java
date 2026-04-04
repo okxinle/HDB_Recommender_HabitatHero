@@ -5,6 +5,8 @@ public class MainSpatialDbMgr {
     private HDBBuildingDbMgr hdbBuildingDbMgr;
     private LandUseDbMgr landUseDbMgr;
     private TransportLineDbMgr transportLineDbMgr;
+    private HDBBuildingSunFacingResultSQLHandler hdbBuildingSunFacingResultSQLHandler;
+    private LandUseFutureDevRiskResultSQLHandler landUseFutureDevRiskResultSQLHandler;
     private TransportLineCalResultSQLHandler transportLineCalResultSQLHandler;
     private DataGovMetadataMgr dataGovMetadataMgr;
     private DataGovAPIHandler dataGovAPIHandler;
@@ -13,6 +15,8 @@ public class MainSpatialDbMgr {
         this.hdbBuildingDbMgr = HDBBuildingDbMgr.getInstance();
         this.landUseDbMgr = LandUseDbMgr.getInstance();
         this.transportLineDbMgr = TransportLineDbMgr.getInstance();
+        this.hdbBuildingSunFacingResultSQLHandler = HDBBuildingSunFacingResultSQLHandler.getInstance();
+        this.landUseFutureDevRiskResultSQLHandler = LandUseFutureDevRiskResultSQLHandler.getInstance();
         this.transportLineCalResultSQLHandler = TransportLineCalResultSQLHandler.getInstance();
         this.dataGovMetadataMgr = DataGovMetadataMgr.getInstance();
         this.dataGovAPIHandler = DataGovAPIHandler.getInstance();
@@ -38,6 +42,8 @@ public class MainSpatialDbMgr {
             createHDBBuildingTable();
             createLandUseTable();
             createTransportLineTable();
+            createHDBBuildingSunFacingResultTable();
+            createLandUseFutureDevRiskResultTable();
             createTransportLineCalResultTable();
             createMetadataTable();
 
@@ -66,6 +72,16 @@ public class MainSpatialDbMgr {
     public void createTransportLineCalResultTable() {
         System.out.println("[INIT] Creating TransportLine Cal Result table...");
         transportLineCalResultSQLHandler.createSQLTable();
+    }
+
+    public void createHDBBuildingSunFacingResultTable() {
+        System.out.println("[INIT] Creating HDB Building Sun Facing Result table...");
+        hdbBuildingSunFacingResultSQLHandler.createSQLTable();
+    }
+
+    public void createLandUseFutureDevRiskResultTable() {
+        System.out.println("[INIT] Creating LandUse Future Dev Risk Result table...");
+        landUseFutureDevRiskResultSQLHandler.createSQLTable();
     }
 
     public void createMetadataTable() {
