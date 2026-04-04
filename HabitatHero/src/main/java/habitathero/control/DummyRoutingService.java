@@ -1,11 +1,8 @@
 package habitathero.control;
 import java.util.Random;
 
-import org.springframework.stereotype.Service;
-
 import habitathero.entity.Coordinates;
 
-@Service
 public class DummyRoutingService implements IRoutingService {
 
     private static final int MIN_MINUTES = 20;

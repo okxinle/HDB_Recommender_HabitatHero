@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { SearchX } from 'lucide-react';
+import { SearchX, Pencil, ArrowRight } from 'lucide-react';
 import '../styles/HDBResultDashBoardPage.css';
 
 const TEMP_RESULTS_KEY = 'temporaryGuestResults';
@@ -20,7 +20,7 @@ const formatCurrency = (value) => {
 
 const formatLeaseYears = (value) => {
   const years = getSafeNumber(value);
-  return years === null ? 'N/A' : `${years} Years`;
+  return years === null ? 'N/A' : `${years} years`;
 };
 
 function HDBResultDashBoardPage() {
@@ -43,6 +43,24 @@ function HDBResultDashBoardPage() {
       return [];
     }
   })();
+
+  const formatTown = (town) => {
+    if (!town) return "Unknown Town";
+
+    return town
+      .toLowerCase()
+      .replace(/(^|\s|\/)\S/g, (char) => char.toUpperCase());
+  };
+
+  const formatStreetName = (street) => {
+    if (!street) return "";
+
+    return street
+      .toLowerCase()
+      .replace(/(^\w|\s\w)/g, (char) => char.toUpperCase());
+  };
+
+  const submittedPreferences = location.state?.submittedPreferences || null;
 
   const stateRankedBlocks = Array.isArray(location.state?.rankedBlocks)
     ? location.state.rankedBlocks
@@ -177,7 +195,7 @@ function HDBResultDashBoardPage() {
   }
 
   return (
-    <div className="results-page-wrapper">
+    <div className="results-page">
       {!isAuthenticated && (
         <div className="guest-results-banner">
           Viewing temporary results.{' '}
@@ -188,49 +206,160 @@ function HDBResultDashBoardPage() {
       )}
 
       <div className="results-header">
-        <h1>Your HDB Matches</h1>
+        <h1>Your Personalized HDB Matches</h1>
         <p>We found {rankedBlocks.length} blocks tailored to your lifestyle preferences.</p>
       </div>
 
-      <div className="results-grid">
-        {rankedBlocks.map((item, index) => {
-          const block = item?.hdbBlock ?? item ?? {};
-          const blockId = block?.blockId ?? 'N/A';
-          const town = block?.town ?? 'Unknown Town';
-          const postalCode = block?.postalCode ?? 'N/A';
+      <div className="results-layout">
+      {submittedPreferences && (
+        <aside className="preferences-panel">
+          <div className="preferences-card">
+            <h2 className="preferences-title">Your Preferences</h2>
+            <hr className="preferences-divider" />
 
-          const globalMatchIndex = getSafeNumber(item?.globalMatchIndex ?? block?.globalMatchIndex);
-          const estimatedPrice = getSafeNumber(item?.estimatedPrice ?? block?.estimatedPrice);
-          const remainingLeaseYears = getSafeNumber(block?.remainingLeaseYears);
+            <div className="preferences-content">
+              <div className="preferences-section">
+                <p>
+                  <strong>Budget:</strong>{" "}
+                  {submittedPreferences.structuralConstraints?.budgetRange?.length === 2
+                    ? `Up to ${formatCurrency(
+                        submittedPreferences.structuralConstraints.budgetRange[1]
+                      )}`
+                    : "N/A"}
+                </p>
 
-          const commuteFairnessScore = getSafeNumber(item?.commuteMetrics?.commuteFairnessScore);
-          const totalCommuteBurden = getSafeNumber(item?.commuteMetrics?.totalCommuteBurden);
-          const fairnessWidth = commuteFairnessScore === null
-            ? 0
-            : Math.max(0, Math.min(100, commuteFairnessScore * 100));
+                <p>
+                  <strong>Preferred Towns:</strong>{" "}
+                  {submittedPreferences.structuralConstraints?.preferredTowns?.length
+                    ? submittedPreferences.structuralConstraints.preferredTowns.join(", ")
+                    : "N/A"}
+                </p>
 
-          const isHighMatch = globalMatchIndex !== null && globalMatchIndex > 75;
-          const noiseRiskLevel = block?.noiseRiskLevel ?? '';
+                <p>
+                  <strong>Flat Type:</strong>{" "}
+                  {submittedPreferences.structuralConstraints?.preferredFlatType || "N/A"}
+                </p>
 
-          return (
-            <div key={`${blockId}-${index}`} className="hdb-card">
-              <div className={`match-badge ${isHighMatch ? 'high' : 'med'}`}>
-                {formatMatchScore(globalMatchIndex)}
+                <p>
+                  <strong>Minimum Lease:</strong>{" "}
+                  {submittedPreferences.structuralConstraints?.minLeaseYears
+                    ? `${submittedPreferences.structuralConstraints.minLeaseYears} years`
+                    : "N/A"}
+                </p>
               </div>
 
-              <div className="card-content">
-                <h3>{town}</h3>
-                <p className="postal-code">Block ID: {blockId} | Postal: {postalCode}</p>
+              <div className="preferences-section">
+                <p>
+                  <strong>Solar Orientation:</strong>{" "}
+                  {submittedPreferences.softConstraints?.find(
+                    (item) => item.preferenceName === "solarOrientation"
+                  )?.mode || "N/A"}
+                </p>
+
+                <p>
+                  <strong>Acoustic Comfort:</strong>{" "}
+                  {submittedPreferences.softConstraints?.find(
+                    (item) => item.preferenceName === "acousticComfort"
+                  )?.mode || "N/A"}
+                </p>
+
+                <p>
+                  <strong>Convenience:</strong>{" "}
+                  {submittedPreferences.softConstraints?.find(
+                    (item) => item.preferenceName === "convenience"
+                  )?.mode || "N/A"}
+                </p>
+              </div>
+
+              <div className="preferences-section">
+                <p>
+                  <strong>Status:</strong>{" "}
+                  {submittedPreferences.commuterProfile?.enabled ? "Enabled" : "Disabled"}
+                </p>
+              </div>
+            </div>
+
+            <button
+              className="modify-btn"
+              onClick={() => navigate("/quiz?step=1")}
+            >
+              <Pencil size={14} style={{ marginRight: "8px" }} />
+              Modify Preferences
+            </button>
+          </div>
+        </aside>
+      )}
+
+      <section className="results-panel">
+        <div className="results-grid">
+          {rankedBlocks.map((item, index) => {
+            const block = item?.hdbBlock ?? item ?? {};
+            const blockId = block?.blockId ?? "N/A";
+            const town = formatTown(block?.town);
+            const postalCode = block?.postalCode ?? "N/A";
+            const blockNumber = block?.blockNumber ?? "N/A";
+            const streetName = formatTown(block?.streetName);
+
+            const globalMatchIndex = getSafeNumber(
+              item?.globalMatchIndex ?? block?.globalMatchIndex
+            );
+            const estimatedPrice = getSafeNumber(
+              item?.estimatedPrice ?? block?.estimatedPrice
+            );
+            const remainingLeaseYears = getSafeNumber(block?.remainingLeaseYears);
+
+            const commuteFairnessScore = getSafeNumber(
+              item?.commuteMetrics?.commuteFairnessScore
+            );
+            const totalCommuteBurden = getSafeNumber(
+              item?.commuteMetrics?.totalCommuteBurden
+            );
+
+            const fairnessWidth =
+              commuteFairnessScore === null
+                ? 0
+                : Math.max(0, Math.min(100, commuteFairnessScore * 100));
+
+            const isHighMatch =
+              globalMatchIndex !== null && globalMatchIndex > 75;
+
+            const noiseRiskLevel = block?.noiseRiskLevel ?? "";
+
+            return (
+              <div key={`${blockId}-${index}`} className="result-card">
+                <div className="result-header-row">
+                  <div>
+                    <h3 className="result-title">Block {blockNumber} {streetName}</h3>
+                    <p className="result-postal">
+                      Town: {town} | Postal: {postalCode}
+                    </p>
+                  </div>
+
+                  <div className="result-side">
+                    <div
+                      className={`match-badge ${
+                        isHighMatch ? "high" : "med"
+                      }`}
+                    >
+                      {formatMatchScore(globalMatchIndex)}
+                    </div>
+                    <button className="view-details-btn">
+                      View Details
+                      <ArrowRight size={14} />
+                    </button>
+                  </div>
+                </div>
 
                 <hr />
 
-                <div className="details-row">
+                <div className="result-details-row">
                   <div className="detail-item">
-                    <span>Estimated Price</span>
+                    <span>Estimated Price: </span>
                     <strong>{formatCurrency(estimatedPrice)}</strong>
                   </div>
+
                   <div className="detail-item">
-                    <span>Lease Remaining</span>
+                    <span>Lease Remaining: </span>
                     <strong>{formatLeaseYears(remainingLeaseYears)}</strong>
                   </div>
                 </div>
@@ -243,27 +372,37 @@ function HDBResultDashBoardPage() {
                         <div
                           className="fairness-fill"
                           style={{ width: `${fairnessWidth}%` }}
-                        ></div>
+                        />
                       </div>
                     </div>
+
                     <p className="commute-time">
-                      Total Daily Burden: {totalCommuteBurden ?? 'N/A'} mins
+                      Total Daily Burden:{" "}
+                      {totalCommuteBurden ?? "N/A"} mins
                     </p>
                   </div>
                 )}
 
                 <div className="tags-container">
-                  {block?.westSunStatus && <span className="tag sun">Afternoon Sun</span>}
-                  {String(noiseRiskLevel).toLowerCase() === 'high' && <span className="tag noise">High Noise Risk</span>}
-                  {block?.futureRiskFlag && <span className="tag risk">Construction Risk</span>}
+                  {block?.westSunStatus && (
+                    <span className="tag sun">Afternoon Sun</span>
+                  )}
+
+                  {String(noiseRiskLevel).toLowerCase() === "high" && (
+                    <span className="tag noise">High Noise Risk</span>
+                  )}
+
+                  {block?.futureRiskFlag && (
+                    <span className="tag risk">Construction Risk</span>
+                  )}
                 </div>
               </div>
-
-              <button className="view-details-btn">View on Map</button>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+      
     </div>
   );
 }

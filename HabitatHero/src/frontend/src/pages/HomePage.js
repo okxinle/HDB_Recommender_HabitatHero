@@ -78,7 +78,7 @@ function HomePage() {
               ))}
 
             </div>
-            <Link to="/quiz">
+            <Link to="/quiz" onClick={() => sessionStorage.removeItem("quizData")}>
               <button className="primary-btn">Start Lifestyle Quiz</button>
             </Link>
           </div>
