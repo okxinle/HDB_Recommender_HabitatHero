@@ -1,6 +1,6 @@
 import React from 'react';
-import {MapContainer, TileLayer, Marker, Popup, Circle, Polygon
-} from 'react-leaflet';
+import { useLocation, useParams } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Popup, Circle, Polygon } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import '../styles/SpatialAnalysisResultDashBoardPage.css';
@@ -18,7 +18,19 @@ L.Icon.Default.mergeOptions({
 });
 
 function SpatialAnalysisResultDashBoardPage() {
-  const blockPosition = [1.3696, 103.8495];
+  const location = useLocation();
+  const { blockId } = useParams();
+
+  const block = location.state?.block ?? {};
+
+  const blockNumber = block?.blockNumber ?? blockId?.replace("hdb", "") ?? "N/A";
+  const streetName = block?.streetName ?? "";
+  const postalCode = block?.postalCode ?? "N/A";
+
+  const formatStreet = (value) =>
+    value?.toLowerCase().replace(/(^\w|\s\w)/g, (char) => char.toUpperCase());
+
+  const blockPosition = [block?.coordinates?.lat, block?.coordinates?.lng];
 
   const reserveSite = [
     [1.3679, 103.8535],
@@ -36,8 +48,13 @@ function SpatialAnalysisResultDashBoardPage() {
       </div>
 
       <div className="block-banner">
-        Block 456 Ang Mo Kio Avenue 10 Singapore 560456
+        Block {blockNumber} {formatStreet(streetName)} Singapore {postalCode}
       </div>
+
+      <p>
+        <strong>Coordinates:</strong>{" "}
+        {block?.coordinates? `${block.coordinates.lat}, ${block.coordinates.lng}`:"N/A"}
+      </p>
 
       <div className="layout">
 
@@ -54,7 +71,7 @@ function SpatialAnalysisResultDashBoardPage() {
               />
 
               <Marker position={blockPosition}>
-                <Popup>Block 456</Popup>
+                <Popup>Block {blockNumber} {formatStreet(streetName)}</Popup>
               </Marker>
 
               <Circle
