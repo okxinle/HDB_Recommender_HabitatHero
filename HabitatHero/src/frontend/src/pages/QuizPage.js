@@ -8,6 +8,7 @@ import QuizSummary from "./QuizSteps/QuizSummary";
 
 const TEMP_RESULTS_KEY = "temporaryGuestResults";
 const MEMBER_RESULTS_AVAILABLE_KEY = "memberResultsAvailable";
+const QUIZ_DATA_KEY = "quizData";
 
 const PREFERENCE_NAME_MAP = {
   solarOrientation: "Solar Orientation",
@@ -31,6 +32,18 @@ const buildBackendPayload = (formData, preferredTowns) => {
   const [minBudget = 0, maxBudget = 0] = formData.structuralConstraints.budgetRange || [];
   const postalCodeA = (formData.commuterProfile.destinations[0] || "").trim();
   const postalCodeB = (formData.commuterProfile.destinations[1] || "").trim();
+  const convenienceConstraint = formData.softConstraints.find(
+    (constraint) => constraint.preferenceName === "convenience"
+  ) || { mode: "ignore", weight: 0, selectedAmenities: [], parentsAddress: "" };
+
+  const convenienceMode = String(convenienceConstraint.mode || "ignore").toUpperCase();
+  const convenienceWeight = convenienceMode === "WEIGHTED"
+    ? Number(convenienceConstraint.weight || 0)
+    : 0;
+  const selectedAmenities = Array.isArray(convenienceConstraint.selectedAmenities)
+    ? convenienceConstraint.selectedAmenities
+    : [];
+  const parentsPostalCode = (convenienceConstraint.parentsAddress || "").trim();
 
   return {
     userId: getCurrentUserId(),
@@ -47,6 +60,10 @@ const buildBackendPayload = (formData, preferredTowns) => {
     },
     postalCodeA,
     postalCodeB,
+    convenienceMode,
+    convenienceWeight,
+    selectedAmenities,
+    parentsPostalCode,
     softConstraints: formData.softConstraints.map((constraint) => ({
       factorName: PREFERENCE_NAME_MAP[constraint.preferenceName] || constraint.preferenceName,
       priorityWeight: constraint.mode === "weighted" ? constraint.weight : 0,
@@ -99,121 +116,52 @@ const buildAuthHeaders = () => {
   return headers;
 };
 
+const initialFormData = {
+  userId: 0,
+  structuralConstraints: {
+    budgetRange: [400000, 800000],
+    preferredRegions: [],
+    preferredTowns: [],
+    preferredFlatType: "",
+    minLeaseYears: 50
+  },
+  commuterProfile: {
+    enabled: false,
+    destinations: ["", ""],
+    fairnessWeight: 0.5
+  },
+  softConstraints: [
+    { preferenceName: "solarOrientation", mode: "ignore", weight: 0 },
+    { preferenceName: "acousticComfort", mode: "ignore", weight: 0 },
+    { preferenceName: "convenience", mode: "ignore", weight: 0, selectedAmenities: [] }
+  ]
+};
+
 function QuizPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [attemptedNext, setAttemptedNext] = useState(false);
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    userId: 0,
-    structuralConstraints: {
-      budgetRange: [400000, 800000], 
-      preferredRegions: [],
-      preferredTowns: [],
-      preferredFlatType: "",
-      minLeaseYears: 50
-    },
-    commuterProfile: {
-      enabled: false,
-      destinations: ["", ""], 
-      fairnessWeight: 0.5
-    },
-    softConstraints: [
-      { preferenceName: "solarOrientation", mode: "ignore", weight: 0 },
-      { preferenceName: "acousticComfort", mode: "ignore", weight: 0 },
-      { preferenceName: "convenience", mode: "ignore", weight: 0, selectedAmenities: [] }
-    ]
-  });
-
-const submitQuiz = async () => {
-  try {
-    let finalTowns = new Set(formData.structuralConstraints.preferredTowns);
-    
-    formData.structuralConstraints.preferredRegions.forEach(region => {
-      const regionTowns = REGION_TOWN_MAP[region];
-      const hasTownsSelected = regionTowns.some(town => finalTowns.has(town));
-      
-      if (!hasTownsSelected) {
-        regionTowns.forEach(town => finalTowns.add(town));
-      }
-    });
-
-    const payload = buildBackendPayload(formData, Array.from(finalTowns));
-
-    const response = await fetch("http://localhost:8080/api/hdb/recommend", {
-      method: "POST",
-      headers: buildAuthHeaders(),
-      body: JSON.stringify(payload)
-    });
-
-    const responseBody = await parseBackendResponse(response);
-    if (!response.ok) {
-      if (response.status === 400) {
-        alert(extractErrorMessage(responseBody, "Some quiz inputs are invalid. Please review your criteria and try again."));
-        return;
-      }
-
-      if (response.status === 404) {
-        alert(extractErrorMessage(responseBody, "No matches found. Please broaden your search criteria."));
-        return;
-      }
-
-      if (response.status === 401) {
-        alert(extractErrorMessage(responseBody, "Please log in or sign up to see your personalized results."));
-        navigate("/login");
-        return;
-      }
-
-      if (response.status >= 500) {
-        alert(extractErrorMessage(responseBody, "A server error occurred. Please try again later."));
-        return;
-      }
-
-      throw new Error(extractErrorMessage(responseBody, "Failed to submit quiz data"));
-    }
-
-    const rankedBlocks = extractRankedBlocks(responseBody);
-    const token = localStorage.getItem("token") || "";
-    const user = localStorage.getItem("user");
-    const isAuthenticated = Boolean(token && user);
-
-    if (!isAuthenticated && rankedBlocks.length > 0) {
-      // Temporary guest data: session-only and cleared on refresh/logout.
-      sessionStorage.setItem(TEMP_RESULTS_KEY, JSON.stringify(rankedBlocks));
-      localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "false");
-    } else if (!isAuthenticated) {
-      sessionStorage.removeItem(TEMP_RESULTS_KEY);
-      localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "false");
-    } else {
-      // Members persist results in backend DB only.
-      sessionStorage.removeItem(TEMP_RESULTS_KEY);
-      localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, rankedBlocks.length > 0 ? "true" : "false");
-
-      if (rankedBlocks.length > 0) {
-        try {
-          await fetch("http://localhost:8080/api/profile/results", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify(rankedBlocks)
-          });
-        } catch (syncError) {
-          // Keep local cache as fallback if backend persistence is temporarily unavailable.
-          console.warn("Unable to sync quiz results to profile storage:", syncError);
-        }
-      }
-    }
-
-    navigate("/results", { state: { rankedBlocks } });
-  } catch (error) {
-    console.error("Error submitting quiz:", error);
-    alert(error?.message || "Unable to submit your quiz right now. Please try again.");
-  }
-};
+  const [formData, setFormData] = useState(initialFormData);
 
   const step = parseInt(searchParams.get("step")) || 1;
+
+  useEffect(() => {
+    const savedQuizData = sessionStorage.getItem(QUIZ_DATA_KEY);
+
+    if (savedQuizData) {
+      try {
+        const parsed = JSON.parse(savedQuizData);
+        setFormData(parsed);
+      } catch (error) {
+        console.warn("unable to parse saved quiz data:", error);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    sessionStorage.setItem(QUIZ_DATA_KEY, JSON.stringify(formData));
+  }, [formData]);
 
   useEffect(() => {
     const stepFromUrl = parseInt(searchParams.get("step")) || 1;
@@ -224,17 +172,16 @@ const submitQuiz = async () => {
 
   const isStep1Valid =
     formData.structuralConstraints.budgetRange[0] < formData.structuralConstraints.budgetRange[1] &&
-    formData.structuralConstraints.preferredRegions.length > 0 && 
+    formData.structuralConstraints.preferredRegions.length > 0 &&
     formData.structuralConstraints.preferredFlatType.length > 0 &&
     Number.isFinite(formData.structuralConstraints.minLeaseYears) &&
     formData.structuralConstraints.minLeaseYears >= 0;
 
-  const isStep2Valid = formData.softConstraints.every(factor => {
+  const isStep2Valid = formData.softConstraints.every((factor) => {
     if (factor.mode === "ignore" || factor.mode === "strict") return true;
     if (factor.mode === "weighted") return factor.weight >= 0;
     return false;
   });
-
 
   const isStep3Valid =
     !formData.commuterProfile.enabled ||
@@ -264,8 +211,137 @@ const submitQuiz = async () => {
     if (step > 1) setSearchParams({ step: String(step - 1) });
   };
 
+  const submitQuiz = async () => {
+    try {
+      const finalTowns = new Set(formData.structuralConstraints.preferredTowns);
+
+      formData.structuralConstraints.preferredRegions.forEach((region) => {
+        const regionTowns = REGION_TOWN_MAP[region] || [];
+        const hasTownsSelected = regionTowns.some((town) => finalTowns.has(town));
+
+        if (!hasTownsSelected) {
+          regionTowns.forEach((town) => finalTowns.add(town));
+        }
+      });
+
+      const mergedPreferredTowns = Array.from(finalTowns);
+
+      const finalFormData = {
+        ...formData,
+        structuralConstraints: {
+          ...formData.structuralConstraints,
+          preferredTowns: mergedPreferredTowns
+        }
+      };
+
+      const payload = buildBackendPayload(finalFormData, mergedPreferredTowns);
+
+      const response = await fetch("http://localhost:8080/api/hdb/recommend", {
+        method: "POST",
+        headers: buildAuthHeaders(),
+        body: JSON.stringify(payload)
+      });
+
+      const responseBody = await parseBackendResponse(response);
+
+      if (!response.ok) {
+        if (response.status === 400) {
+          alert(
+            extractErrorMessage(
+              responseBody,
+              "some quiz inputs are invalid. please review your criteria and try again."
+            )
+          );
+          return;
+        }
+
+        if (response.status === 404) {
+          alert(
+            extractErrorMessage(
+              responseBody,
+              "no matches found. please broaden your search criteria."
+            )
+          );
+          return;
+        }
+
+        if (response.status === 401) {
+          alert(
+            extractErrorMessage(
+              responseBody,
+              "please log in or sign up to see your personalized results."
+            )
+          );
+          navigate("/login");
+          return;
+        }
+
+        if (response.status >= 500) {
+          alert(
+            extractErrorMessage(
+              responseBody,
+              "a server error occurred. please try again later."
+            )
+          );
+          return;
+        }
+
+        throw new Error(
+          extractErrorMessage(responseBody, "failed to submit quiz data")
+        );
+      }
+
+      const rankedBlocks = extractRankedBlocks(responseBody);
+      const token = localStorage.getItem("token") || "";
+      const user = localStorage.getItem("user");
+      const isAuthenticated = Boolean(token && user);
+
+      sessionStorage.setItem(QUIZ_DATA_KEY, JSON.stringify(finalFormData));
+
+      if (!isAuthenticated && rankedBlocks.length > 0) {
+        sessionStorage.setItem(TEMP_RESULTS_KEY, JSON.stringify(rankedBlocks));
+        localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "false");
+      } else if (!isAuthenticated) {
+        sessionStorage.removeItem(TEMP_RESULTS_KEY);
+        localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "false");
+      } else {
+        sessionStorage.removeItem(TEMP_RESULTS_KEY);
+        localStorage.setItem(
+          MEMBER_RESULTS_AVAILABLE_KEY,
+          rankedBlocks.length > 0 ? "true" : "false"
+        );
+
+        if (rankedBlocks.length > 0) {
+          try {
+            await fetch("http://localhost:8080/api/profile/results", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify(rankedBlocks)
+            });
+          } catch (syncError) {
+            console.warn("unable to sync quiz results to profile storage:", syncError);
+          }
+        }
+      }
+
+      navigate("/results", {
+        state: {
+          rankedBlocks,
+          submittedPreferences: finalFormData
+        }
+      });
+    } catch (error) {
+      console.error("error submitting quiz:", error);
+      alert(error?.message || "unable to submit your quiz right now. please try again.");
+    }
+  };
+
   const renderStep = () => {
     const stepProps = { data: formData, update: setFormData, showErrors: attemptedNext };
+
     switch (step) {
       case 1: return <StructuralConstraints {...stepProps} />;
       case 2: return <LivabilityFactors {...stepProps} />;

@@ -12,8 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import habitathero.GeoSpatialAnalysis.src.Coordinate;
-import habitathero.GeoSpatialAnalysis.src.HDBBuildingMgr;
+import habitathero.control.GeocodingService;
 import habitathero.control.RecommendationEngine;
 import habitathero.control.UserProfileDbManager;
 import habitathero.entity.CommuterProfile;
@@ -34,10 +33,14 @@ public class RecommendationController {
      */
     private final RecommendationEngine engine;
     private final UserProfileDbManager userProfileDbManager;
+    private final GeocodingService geocodingService;
 
-    public RecommendationController(RecommendationEngine engine, UserProfileDbManager userProfileDbManager) {
+    public RecommendationController(RecommendationEngine engine,
+                                    UserProfileDbManager userProfileDbManager,
+                                    GeocodingService geocodingService) {
         this.engine = engine;
         this.userProfileDbManager = userProfileDbManager;
+        this.geocodingService = geocodingService;
     }
 
     /**
@@ -54,10 +57,9 @@ public class RecommendationController {
     @PostMapping("/recommend")
     public ResponseEntity<?> recommend(@RequestBody RecommendationRequest request, Authentication authentication) {
         try {
-            UserProfile profile = request;
-            applyPostalCodeDestinations(request, profile);
+            applyPostalCodeDestinations(request, request);
 
-            List<HDBBlock> recommendedBlocks = engine.generateRecommendations(profile);
+            List<HDBBlock> recommendedBlocks = engine.generateRecommendations(request);
 
             // Persist only for authenticated members.
             if (authentication != null && authentication.isAuthenticated() && authentication.getPrincipal() instanceof UserAccount userAccount) {
@@ -66,6 +68,7 @@ public class RecommendationController {
 
             return ResponseEntity.ok(Map.of(
                 "status", "success",
+                "pipeline", "REAL_DB_MULTI_COMMUTER_HAVERSINE",
                 "results", recommendedBlocks
             ));
 
@@ -115,17 +118,16 @@ public class RecommendationController {
     }
 
     private Coordinates resolveDestination(String postalCode, String fieldName) {
-        Coordinate geospatialCoordinate = HDBBuildingMgr.getInstance().postalCodeToCoordinate(postalCode);
+        java.util.Optional<Coordinates> coords = geocodingService.getCoordinates(postalCode);
 
-        if (geospatialCoordinate == null ||
-            (Double.compare(geospatialCoordinate.getLatitude(), -1.0) == 0 &&
-             Double.compare(geospatialCoordinate.getLongitude(), -1.0) == 0)) {
+        if (coords.isEmpty()) {
             throw new IllegalArgumentException(
-                "Invalid " + fieldName + ": unable to resolve coordinates for postal code " + postalCode + "."
+                "Invalid " + fieldName + ": unable to resolve coordinates for postal code " + postalCode
+                + " from local datasets or OneMap API."
             );
         }
 
-        return new Coordinates(geospatialCoordinate.getLatitude(), geospatialCoordinate.getLongitude());
+        return coords.get();
     }
 
     private boolean hasText(String value) {

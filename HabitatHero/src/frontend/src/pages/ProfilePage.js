@@ -2,10 +2,14 @@ import "../styles/ProfilePage.css";
 import { User, Mail, Lock, Calendar } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import InputField from "../components/InputField";
 
 function ProfilePage() {
   const [profile, setProfile] = useState(null);
   const [user, setUser] = useState(null);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ oldPassword: "", newPassword: "" });
+  const [passwordError, setPasswordError] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -56,6 +60,52 @@ function ProfilePage() {
     }
   };
 
+  const handlePasswordInputChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError("");
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    if (!passwordForm.oldPassword || !passwordForm.newPassword) {
+      setPasswordError("Please fill in both fields.");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:8080/api/auth/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          oldPassword: passwordForm.oldPassword,
+          newPassword: passwordForm.newPassword
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.status === "success") {
+        alert("Password updated successfully!");
+        setPasswordForm({ oldPassword: "", newPassword: "" });
+        setShowPasswordForm(false);
+      } else {
+        setPasswordError(data.message || "Failed to update password.");
+      }
+    } catch (error) {
+      setPasswordError("System error. Please try again later.");
+    }
+  };
+
   return (
     <div className="profile-page">
       <div className="profile-header">
@@ -96,10 +146,37 @@ function ProfilePage() {
             <span className="profile-label">Password</span>
             <div className="password-row">
               <span className="profile-value">********</span>
-              <button className="change-password-btn">
+              <button
+                className="change-password-btn"
+                onClick={() => setShowPasswordForm((prev) => !prev)}
+              >
                 Change Password
               </button>
             </div>
+            {showPasswordForm && 
+            (
+              <div>
+                <InputField
+                label="Current Password"
+                type="password"
+                name="oldPassword"
+                value={passwordForm.oldPassword}
+                onChange={handlePasswordInputChange}
+              />
+
+              <InputField
+                label="New Password"
+                type="password"
+                name="newPassword"
+                value={passwordForm.newPassword}
+                onChange={handlePasswordInputChange}
+              />
+                <button className="update-password-btn" onClick={handleChangePassword}>
+                  Update Password
+                </button>
+                {passwordError && <span style={{ color: "#b91c1c" }}>{passwordError}</span>}
+              </div>
+            )}
           </div>
         </div>
 

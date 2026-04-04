@@ -1,39 +1,62 @@
 package habitathero.control;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.json.JSONObject;
 import org.springframework.stereotype.Service;
 
+import habitathero.GeoSpatialAnalysis.src.Coordinate;
+import habitathero.GeoSpatialAnalysis.src.HDBBuildingMgr;
+import habitathero.GeoSpatialAnalysis.src.TransportLineMgr;
+import habitathero.boundary.RecommendationRequest;
 import habitathero.entity.CommuterProfile;
 import habitathero.entity.HDBBlock;
 import habitathero.entity.HDBDataConstants;
 import habitathero.entity.StructuralConstraints;
-import habitathero.entity.UserProfile;
 import habitathero.entity.WeightedPreference;
 import habitathero.exception.ZeroMatchesException;
-import habitathero.repository.IHDBRepository;
+import habitathero.repository.ResaleTransactionRepository;
 
 @Service
 public class RecommendationEngine {
 
-    private IHDBRepository  dbRepository;
-    private IRoutingService routingService;
+    private static final String FACTOR_SOLAR = "Solar Orientation";
+    private static final String FACTOR_ACOUSTIC = "Acoustic Comfort";
+    private static final String FACTOR_CONVENIENCE = "Convenience";
+    private static final double STRICT_NOISE_DISTANCE_METERS = 100.0;
+    private static final double QUIET_NOISE_DB = 55.0;
+    private static final double LOUD_NOISE_DB = 85.0;
 
-    public RecommendationEngine(IHDBRepository dbRepository, IRoutingService routingService) {
-        this.dbRepository   = dbRepository;
-        this.routingService = routingService;
+    private final ResaleTransactionRepository resaleTransactionRepository;
+    private final MultiCommuterService multiCommuterService;
+    private final HDBBuildingMgr hdbBuildingMgr;
+    private final TransportLineMgr transportLineMgr;
+    private final ConvenienceScoringService convenienceScoringService;
+
+    public RecommendationEngine(ResaleTransactionRepository resaleTransactionRepository,
+                                MultiCommuterService multiCommuterService,
+                                HDBBuildingMgr hdbBuildingMgr,
+                                TransportLineMgr transportLineMgr,
+                                ConvenienceScoringService convenienceScoringService) {
+        this.resaleTransactionRepository = resaleTransactionRepository;
+        this.multiCommuterService = multiCommuterService;
+        this.hdbBuildingMgr = hdbBuildingMgr;
+        this.transportLineMgr = transportLineMgr;
+        this.convenienceScoringService = convenienceScoringService;
     }
 
     // ── Public entry point ────────────────────────────────────────────────
 
-    public List<HDBBlock> generateRecommendations(UserProfile profile) {
-        if (profile == null) {
+    public List<HDBBlock> generateRecommendations(RecommendationRequest request) {
+        if (request == null) {
             throw new IllegalArgumentException("Request body is missing user profile data.");
         }
 
-        StructuralConstraints constraints = profile.getStructuralConstraints();
+        StructuralConstraints constraints = request.getStructuralConstraints();
         if (constraints == null) {
             throw new IllegalArgumentException("Missing structuralConstraints in request payload.");
         }
@@ -41,124 +64,354 @@ public class RecommendationEngine {
         // Lab 3: Validate user inputs against official HDB data
         validateStructuralConstraints(constraints);
 
-        // Step 1 & 2: fetch all blocks and apply hard filters
-        List<HDBBlock> allBlocks      = dbRepository.findAll();
-        List<HDBBlock> filteredBlocks = applyHardFilters(allBlocks, constraints);
-
-        List<WeightedPreference> softConstraints =
-                profile.getSoftConstraints() == null ? List.of() : profile.getSoftConstraints();
-
-        // Pre-compute the maximum possible livability score (sum of all priority weights)
-        // so we can normalise it to the range [0.0, 1.0] before combining with commuteScore.
-        double totalWeight = softConstraints.stream()
-                .mapToDouble(WeightedPreference::getPriorityWeight)
-                .sum();
-
-        // Step 3: score every block that passed the hard filters
-        for (HDBBlock block : filteredBlocks) {
-
-            // Step 4 & 5: compute both sub-scores
-            double livabilityScore = calculateLivabilityScore(block, softConstraints);
-            float  commuteScore    = calculateCommuteScore(block, profile.getCommuterProfile());
-
-            // Normalise livability to [0.0, 1.0]
-            double normalisedLivability = (totalWeight > 0) ? livabilityScore / totalWeight : 0.0;
-
-            // Step 6: combine scores
-            double combinedScore;
-            if (commuteScore == -1.0f || commuteScore == 0.0f) {
-                // Commute is disabled or the routing API returned an error —
-                // fall back to livability alone.
-                combinedScore = normalisedLivability;
-            } else {
-                // Both signals are valid: blend them with equal weight (50 / 50).
-                combinedScore = (normalisedLivability + commuteScore) / 2.0;
-            }
-
-            // Step 7: scale to a percentage [0.0, 100.0] and persist on the block
-            block.setGlobalMatchIndex(combinedScore * 100.0);
-        }
-
-        // Step 8 & 9: sort descending and return
-        sortBlocksByMatchIndex(filteredBlocks);
-        return filteredBlocks;
-    }
-
-    private List<HDBBlock> applyHardFilters(List<HDBBlock> allBlocks, StructuralConstraints constraints) {
-        double maxBudget = constraints.getMaxBudget() > 0 ? constraints.getMaxBudget() : Double.MAX_VALUE;
-        int minLeaseYears = Math.max(0, constraints.getMinLeaseYears());
-        List<String> preferredTowns = constraints.getPreferredTowns();
-        boolean hasTownFilter = preferredTowns != null && !preferredTowns.isEmpty();
-
-        List<HDBBlock> result = allBlocks.stream()
-            .filter(Objects::nonNull)
-            .filter(b -> b.getEstimatedPrice() <= maxBudget)
-            .filter(b -> b.getRemainingLeaseYears() >= minLeaseYears)
-            .filter(b -> !hasTownFilter || preferredTowns.contains(b.getTown()))
-                .collect(Collectors.toList());
-
-        if (result.isEmpty()) {
+        List<BlockCandidateView> candidateList = fetchCandidates(constraints);
+        System.out.println("DEBUG: Candidates found in DB: " + candidateList.size());
+        if (candidateList.isEmpty()) {
             throw new ZeroMatchesException();
         }
-        return result;
-    }
 
-    // ── Soft scoring (stubs) ─────────────────────────────────────────────
+        multiCommuterService.annotateCommuteScores(candidateList, request.getCommuterProfile());
 
-    private double calculateLivabilityScore(HDBBlock block, List<WeightedPreference> preferences) {
-        double totalScore = 0.0;
+        List<WeightedPreference> softConstraints = request.getSoftConstraints() == null
+                ? List.of()
+            : request.getSoftConstraints();
 
-        for (WeightedPreference preference : preferences) {
-            double factorScore;
+        FactorConfig solarConfig = resolveFactorConfig(softConstraints, FACTOR_SOLAR);
+        FactorConfig acousticConfig = resolveFactorConfig(softConstraints, FACTOR_ACOUSTIC);
+        FactorConfig convenienceConfig = resolveConvenienceConfig(request, softConstraints);
 
-            switch (preference.getFactorName()) {
-                case "Solar Orientation":
-                    factorScore = block.isWestSunStatus() ? 0.0 : 1.0;
-                    break;
+        boolean hasValidCommuterPair = hasValidCommuterPair(request.getCommuterProfile());
+        List<HDBBlock> rankedBlocks = new ArrayList<>();
 
-                case "Acoustic Comfort":
-                    factorScore = "Low".equalsIgnoreCase(block.getNoiseRiskLevel()) ? 1.0 : 0.0;
-                    break;
+        for (BlockCandidateView candidate : candidateList) {
+            HDBBlock block = candidate.getBlock();
 
-                case "Convenience":
-                    // TODO: implement convenience scoring logic
-                    factorScore = 0.0;
-                    break;
+            JSONObject sunFacingResult = getSunFacingResult(block);
+            JSONObject noiseLevelResult = getNoiseLevelResult(block);
 
-                default:
-                    factorScore = 0.0;
-                    break;
+            double solarScore = scoreSolarOrientation(block, sunFacingResult);
+            double acousticScore = scoreAcousticComfort(block, noiseLevelResult);
+            double convenienceScore = convenienceScoringService.scoreBlock(block, request);
+
+            if (!passesStrictConstraints(
+                    block,
+                    solarConfig,
+                    acousticConfig,
+                    convenienceConfig,
+                    sunFacingResult,
+                    noiseLevelResult,
+                    convenienceScore)) {
+                continue;
             }
-            totalScore += factorScore * preference.getPriorityWeight();
+
+            WeightedScore weightedScore = calculateWeightedLivabilityScore(
+                    solarConfig,
+                    acousticConfig,
+                    convenienceConfig,
+                    solarScore,
+                    acousticScore,
+                    convenienceScore);
+
+            // Keep match score neutral when all factors are ignored (instead of forcing 0%).
+            double normalizedLivability = weightedScore.totalWeight > 0.0
+                    ? weightedScore.weightedScore / weightedScore.totalWeight
+                    : 1.0;
+            normalizedLivability = clamp01(normalizedLivability);
+
+            double combinedScore = hasValidCommuterPair
+                    ? clamp01((normalizedLivability + candidate.getCommuteScore()) / 2.0)
+                    : normalizedLivability;
+
+            block.setEstimatedPrice(candidate.getAverageResalePrice());
+            block.setRemainingLeaseYears((int) Math.round(candidate.getAverageRemainingLease()));
+            block.setGlobalMatchIndex(100.0 * combinedScore);
+            rankedBlocks.add(block);
         }
-        return totalScore;
+
+        if (rankedBlocks.isEmpty()) {
+            throw new ZeroMatchesException();
+        }
+
+        rankedBlocks.sort(Comparator.comparingDouble(HDBBlock::getGlobalMatchIndex).reversed());
+        return rankedBlocks;
     }
 
-    private float calculateCommuteScore(HDBBlock block, CommuterProfile commuteProfile) {
-        if (commuteProfile == null || !commuteProfile.isEnabled()) {
-            return 0.0f;
-        }
+    private List<BlockCandidateView> fetchCandidates(StructuralConstraints constraints) {
+        double maxBudget = constraints.getMaxBudget() > 0 ? constraints.getMaxBudget() : Double.MAX_VALUE;
+        int minLeaseYears = Math.max(0, constraints.getMinLeaseYears());
+        String preferredFlatType = constraints.getPreferredFlatType();
 
-        if (commuteProfile.getDestinationA() == null || commuteProfile.getDestinationB() == null) {
-            return -1.0f;
-        }
+        boolean townFilterDisabled = constraints.getPreferredTowns() == null || constraints.getPreferredTowns().isEmpty();
+        List<String> preferredTowns = townFilterDisabled
+                ? List.of("__TOWN_FILTER_DISABLED__")
+            : constraints.getPreferredTowns().stream()
+                .filter(town -> town != null && !town.isBlank())
+                .map(town -> town.trim().toUpperCase())
+                .collect(Collectors.toList());
 
-        int timeA = routingService.getTravelTime(block.getCoordinates(), commuteProfile.getDestinationA());
-        int timeB = routingService.getTravelTime(block.getCoordinates(), commuteProfile.getDestinationB());
-
-        return calculateFairnessIndex(timeA, timeB);
+        return resaleTransactionRepository.findCandidateBlocks(
+                maxBudget,
+                minLeaseYears,
+                preferredFlatType,
+                preferredTowns,
+                townFilterDisabled);
     }
 
-    private float calculateFairnessIndex(int timeA, int timeB) {
-        // Return -1.0f to signal invalid data (e.g. API timeout or error)
-        if (timeA < 0 || timeB < 0) {
-            return -1.0f;
-        }
-        return 1.0f - ((float) Math.abs(timeA - timeB) / (timeA + timeB + 1));
+    private boolean hasValidCommuterPair(CommuterProfile commuterProfile) {
+        return commuterProfile != null
+                && commuterProfile.isEnabled()
+                && commuterProfile.getDestinationA() != null
+                && commuterProfile.getDestinationB() != null;
     }
 
-    private void sortBlocksByMatchIndex(List<HDBBlock> blocks) {
-        blocks.sort(Comparator.comparingDouble(HDBBlock::getGlobalMatchIndex).reversed());
+    private WeightedScore calculateWeightedLivabilityScore(FactorConfig solarConfig,
+                                                           FactorConfig acousticConfig,
+                                                           FactorConfig convenienceConfig,
+                                                           double solarScore,
+                                                           double acousticScore,
+                                                           double convenienceScore) {
+        double weightedScore = 0.0;
+        double totalWeight = 0.0;
+
+        if (solarConfig.mode == FactorMode.WEIGHTED && solarConfig.weight > 0.0) {
+            weightedScore += solarScore * solarConfig.weight;
+            totalWeight += solarConfig.weight;
+        }
+
+        if (acousticConfig.mode == FactorMode.WEIGHTED && acousticConfig.weight > 0.0) {
+            weightedScore += acousticScore * acousticConfig.weight;
+            totalWeight += acousticConfig.weight;
+        }
+
+        if (convenienceConfig.mode == FactorMode.WEIGHTED && convenienceConfig.weight > 0.0) {
+            weightedScore += clamp01(convenienceScore) * convenienceConfig.weight;
+            totalWeight += convenienceConfig.weight;
+        }
+
+        return new WeightedScore(weightedScore, totalWeight);
+    }
+
+    private boolean passesStrictConstraints(HDBBlock block,
+                                            FactorConfig solarConfig,
+                                            FactorConfig acousticConfig,
+                                            FactorConfig convenienceConfig,
+                                            JSONObject sunFacingResult,
+                                            JSONObject noiseLevelResult,
+                                            double convenienceScore) {
+        if (solarConfig.mode == FactorMode.STRICT && !passesStrictSolar(block, sunFacingResult)) {
+            return false;
+        }
+
+        if (acousticConfig.mode == FactorMode.STRICT && !passesStrictAcoustic(block, noiseLevelResult)) {
+            return false;
+        }
+
+        if (convenienceConfig.mode == FactorMode.STRICT && clamp01(convenienceScore) < 1.0) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private FactorConfig resolveConvenienceConfig(RecommendationRequest request, List<WeightedPreference> preferences) {
+        String explicitMode = normalizeMode(request.getConvenienceMode());
+        if (explicitMode != null) {
+            FactorMode mode = FactorMode.valueOf(explicitMode);
+            if (mode == FactorMode.WEIGHTED) {
+                return new FactorConfig(mode, Math.max(0.0, request.getConvenienceWeight()));
+            }
+            return new FactorConfig(mode, 0.0);
+        }
+
+        return resolveFactorConfig(preferences, FACTOR_CONVENIENCE);
+    }
+
+    private FactorConfig resolveFactorConfig(List<WeightedPreference> preferences, String factorName) {
+        Optional<WeightedPreference> preferenceOpt = preferences.stream()
+                .filter(preference -> preference.getFactorName() != null
+                        && factorName.equalsIgnoreCase(preference.getFactorName().trim()))
+                .findFirst();
+
+        if (preferenceOpt.isEmpty()) {
+            return new FactorConfig(FactorMode.IGNORE, 0.0);
+        }
+
+        WeightedPreference preference = preferenceOpt.get();
+        if (preference.isStrict()) {
+            return new FactorConfig(FactorMode.STRICT, 0.0);
+        }
+
+        if (preference.getPriorityWeight() > 0.0) {
+            return new FactorConfig(FactorMode.WEIGHTED, preference.getPriorityWeight());
+        }
+
+        return new FactorConfig(FactorMode.IGNORE, 0.0);
+    }
+
+    private JSONObject getSunFacingResult(HDBBlock block) {
+        String postalCode = normalized(block.getPostalCode());
+        if (postalCode == null) {
+            return null;
+        }
+
+        try {
+            return hdbBuildingMgr.calSunFacing(postalCode);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private JSONObject getNoiseLevelResult(HDBBlock block) {
+        String postalCode = normalized(block.getPostalCode());
+
+        try {
+            if (postalCode != null) {
+                return transportLineMgr.calNoiseLevel(postalCode);
+            }
+
+            if (block.getCoordinates() != null) {
+                Coordinate coords = new Coordinate(block.getCoordinates().getLat(), block.getCoordinates().getLng());
+                return transportLineMgr.calNoiseLevel(coords);
+            }
+        } catch (Exception ignored) {
+            return null;
+        }
+
+        return null;
+    }
+
+    private double scoreSolarOrientation(HDBBlock block, JSONObject sunFacingResult) {
+        if (sunFacingResult != null && "OK".equalsIgnoreCase(sunFacingResult.optString("status"))) {
+            double westExposurePct = sunFacingResult.optDouble("westScoreRelativeExposurePct", Double.NaN);
+            if (!Double.isNaN(westExposurePct)) {
+                return clamp01(1.0 - (westExposurePct / 100.0));
+            }
+
+            String dominant = sunFacingResult.optString("dominant", "");
+            if ("WEST".equalsIgnoreCase(dominant)) {
+                return 0.0;
+            }
+            if ("EAST".equalsIgnoreCase(dominant)) {
+                return 1.0;
+            }
+            if ("BALANCED".equalsIgnoreCase(dominant)) {
+                return 0.5;
+            }
+        }
+
+        // Fallback to persisted block field if geospatial output is unavailable.
+        return block.isWestSunStatus() ? 0.0 : 1.0;
+    }
+
+    private boolean passesStrictSolar(HDBBlock block, JSONObject sunFacingResult) {
+        if (sunFacingResult != null && "OK".equalsIgnoreCase(sunFacingResult.optString("status"))) {
+            String dominant = sunFacingResult.optString("dominant", "");
+            if (!dominant.isBlank()) {
+                return !"WEST".equalsIgnoreCase(dominant);
+            }
+
+            return scoreSolarOrientation(block, sunFacingResult) >= 0.5;
+        }
+
+        return !block.isWestSunStatus();
+    }
+
+    private double scoreAcousticComfort(HDBBlock block, JSONObject noiseLevelResult) {
+        if (noiseLevelResult != null && !noiseLevelResult.has("error")) {
+            double noiseDb = noiseLevelResult.optDouble("noise_level_db", Double.NaN);
+            if (!Double.isNaN(noiseDb)) {
+                return scoreFromNoiseDb(noiseDb);
+            }
+        }
+
+        // Fallback to persisted block field if geospatial output is unavailable.
+        return "Low".equalsIgnoreCase(block.getNoiseRiskLevel()) ? 1.0 : 0.0;
+    }
+
+    private boolean passesStrictAcoustic(HDBBlock block, JSONObject noiseLevelResult) {
+        if (noiseLevelResult != null && !noiseLevelResult.has("error")) {
+            double distanceMeters = noiseLevelResult.optDouble("distance_meters", Double.NaN);
+            if (!Double.isNaN(distanceMeters)) {
+                return distanceMeters >= STRICT_NOISE_DISTANCE_METERS;
+            }
+
+            double noiseDb = noiseLevelResult.optDouble("noise_level_db", Double.NaN);
+            if (!Double.isNaN(noiseDb)) {
+                return scoreFromNoiseDb(noiseDb) >= 0.5;
+            }
+        }
+
+        return "Low".equalsIgnoreCase(block.getNoiseRiskLevel());
+    }
+
+    private double scoreFromNoiseDb(double noiseDb) {
+        if (noiseDb <= QUIET_NOISE_DB) {
+            return 1.0;
+        }
+        if (noiseDb >= LOUD_NOISE_DB) {
+            return 0.0;
+        }
+
+        double normalized = 1.0 - ((noiseDb - QUIET_NOISE_DB) / (LOUD_NOISE_DB - QUIET_NOISE_DB));
+        return clamp01(normalized);
+    }
+
+    private String normalized(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String normalizeMode(String rawMode) {
+        if (rawMode == null || rawMode.trim().isEmpty()) {
+            return null;
+        }
+
+        String normalized = rawMode.trim().toUpperCase(Locale.ROOT);
+        if ("IGNORE".equals(normalized) || "STRICT".equals(normalized) || "WEIGHTED".equals(normalized)) {
+            return normalized;
+        }
+
+        return null;
+    }
+
+    private double clamp01(double value) {
+        if (value < 0.0) {
+            return 0.0;
+        }
+        if (value > 1.0) {
+            return 1.0;
+        }
+        return value;
+    }
+
+    private static final class WeightedScore {
+        private final double weightedScore;
+        private final double totalWeight;
+
+        private WeightedScore(double weightedScore, double totalWeight) {
+            this.weightedScore = weightedScore;
+            this.totalWeight = totalWeight;
+        }
+    }
+
+    private enum FactorMode {
+        IGNORE,
+        STRICT,
+        WEIGHTED
+    }
+
+    private static final class FactorConfig {
+        private final FactorMode mode;
+        private final double weight;
+
+        private FactorConfig(FactorMode mode, double weight) {
+            this.mode = mode;
+            this.weight = weight;
+        }
     }
 
     /**

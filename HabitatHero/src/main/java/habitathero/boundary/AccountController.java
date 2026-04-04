@@ -1,6 +1,7 @@
 package habitathero.boundary;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -35,24 +37,41 @@ public class AccountController {
         this.authService = authService;
     }
 
+    private UserAccount getAuthenticatedUser(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return null;
+        }
+        try {
+            String token = authHeader.substring(7);
+            String email = jwtService.extractEmail(token);
+            return userRepository.findByEmail(email).orElse(null);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     // 1. The Registration Endpoint
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody Map<String, String> request) {
         String email = request.get("email");
         String password = request.get("password");
+        String name = request.get("name");
 
         try {
-            UserAccount newUser = authService.registerUser(email, password);
+            UserAccount newUser = authService.registerUser(email, password, name);
             String token = authService.generateToken(newUser);
+
+            Map<String, Object> userPayload = new HashMap<>();
+            userPayload.put("userId", newUser.getUserId());
+            userPayload.put("email", newUser.getEmail());
+            userPayload.put("name", newUser.getName());
+            userPayload.put("createdAt", newUser.getCreatedAt());
+            userPayload.put("isActive", newUser.isActive());
 
             return ResponseEntity.ok(Map.of(
                 "status", "success",
                 "token", token,
-                "user", Map.of(
-                    "userId", newUser.getUserId(),
-                    "email", newUser.getEmail(),
-                    "isActive", newUser.isActive()
-                )
+                "user", userPayload
             ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -97,14 +116,18 @@ public class AccountController {
             userRepository.save(user);
 
             String token = jwtService.generateToken(user);
+
+            Map<String, Object> userPayload = new HashMap<>();
+            userPayload.put("userId", user.getUserId());
+            userPayload.put("email", user.getEmail());
+            userPayload.put("name", user.getName());
+            userPayload.put("createdAt", user.getCreatedAt());
+            userPayload.put("isActive", user.isActive());
+
             return ResponseEntity.ok(Map.of(
                 "status", "success",
                 "token", token,
-                "user", Map.of(
-                    "userId", user.getUserId(),
-                    "email", user.getEmail(),
-                    "isActive", user.isActive()
-                )
+                "user", userPayload
             ));
         } else {
             // FAILED LOGIN: Increment attempts
@@ -124,6 +147,31 @@ public class AccountController {
             return ResponseEntity.status(401).body(Map.of(
                 "message", "Invalid email or password. Attempts remaining: " + (5 - newAttempts)
             ));
+        }
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+        @RequestHeader("Authorization") String authHeader,
+        @RequestBody Map<String, String> request
+    ) {
+        UserAccount user = getAuthenticatedUser(authHeader);
+        if (user == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
+        }
+
+        String oldPassword = request.get("oldPassword");
+        String newPassword = request.get("newPassword");
+
+        if (oldPassword == null || oldPassword.isBlank() || newPassword == null || newPassword.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Old and new password are required"));
+        }
+
+        try {
+            authService.changePassword(user, oldPassword, newPassword);
+            return ResponseEntity.ok(Map.of("status", "success", "message", "Password updated successfully!"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 }

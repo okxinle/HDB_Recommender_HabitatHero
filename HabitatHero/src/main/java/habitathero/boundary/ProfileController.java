@@ -1,5 +1,6 @@
 package habitathero.boundary;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -96,11 +97,12 @@ public class ProfileController {
         // Fetch the profile using the user's ID
         UserProfile profile = profileRepository.findById(user.getUserId()).orElse(null);
 
-        if (profile == null) {
-            return ResponseEntity.ok(Map.of("status", "success", "data", null));
-        }
+        Map<String, Object> data = new HashMap<>();
+        data.put("profile", profile);
+        data.put("name", user.getName());
+        data.put("createdAt", user.getCreatedAt());
 
-        return ResponseEntity.ok(Map.of("status", "success", "data", profile));
+        return ResponseEntity.ok(Map.of("status", "success", "data", data));
     }
 
     @PostMapping
