@@ -28,6 +28,7 @@ public class RecommendationEngine {
     private static final String FACTOR_ACOUSTIC = "Acoustic Comfort";
     private static final String FACTOR_CONVENIENCE = "Convenience";
     private static final double STRICT_NOISE_DISTANCE_METERS = 100.0;
+    private static final double STRICT_CONVENIENCE_MIN_SCORE = 0.5;
     private static final double QUIET_NOISE_DB = 55.0;
     private static final double LOUD_NOISE_DB = 85.0;
 
@@ -79,6 +80,11 @@ public class RecommendationEngine {
         FactorConfig solarConfig = resolveFactorConfig(softConstraints, FACTOR_SOLAR);
         FactorConfig acousticConfig = resolveFactorConfig(softConstraints, FACTOR_ACOUSTIC);
         FactorConfig convenienceConfig = resolveConvenienceConfig(request, softConstraints);
+        int selectedConvenienceCount = request.getSelectedAmenities() == null
+            ? 0
+            : (int) request.getSelectedAmenities().stream()
+                .filter(item -> item != null && !item.trim().isEmpty())
+                .count();
 
         boolean hasValidCommuterPair = hasValidCommuterPair(request.getCommuterProfile());
         List<HDBBlock> rankedBlocks = new ArrayList<>();
@@ -98,6 +104,7 @@ public class RecommendationEngine {
                     solarConfig,
                     acousticConfig,
                     convenienceConfig,
+                    selectedConvenienceCount,
                     sunFacingResult,
                     noiseLevelResult,
                     convenienceScore)) {
@@ -195,6 +202,7 @@ public class RecommendationEngine {
                                             FactorConfig solarConfig,
                                             FactorConfig acousticConfig,
                                             FactorConfig convenienceConfig,
+                                            int selectedConvenienceCount,
                                             JSONObject sunFacingResult,
                                             JSONObject noiseLevelResult,
                                             double convenienceScore) {
@@ -206,7 +214,9 @@ public class RecommendationEngine {
             return false;
         }
 
-        if (convenienceConfig.mode == FactorMode.STRICT && clamp01(convenienceScore) < 1.0) {
+        if (convenienceConfig.mode == FactorMode.STRICT
+            && selectedConvenienceCount > 0
+            && clamp01(convenienceScore) < STRICT_CONVENIENCE_MIN_SCORE) {
             return false;
         }
 

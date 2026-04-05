@@ -10,5 +10,5 @@ public interface IRoutingService {
      * @param dest   the destination location
      * @return travel time in minutes
      */
-    int getTravelTime(Coordinates origin, Coordinates dest);
+    double getTravelTime(Coordinates origin, Coordinates dest);
 }
