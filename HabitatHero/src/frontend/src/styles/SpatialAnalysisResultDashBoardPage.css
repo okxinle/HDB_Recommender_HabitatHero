@@ -1,5 +1,116 @@
 .result-detail-page {
-  padding: 40px;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 44px 24px 64px;
+  width: 100%;
+}
+
+.header {
+  text-align: center;
+}
+
+.header h1 {
+  margin: 0 0 8px 0;
+}
+
+.header p {
+  margin: 0 0 24px 0;
+}
+
+.block-banner {
+  background: #2f7d74;
+  color: white;
+  padding: 16px 24px;
+  border-radius: 16px;
+  margin: 0 auto 32px;
+  font-weight: bold;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 32px;
+  align-items: start;
+  justify-content: center;
+}
+
+.map-section {
+  width: 100%;
+}
+
+.map-wrapper {
+  position: relative; /* VERY IMPORTANT */
+  width: 100%;
+}
+
+.map {
+  height: 500px;
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.legend {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 14px 16px;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  z-index: 1000;
+}
+
+.insights {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  align-self: start;
+  margin-top: 0;
+}
+
+.card {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #b9c7c7;
+  border-radius: 20px;
+  padding: 24px 24px;
+  background: white;
+  margin: 0;
+}
+
+.card h3 {
+  margin: 0 0 18px 0;
+}
+
+.card p {
+  margin: 0 0 14px 0;
+}
+
+.card p:last-child {
+  margin-bottom: 0;
+}
+
+.tag {
+  display: inline-block;
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 12px;
+  margin-bottom: 18px;
+}
+
+.tag.moderate {
+  background: #f4c56a;
+}
+
+.tag.low {
+  background: #4caf50;
+  color: white;
+}
+
+.header {
+  text-align: center;
 }
 
 .header h1 {

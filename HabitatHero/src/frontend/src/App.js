@@ -35,7 +35,7 @@ function App() {
           <Route path="/results" element={<HDBResultDashBoardPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/result-detail" element={<SpatialAnalysisResultDashBoardPage />} />
+          <Route path="/result-detail/:blockId" element={<SpatialAnalysisResultDashBoardPage />} />
         </Routes>
       </main>
 

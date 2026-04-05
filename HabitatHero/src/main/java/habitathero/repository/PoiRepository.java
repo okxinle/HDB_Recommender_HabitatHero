@@ -28,4 +28,23 @@ public interface PoiRepository extends JpaRepository<PointOfInterest, Long> {
                         @Param("lon") double lon,
                         @Param("category") String category,
                         @Param("radiusKm") double radiusKm);
+
+    @Query(value = """
+            SELECT p.*
+            FROM point_of_interest p
+            WHERE p.category = :category
+              AND (
+                    6371.0 * 2 * ASIN(
+                        SQRT(
+                            POWER(SIN(RADIANS((p.latitude - :lat) / 2.0)), 2)
+                            + COS(RADIANS(:lat)) * COS(RADIANS(p.latitude))
+                            * POWER(SIN(RADIANS((p.longitude - :lon) / 2.0)), 2)
+                        )
+                    )
+                ) <= :radiusKm
+            """, nativeQuery = true)
+    java.util.List<PointOfInterest> findNearbyPOIs(@Param("lat") double lat,
+                                                   @Param("lon") double lon,
+                                                   @Param("category") String category,
+                                                   @Param("radiusKm") double radiusKm);
 }

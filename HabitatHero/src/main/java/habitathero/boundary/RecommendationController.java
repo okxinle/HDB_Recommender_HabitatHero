@@ -60,15 +60,18 @@ public class RecommendationController {
             applyPostalCodeDestinations(request, request);
 
             List<HDBBlock> recommendedBlocks = engine.generateRecommendations(request);
+            boolean resultsPersisted = false;
 
             // Persist only for authenticated members.
             if (authentication != null && authentication.isAuthenticated() && authentication.getPrincipal() instanceof UserAccount userAccount) {
                 userProfileDbManager.saveLatestResults(userAccount.getUserId(), recommendedBlocks);
+                resultsPersisted = true;
             }
 
             return ResponseEntity.ok(Map.of(
                 "status", "success",
                 "pipeline", "REAL_DB_MULTI_COMMUTER_HAVERSINE",
+                "resultsPersisted", resultsPersisted,
                 "results", recommendedBlocks
             ));
 

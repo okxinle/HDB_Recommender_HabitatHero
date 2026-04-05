@@ -1,5 +1,8 @@
 package habitathero.entity;
 
+import java.util.List;
+import java.util.Map;
+
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -9,6 +12,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import jakarta.persistence.UniqueConstraint;
 
 @Entity
@@ -35,6 +39,15 @@ public class HDBBlock {
     private String noiseRiskLevel;
     private boolean futureRiskFlag;
     private double globalMatchIndex;
+
+    @Transient
+    private double convenienceScore;
+
+    @Transient
+    private Map<String, Boolean> convenienceFactors;
+
+    @Transient
+    private Map<String, List<String>> matchedAmenities;
     
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
@@ -54,6 +67,9 @@ public class HDBBlock {
     public String getNoiseRiskLevel() { return noiseRiskLevel; }
     public boolean isFutureRiskFlag() { return futureRiskFlag; }
     public double getGlobalMatchIndex() { return globalMatchIndex; }
+    public double getConvenienceScore() { return convenienceScore; }
+    public Map<String, Boolean> getConvenienceFactors() { return convenienceFactors; }
+    public Map<String, List<String>> getMatchedAmenities() { return matchedAmenities; }
     public Coordinates getCoordinates() { return coordinates; }
 
     // ── Setters ───────────────────────────────────────────────────────────────
@@ -68,6 +84,9 @@ public class HDBBlock {
     public void setNoiseRiskLevel(String noiseRiskLevel) { this.noiseRiskLevel = noiseRiskLevel; }
     public void setFutureRiskFlag(boolean futureRiskFlag) { this.futureRiskFlag = futureRiskFlag; }
     public void setGlobalMatchIndex(double globalMatchIndex) { this.globalMatchIndex = globalMatchIndex; }
+    public void setConvenienceScore(double convenienceScore) { this.convenienceScore = convenienceScore; }
+    public void setConvenienceFactors(Map<String, Boolean> convenienceFactors) { this.convenienceFactors = convenienceFactors; }
+    public void setMatchedAmenities(Map<String, List<String>> matchedAmenities) { this.matchedAmenities = matchedAmenities; }
     public void setCoordinates(Coordinates coordinates) { this.coordinates = coordinates; }
 
     @Override

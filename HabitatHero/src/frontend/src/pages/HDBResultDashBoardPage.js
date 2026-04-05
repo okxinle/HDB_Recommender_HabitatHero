@@ -1,10 +1,27 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { SearchX, Pencil, ArrowRight } from 'lucide-react';
+import { SearchX, ArrowRight } from 'lucide-react';
 import '../styles/HDBResultDashBoardPage.css';
 
 const TEMP_RESULTS_KEY = 'temporaryGuestResults';
 const MEMBER_RESULTS_AVAILABLE_KEY = 'memberResultsAvailable';
+const RESULTS_PREFERENCES_KEY = 'resultsSubmittedPreferences';
+
+const AMENITY_LABEL_MAP = {
+  school: 'School',
+  hawkerCentre: 'Hawker Centre',
+  supermarket: 'Supermarket',
+  park: 'Park',
+  hospital: 'Hospital',
+  playground: 'Playground',
+  parentsAddress: "Parents' Home"
+};
+
+const PREFERENCE_LABEL_MAP = {
+  solarOrientation: 'Solar Orientation',
+  acousticComfort: 'Acoustic Comfort',
+  convenience: 'Convenience'
+};
 
 const getSafeNumber = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : null);
 
@@ -21,6 +38,11 @@ const formatCurrency = (value) => {
 const formatLeaseYears = (value) => {
   const years = getSafeNumber(value);
   return years === null ? 'N/A' : `${years} years`;
+};
+
+const formatConvenienceMatch = (value) => {
+  const score = getSafeNumber(value);
+  return score === null ? 'N/A' : `${Math.round(score * 100)}%`;
 };
 
 function HDBResultDashBoardPage() {
@@ -55,8 +77,26 @@ function HDBResultDashBoardPage() {
   const stateRankedBlocks = Array.isArray(location.state?.rankedBlocks)
     ? location.state.rankedBlocks
     : null;
+  const stateSubmittedPreferences = location.state?.submittedPreferences ?? null;
+
+  const storedSubmittedPreferences = (() => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(RESULTS_PREFERENCES_KEY) || 'null');
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (error) {
+      return null;
+    }
+  })();
 
   useEffect(() => {
+    if (stateSubmittedPreferences) {
+      localStorage.setItem(RESULTS_PREFERENCES_KEY, JSON.stringify(stateSubmittedPreferences));
+    }
+
+    if (cachedRankedBlocks.length > 0) {
+      setHasQuizBeenTaken(true);
+    }
+
     // Guests: no backend fetch needed.
     if (!isAuthenticated) return;
 
@@ -106,7 +146,7 @@ function HDBResultDashBoardPage() {
     return () => {
       isMounted = false;
     };
-  }, [isAuthenticated, token, stateRankedBlocks]);
+  }, [cachedRankedBlocks.length, isAuthenticated, token, stateRankedBlocks, stateSubmittedPreferences]);
 
   const rankedBlocks = useMemo(() => {
     if (isAuthenticated) {
@@ -114,10 +154,98 @@ function HDBResultDashBoardPage() {
       if (Array.isArray(stateRankedBlocks) && stateRankedBlocks.length > 0) {
         return stateRankedBlocks;
       }
-      return memberRankedBlocks;
+      if (memberRankedBlocks.length > 0) {
+        return memberRankedBlocks;
+      }
+      return cachedRankedBlocks;
     }
     return stateRankedBlocks ?? cachedRankedBlocks;
   }, [isAuthenticated, memberRankedBlocks, stateRankedBlocks, cachedRankedBlocks]);
+
+  const hasFreshNavigationResults =
+    Array.isArray(stateRankedBlocks) && stateRankedBlocks.length > 0;
+  const usingSessionFallback =
+    isAuthenticated &&
+    rankedBlocks.length > 0 &&
+    cachedRankedBlocks.length > 0 &&
+    memberRankedBlocks.length === 0;
+  const hasProfileSavedResults =
+    isAuthenticated &&
+    rankedBlocks.length > 0 &&
+    (memberRankedBlocks.length > 0 || hasFreshNavigationResults) &&
+    !usingSessionFallback;
+
+  const submittedPreferences = stateSubmittedPreferences ?? storedSubmittedPreferences;
+
+  const summaryData = useMemo(() => {
+    if (!submittedPreferences) {
+      return null;
+    }
+
+    const structural = submittedPreferences.structuralConstraints || {};
+    const commuter = submittedPreferences.commuterProfile || {};
+    const softConstraints = Array.isArray(submittedPreferences.softConstraints)
+      ? submittedPreferences.softConstraints
+      : [];
+    const convenienceConfig = softConstraints.find((item) => item?.preferenceName === 'convenience') || {};
+
+    const budgetRange = Array.isArray(structural.budgetRange) ? structural.budgetRange : [];
+    const minBudget = getSafeNumber(budgetRange[0]);
+    const maxBudget = getSafeNumber(budgetRange[1]);
+
+    const regions = Array.isArray(structural.preferredRegions)
+      ? structural.preferredRegions.filter(Boolean)
+      : [];
+    const towns = Array.isArray(structural.preferredTowns)
+      ? structural.preferredTowns.filter(Boolean)
+      : [];
+
+    const destinations = Array.isArray(commuter.destinations)
+      ? commuter.destinations.filter((value) => typeof value === 'string' && value.trim().length > 0)
+      : [];
+
+    const amenities = Array.isArray(convenienceConfig.selectedAmenities)
+      ? convenienceConfig.selectedAmenities
+          .filter(Boolean)
+          .map((key) => AMENITY_LABEL_MAP[key] || key)
+      : [];
+
+    const factorModes = softConstraints.map((factor) => {
+      const mode = factor?.mode || 'ignore';
+      const weight = getSafeNumber(factor?.weight);
+      const factorLabel = PREFERENCE_LABEL_MAP[factor?.preferenceName] || factor?.preferenceName || 'Unknown';
+      if (mode === 'weighted' && weight !== null) {
+        return `${factorLabel}: Weighted (${weight})`;
+      }
+      if (mode === 'strict') {
+        return `${factorLabel}: Strict`;
+      }
+      return `${factorLabel}: Ignore`;
+    });
+
+    return {
+      budgetText:
+        minBudget !== null && maxBudget !== null
+          ? `$${minBudget.toLocaleString()} - $${maxBudget.toLocaleString()}`
+          : 'Not set',
+      flatType: structural.preferredFlatType || 'Not set',
+      minLeaseYears:
+        Number.isFinite(structural.minLeaseYears)
+          ? `${structural.minLeaseYears} years`
+          : 'Not set',
+      regionsText: regions.length > 0 ? regions.join(', ') : 'Not set',
+      townsText: towns.length > 0 ? towns.join(', ') : 'Not set',
+      commuterEnabled: Boolean(commuter.enabled),
+      commuterDestinations: destinations,
+      convenienceMode: convenienceConfig.mode || 'ignore',
+      amenities,
+      factorModes
+    };
+  }, [submittedPreferences]);
+
+  const handleEditPreferences = () => {
+    navigate('/quiz?step=1');
+  };
 
   if (stateRankedBlocks !== null) {
     if (!isAuthenticated && stateRankedBlocks.length > 0) {
@@ -195,6 +323,52 @@ function HDBResultDashBoardPage() {
         </div>
       )}
 
+      {hasProfileSavedResults && (
+        <div className="result-status-banner result-status-banner--success">
+          Saved to your profile. Your recommendations will still be here when you come back.
+        </div>
+      )}
+
+      {usingSessionFallback && (
+        <div className="result-status-banner result-status-banner--warning">
+          Showing temporary session results. Your login may have expired, so these might not be saved to your profile yet.
+        </div>
+      )}
+
+      <section className="choice-summary-card">
+        <div className="choice-summary-header">
+          <h2>Your Choices Summary</h2>
+          <button type="button" className="edit-preferences-btn" onClick={handleEditPreferences}>
+            Edit Preferences
+          </button>
+        </div>
+
+        {!summaryData ? (
+          <p className="choice-summary-empty">No quiz summary found yet. Take the quiz to build your preferences.</p>
+        ) : (
+          <div className="choice-summary-grid">
+            <div className="choice-summary-item"><strong>Budget:</strong> {summaryData.budgetText}</div>
+            <div className="choice-summary-item"><strong>Flat Type:</strong> {summaryData.flatType}</div>
+            <div className="choice-summary-item"><strong>Min Lease:</strong> {summaryData.minLeaseYears}</div>
+            <div className="choice-summary-item"><strong>Preferred Regions:</strong> {summaryData.regionsText}</div>
+            <div className="choice-summary-item"><strong>Preferred Towns:</strong> {summaryData.townsText}</div>
+            <div className="choice-summary-item">
+              <strong>Commuter Analysis:</strong> {summaryData.commuterEnabled ? 'Enabled' : 'Disabled'}
+              {summaryData.commuterEnabled && summaryData.commuterDestinations.length > 0 && (
+                <span> ({summaryData.commuterDestinations.join(' & ')})</span>
+              )}
+            </div>
+            <div className="choice-summary-item"><strong>Convenience Mode:</strong> {summaryData.convenienceMode}</div>
+            <div className="choice-summary-item">
+              <strong>Selected Amenities:</strong> {summaryData.amenities.length > 0 ? summaryData.amenities.join(', ') : 'None'}
+            </div>
+            <div className="choice-summary-item choice-summary-item--full">
+              <strong>Factor Preferences:</strong> {summaryData.factorModes.length > 0 ? summaryData.factorModes.join(' | ') : 'None'}
+            </div>
+          </div>
+        )}
+      </section>
+
       <div className="results-header">
         <h1>Your Personalized HDB Matches</h1>
         <p>We found {rankedBlocks.length} blocks tailored to your lifestyle preferences.</p>
@@ -218,6 +392,16 @@ function HDBResultDashBoardPage() {
               item?.estimatedPrice ?? block?.estimatedPrice
             );
             const remainingLeaseYears = getSafeNumber(block?.remainingLeaseYears);
+            const convenienceScore = getSafeNumber(
+              item?.convenienceScore ?? block?.convenienceScore
+            );
+            const convenienceFactors =
+              item?.convenienceFactors ?? block?.convenienceFactors ?? {};
+            const convenienceEntries = Object.entries(convenienceFactors);
+            const hasConvenienceBreakdown = convenienceEntries.length > 0;
+            const convenienceMatchText = hasConvenienceBreakdown
+              ? formatConvenienceMatch(convenienceScore)
+              : 'Unavailable';
 
             const commuteFairnessScore = getSafeNumber(
               item?.commuteMetrics?.commuteFairnessScore
@@ -254,10 +438,12 @@ function HDBResultDashBoardPage() {
                     >
                       {formatMatchScore(globalMatchIndex)}
                     </div>
+                    <Link to={`/result-detail/blkid-${blockId}`} state={{ block, result: item }} className='details-link'>
                     <button className="view-details-btn">
                       View Details
                       <ArrowRight size={14} />
                     </button>
+                  </Link>
                   </div>
                 </div>
 
@@ -272,6 +458,11 @@ function HDBResultDashBoardPage() {
                   <div className="detail-item">
                     <span>Lease Remaining: </span>
                     <strong>{formatLeaseYears(remainingLeaseYears)}</strong>
+                  </div>
+
+                  <div className="detail-item">
+                    <span>Convenience Match: </span>
+                    <strong>{convenienceMatchText}</strong>
                   </div>
                 </div>
 
