@@ -71,6 +71,9 @@ public class UserAccount {
     public boolean isActive() { return isActive; }
     public void setActive(boolean active) { isActive = active; }
 
+    public Role getRole() { return role; }
+    public void setRole(Role role) { this.role = role; }
+
     // --- NEW: Getters and Setters for Lockout ---
     public int getFailedLoginAttempts() { return failedLoginAttempts; }
     public void setFailedLoginAttempts(int failedLoginAttempts) { this.failedLoginAttempts = failedLoginAttempts; }

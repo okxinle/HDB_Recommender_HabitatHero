@@ -42,9 +42,8 @@ public class SecurityConfig {
             
             // 3. Configure which endpoints are public vs. private
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // From HEAD (Crucial for React CORS)
-                .requestMatchers("/api/hdb/recommend").permitAll()      // From HEAD
-                .requestMatchers("/api/auth/**", "/error").permitAll()  // Combined from both branches
+                .requestMatchers("/api/auth/**", "/error").permitAll()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
             
