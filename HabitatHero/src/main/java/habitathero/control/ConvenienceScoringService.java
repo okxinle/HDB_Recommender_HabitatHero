@@ -1,13 +1,17 @@
 package habitathero.control;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
 import habitathero.boundary.RecommendationRequest;
 import habitathero.entity.Coordinates;
 import habitathero.entity.HDBBlock;
+import habitathero.entity.PointOfInterest;
 import habitathero.repository.PoiRepository;
 
 @Service
@@ -23,6 +27,7 @@ public class ConvenienceScoringService {
     private static final String CATEGORY_PARK = "PARK";
     private static final String CATEGORY_HOSPITAL = "HOSPITAL";
     private static final String CATEGORY_PLAYGROUND = "PLAYGROUND";
+    private static final String PARENTS_HOME_WITHIN_4KM = "Parents' Home (Within 4km)";
 
     private final PoiRepository poiRepository;
     private final GeocodingService geocodingService;
@@ -33,8 +38,12 @@ public class ConvenienceScoringService {
     }
 
     public double scoreBlock(HDBBlock block, RecommendationRequest request) {
+        return evaluateBlock(block, request).getScore();
+    }
+
+    public ConvenienceEvaluation evaluateBlock(HDBBlock block, RecommendationRequest request) {
         if (block == null || request == null || block.getCoordinates() == null) {
-            return 0.0;
+            return new ConvenienceEvaluation(0.0, Map.of(), Map.of());
         }
 
         List<String> selectedAmenities = request.getSelectedAmenities() == null
@@ -42,11 +51,13 @@ public class ConvenienceScoringService {
                 : request.getSelectedAmenities();
 
         if (selectedAmenities.isEmpty()) {
-            return 0.0;
+            return new ConvenienceEvaluation(0.0, Map.of(), Map.of());
         }
 
         int matched = 0;
         int total = 0;
+        Map<String, Boolean> amenityMatches = new LinkedHashMap<>();
+        Map<String, List<String>> matchedAmenities = new LinkedHashMap<>();
 
         for (String amenityRaw : selectedAmenities) {
             String amenity = normalizeFrontendAmenity(amenityRaw);
@@ -55,35 +66,53 @@ public class ConvenienceScoringService {
             }
 
             total++;
-            if (isAmenitySatisfied(block.getCoordinates(), amenity, request.getParentsPostalCode())) {
+            AmenityMatchDetail matchDetail = getAmenityMatchDetail(
+                    block.getCoordinates(),
+                    amenity,
+                    request.getParentsPostalCode());
+            boolean satisfied = matchDetail.isMatched();
+            amenityMatches.put(amenity, satisfied);
+            if (satisfied) {
                 matched++;
+                matchedAmenities.put(amenity, matchDetail.getPlaceNames());
             }
         }
 
         if (total == 0) {
-            return 0.0;
+            return new ConvenienceEvaluation(0.0, amenityMatches, matchedAmenities);
         }
 
-        return (double) matched / (double) total;
+        return new ConvenienceEvaluation((double) matched / (double) total, amenityMatches, matchedAmenities);
     }
 
-    private boolean isAmenitySatisfied(Coordinates blockCoordinates, String amenity, String parentsPostalCode) {
+    private AmenityMatchDetail getAmenityMatchDetail(Coordinates blockCoordinates, String amenity, String parentsPostalCode) {
         if (AMENITY_PARENTS_ADDRESS.equals(amenity)) {
-            return isParentsAddressSatisfied(blockCoordinates, parentsPostalCode);
+            boolean parentsMatched = isParentsAddressSatisfied(blockCoordinates, parentsPostalCode);
+            if (parentsMatched) {
+                return new AmenityMatchDetail(true, List.of(PARENTS_HOME_WITHIN_4KM));
+            }
+            return new AmenityMatchDetail(false, List.of());
         }
 
         String category = mapAmenityToCategory(amenity);
         if (category == null) {
-            return false;
+            return new AmenityMatchDetail(false, List.of());
         }
 
-        int count = poiRepository.countNearbyPOIs(
+        List<PointOfInterest> nearbyPois = poiRepository.findNearbyPOIs(
                 blockCoordinates.getLat(),
                 blockCoordinates.getLng(),
                 category,
                 POI_MAX_DISTANCE_KM);
 
-        return count >= 1;
+        List<String> placeNames = nearbyPois.stream()
+                .map(PointOfInterest::getName)
+                .filter(name -> name != null && !name.trim().isEmpty())
+                .map(String::trim)
+                .distinct()
+                .collect(Collectors.toList());
+
+        return new AmenityMatchDetail(!placeNames.isEmpty(), placeNames);
     }
 
     private boolean isParentsAddressSatisfied(Coordinates blockCoordinates, String parentsPostalCode) {
@@ -147,5 +176,49 @@ public class ConvenienceScoringService {
 
         double centralAngle = 2 * Math.atan2(Math.sqrt(hav), Math.sqrt(1 - hav));
         return EARTH_RADIUS_KM * centralAngle;
+    }
+
+    public static final class ConvenienceEvaluation {
+        private final double score;
+        private final Map<String, Boolean> amenityMatches;
+        private final Map<String, List<String>> matchedAmenities;
+
+        private ConvenienceEvaluation(double score,
+                                      Map<String, Boolean> amenityMatches,
+                                      Map<String, List<String>> matchedAmenities) {
+            this.score = score;
+            this.amenityMatches = amenityMatches;
+            this.matchedAmenities = matchedAmenities;
+        }
+
+        public double getScore() {
+            return score;
+        }
+
+        public Map<String, Boolean> getAmenityMatches() {
+            return amenityMatches;
+        }
+
+        public Map<String, List<String>> getMatchedAmenities() {
+            return matchedAmenities;
+        }
+    }
+
+    private static final class AmenityMatchDetail {
+        private final boolean matched;
+        private final List<String> placeNames;
+
+        private AmenityMatchDetail(boolean matched, List<String> placeNames) {
+            this.matched = matched;
+            this.placeNames = placeNames;
+        }
+
+        private boolean isMatched() {
+            return matched;
+        }
+
+        private List<String> getPlaceNames() {
+            return placeNames;
+        }
     }
 }

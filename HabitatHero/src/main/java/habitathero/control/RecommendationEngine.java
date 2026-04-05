@@ -97,7 +97,9 @@ public class RecommendationEngine {
 
             double solarScore = scoreSolarOrientation(block, sunFacingResult);
             double acousticScore = scoreAcousticComfort(block, noiseLevelResult);
-            double convenienceScore = convenienceScoringService.scoreBlock(block, request);
+                ConvenienceScoringService.ConvenienceEvaluation convenienceEvaluation =
+                    convenienceScoringService.evaluateBlock(block, request);
+                double convenienceScore = convenienceEvaluation.getScore();
 
             if (!passesStrictConstraints(
                     block,
@@ -132,6 +134,9 @@ public class RecommendationEngine {
             block.setEstimatedPrice(candidate.getAverageResalePrice());
             block.setRemainingLeaseYears((int) Math.round(candidate.getAverageRemainingLease()));
             block.setGlobalMatchIndex(100.0 * combinedScore);
+            block.setConvenienceScore(clamp01(convenienceScore));
+            block.setConvenienceFactors(convenienceEvaluation.getAmenityMatches());
+            block.setMatchedAmenities(convenienceEvaluation.getMatchedAmenities());
             rankedBlocks.add(block);
         }
 

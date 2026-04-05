@@ -22,6 +22,7 @@ function SpatialAnalysisResultDashBoardPage() {
   const { blockId } = useParams();
 
   const block = location.state?.block ?? {};
+  const result = location.state?.result ?? {};
 
   const blockNumber = block?.blockNumber ?? blockId?.replace("hdb", "") ?? "N/A";
   const streetName = block?.streetName ?? "";
@@ -29,6 +30,21 @@ function SpatialAnalysisResultDashBoardPage() {
 
   const formatStreet = (value) =>
     value?.toLowerCase().replace(/(^\w|\s\w)/g, (char) => char.toUpperCase());
+
+  const matchedAmenities = result?.matchedAmenities ?? block?.matchedAmenities ?? {};
+  const matchedAmenitiesEntries = Object.entries(matchedAmenities);
+
+  const convenienceLabelMap = {
+    school: 'School',
+    hawkerCentre: 'Hawker Centre',
+    supermarket: 'Supermarket',
+    park: 'Park',
+    hospital: 'Hospital',
+    playground: 'Playground',
+    parentsAddress: "Parents' Home"
+  };
+
+  const formatConvenienceLabel = (key) => convenienceLabelMap[key] || key;
 
   const blockPosition = [block?.coordinates?.lat, block?.coordinates?.lng];
 
@@ -125,6 +141,21 @@ function SpatialAnalysisResultDashBoardPage() {
               <li>Nearby URA reserve site</li>
               <li>Temporary construction noise</li>
             </ul>
+          </div>
+
+          <div className="card">
+            <h3>CONVENIENCE FACTORS</h3>
+            {matchedAmenitiesEntries.length === 0 ? (
+              <p>No matched amenities found for this block.</p>
+            ) : (
+              <ul>
+                {matchedAmenitiesEntries.map(([key, placeNames]) => (
+                  <li key={key}>
+                    {formatConvenienceLabel(key)}: {Array.isArray(placeNames) && placeNames.length > 0 ? placeNames.join(', ') : 'No places found'}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
         </div>

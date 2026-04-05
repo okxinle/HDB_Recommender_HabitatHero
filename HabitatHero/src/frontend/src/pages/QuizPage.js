@@ -9,6 +9,7 @@ import QuizSummary from "./QuizSteps/QuizSummary";
 const TEMP_RESULTS_KEY = "temporaryGuestResults";
 const MEMBER_RESULTS_AVAILABLE_KEY = "memberResultsAvailable";
 const QUIZ_DATA_KEY = "quizData";
+const RESULTS_PREFERENCES_KEY = "resultsSubmittedPreferences";
 
 const PREFERENCE_NAME_MAP = {
   solarOrientation: "Solar Orientation",
@@ -303,6 +304,7 @@ function QuizPage() {
       const backendPersisted = Boolean(responseBody?.resultsPersisted);
 
       sessionStorage.setItem(QUIZ_DATA_KEY, JSON.stringify(finalFormData));
+      localStorage.setItem(RESULTS_PREFERENCES_KEY, JSON.stringify(finalFormData));
 
       if (!hasLocalAuth && rankedBlocks.length > 0) {
         sessionStorage.setItem(TEMP_RESULTS_KEY, JSON.stringify(rankedBlocks));
