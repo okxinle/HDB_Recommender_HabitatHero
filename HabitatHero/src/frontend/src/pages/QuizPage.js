@@ -299,26 +299,23 @@ function QuizPage() {
       const rankedBlocks = extractRankedBlocks(responseBody);
       const token = localStorage.getItem("token") || "";
       const user = localStorage.getItem("user");
-      const isAuthenticated = Boolean(token && user);
+      const hasLocalAuth = Boolean(token && user);
+      const backendPersisted = Boolean(responseBody?.resultsPersisted);
 
       sessionStorage.setItem(QUIZ_DATA_KEY, JSON.stringify(finalFormData));
 
-      if (!isAuthenticated && rankedBlocks.length > 0) {
+      if (!hasLocalAuth && rankedBlocks.length > 0) {
         sessionStorage.setItem(TEMP_RESULTS_KEY, JSON.stringify(rankedBlocks));
         localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "false");
-      } else if (!isAuthenticated) {
+      } else if (!hasLocalAuth) {
         sessionStorage.removeItem(TEMP_RESULTS_KEY);
         localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "false");
       } else {
-        sessionStorage.removeItem(TEMP_RESULTS_KEY);
-        localStorage.setItem(
-          MEMBER_RESULTS_AVAILABLE_KEY,
-          rankedBlocks.length > 0 ? "true" : "false"
-        );
+        let syncedToProfile = backendPersisted;
 
         if (rankedBlocks.length > 0) {
           try {
-            await fetch("http://localhost:8080/api/profile/results", {
+            const syncResponse = await fetch("http://localhost:8080/api/profile/results", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -326,9 +323,29 @@ function QuizPage() {
               },
               body: JSON.stringify(rankedBlocks)
             });
+
+            if (syncResponse.ok) {
+              syncedToProfile = true;
+            }
           } catch (syncError) {
             console.warn("unable to sync quiz results to profile storage:", syncError);
           }
+        }
+
+        if (syncedToProfile) {
+          sessionStorage.removeItem(TEMP_RESULTS_KEY);
+          localStorage.setItem(
+            MEMBER_RESULTS_AVAILABLE_KEY,
+            rankedBlocks.length > 0 ? "true" : "false"
+          );
+        } else {
+          // Keep a session fallback when auth token is stale or profile sync fails.
+          if (rankedBlocks.length > 0) {
+            sessionStorage.setItem(TEMP_RESULTS_KEY, JSON.stringify(rankedBlocks));
+          } else {
+            sessionStorage.removeItem(TEMP_RESULTS_KEY);
+          }
+          localStorage.setItem(MEMBER_RESULTS_AVAILABLE_KEY, "false");
         }
       }
 

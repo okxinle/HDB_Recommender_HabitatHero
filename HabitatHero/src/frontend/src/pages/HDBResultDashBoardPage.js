@@ -57,6 +57,10 @@ function HDBResultDashBoardPage() {
     : null;
 
   useEffect(() => {
+    if (cachedRankedBlocks.length > 0) {
+      setHasQuizBeenTaken(true);
+    }
+
     // Guests: no backend fetch needed.
     if (!isAuthenticated) return;
 
@@ -106,7 +110,7 @@ function HDBResultDashBoardPage() {
     return () => {
       isMounted = false;
     };
-  }, [isAuthenticated, token, stateRankedBlocks]);
+  }, [cachedRankedBlocks.length, isAuthenticated, token, stateRankedBlocks]);
 
   const rankedBlocks = useMemo(() => {
     if (isAuthenticated) {
@@ -114,10 +118,26 @@ function HDBResultDashBoardPage() {
       if (Array.isArray(stateRankedBlocks) && stateRankedBlocks.length > 0) {
         return stateRankedBlocks;
       }
-      return memberRankedBlocks;
+      if (memberRankedBlocks.length > 0) {
+        return memberRankedBlocks;
+      }
+      return cachedRankedBlocks;
     }
     return stateRankedBlocks ?? cachedRankedBlocks;
   }, [isAuthenticated, memberRankedBlocks, stateRankedBlocks, cachedRankedBlocks]);
+
+  const hasFreshNavigationResults =
+    Array.isArray(stateRankedBlocks) && stateRankedBlocks.length > 0;
+  const usingSessionFallback =
+    isAuthenticated &&
+    rankedBlocks.length > 0 &&
+    cachedRankedBlocks.length > 0 &&
+    memberRankedBlocks.length === 0;
+  const hasProfileSavedResults =
+    isAuthenticated &&
+    rankedBlocks.length > 0 &&
+    (memberRankedBlocks.length > 0 || hasFreshNavigationResults) &&
+    !usingSessionFallback;
 
   if (stateRankedBlocks !== null) {
     if (!isAuthenticated && stateRankedBlocks.length > 0) {
@@ -192,6 +212,18 @@ function HDBResultDashBoardPage() {
           <Link to="/signup" className="guest-results-signup-link">
             Sign up to save these to your profile permanently!
           </Link>
+        </div>
+      )}
+
+      {hasProfileSavedResults && (
+        <div className="result-status-banner result-status-banner--success">
+          Saved to your profile. Your recommendations will still be here when you come back.
+        </div>
+      )}
+
+      {usingSessionFallback && (
+        <div className="result-status-banner result-status-banner--warning">
+          Showing temporary session results. Your login may have expired, so these might not be saved to your profile yet.
         </div>
       )}
 

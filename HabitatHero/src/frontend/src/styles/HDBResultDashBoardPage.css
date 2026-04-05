@@ -68,6 +68,26 @@
   text-decoration: underline;
 }
 
+.result-status-banner {
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  font-size: 14px;
+  border: 1px solid;
+}
+
+.result-status-banner--success {
+  background: #e8f6f4;
+  border-color: #9fd6cf;
+  color: #08544e;
+}
+
+.result-status-banner--warning {
+  background: #fff5e8;
+  border-color: #f2cb92;
+  color: #6a4207;
+}
+
 .hdb-card {
   background: white;
   border-radius: 16px;
