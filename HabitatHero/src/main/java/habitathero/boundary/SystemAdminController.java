@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PathVariable;
 
 import habitathero.control.BackfillCoordinatesService;
 import habitathero.control.DataPipelineService;
@@ -17,6 +18,10 @@ import habitathero.control.HdbSpatialImportService;
 import habitathero.entity.AuditLog;
 import habitathero.entity.HDBBlock;
 import habitathero.entity.PointOfInterest;
+import habitathero.entity.UserAccount;
+import habitathero.entity.GlobalWeightConfig;
+import habitathero.repository.GlobalWeightConfigRepository;
+import habitathero.repository.UserRepository;
 import habitathero.repository.AuditLogRepository;
 import habitathero.repository.IHDBRepository;
 import habitathero.repository.PoiRepository;
@@ -37,6 +42,9 @@ public class SystemAdminController {
     }
 
     @Autowired
+    private UserRepository userRepository;
+    
+    @Autowired
     private DataPipelineService dataPipelineService;
 
     @Autowired
@@ -50,6 +58,9 @@ public class SystemAdminController {
 
     @Autowired
     private PoiRepository poiRepository;
+
+    @Autowired
+    private GlobalWeightConfigRepository globalWeightConfigRepository;
 
     // Headless API to manually trigger the sync (useful for testing)
     @PostMapping("/trigger-sync")
@@ -129,6 +140,28 @@ public class SystemAdminController {
         }
     }
 
+    // Tune global algorithm weights
+    @PostMapping("/weights")
+    public ResponseEntity<?> updateGlobalWeights(@RequestBody Map<String, Double> weights) {
+        if (weights == null || weights.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "status", "error",
+                "message", "No weights provided"
+            ));
+        }
+
+        for (Map.Entry<String, Double> entry : weights.entrySet()) {
+            GlobalWeightConfig config = new GlobalWeightConfig(entry.getKey(), entry.getValue());
+            globalWeightConfigRepository.save(config);
+        }
+
+        return ResponseEntity.ok(Map.of(
+            "status", "success",
+            "message", "Global weights updated",
+            "updatedKeys", weights.keySet()
+        ));
+    }
+
     // API to view the audit logs
     @GetMapping("/logs")
     public ResponseEntity<List<AuditLog>> getAuditLogs() {
@@ -138,4 +171,23 @@ public class SystemAdminController {
         );
         return ResponseEntity.ok(logs);
     }
+
+    // Revoke user access by deactivating their account
+    @PostMapping("/users/{userId}/revoke")
+    public ResponseEntity<?> revokeUserAccess(@PathVariable int userId) {
+        UserAccount user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(404).body(Map.of(
+                "status", "error",
+                "message", "User not found"
+            ));
+        }
+        user.setActive(false);
+        userRepository.save(user);
+        return ResponseEntity.ok(Map.of(
+            "status", "success",
+            "message", "User " + userId + " access revoked"
+        ));
+    }
+
 }
