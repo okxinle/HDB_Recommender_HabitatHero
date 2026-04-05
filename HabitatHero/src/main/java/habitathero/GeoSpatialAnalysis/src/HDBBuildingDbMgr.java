@@ -28,9 +28,11 @@ public class HDBBuildingDbMgr {
         return LOCALFILEPATH;
     }
 
+
     public boolean forceDownloadGeoJson(){
         return hdbGJDownloader.downloadGeoJson(DATASET_ID, LOCALFILEPATH);
     }
+
 
     public Boolean downloadGeoJson() {
         return hdbGJDownloader.downloadGeoJson(DATASET_ID, LOCALFILEPATH);
