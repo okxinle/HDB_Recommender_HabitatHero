@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { SearchX, ArrowRight } from 'lucide-react';
+import { SearchX, ArrowRight, Search } from 'lucide-react';
 import '../styles/HDBResultDashBoardPage.css';
 
 const TEMP_RESULTS_KEY = 'temporaryGuestResults';
 const MEMBER_RESULTS_AVAILABLE_KEY = 'memberResultsAvailable';
 const RESULTS_PREFERENCES_KEY = 'resultsSubmittedPreferences';
+const LOADING_UI_VARIANT = 'skeleton';
+const SKELETON_CARD_COUNT = 3;
 
 const AMENITY_LABEL_MAP = {
   school: 'School',
@@ -45,6 +47,58 @@ const formatConvenienceMatch = (value) => {
   return score === null ? 'N/A' : `${Math.round(score * 100)}%`;
 };
 
+const skeletonCardIndices = Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => index);
+
+function ResultsSkeletonCard() {
+  return (
+    <div className="result-card result-card--skeleton" aria-hidden="true">
+      <div className="result-header-row">
+        <div className="skeleton-col">
+          <div className="skeleton-line skeleton-line--title" />
+          <div className="skeleton-line skeleton-line--subtitle" />
+        </div>
+        <div className="skeleton-side">
+          <div className="skeleton-pill" />
+          <div className="skeleton-button" />
+        </div>
+      </div>
+
+      <hr />
+
+      <div className="result-details-row">
+        <div className="detail-item detail-item--skeleton">
+          <div className="skeleton-line skeleton-line--detail-label" />
+          <div className="skeleton-line skeleton-line--detail-value" />
+        </div>
+
+        <div className="detail-item detail-item--skeleton">
+          <div className="skeleton-line skeleton-line--detail-label" />
+          <div className="skeleton-line skeleton-line--detail-value" />
+        </div>
+
+        <div className="detail-item detail-item--skeleton">
+          <div className="skeleton-line skeleton-line--detail-label" />
+          <div className="skeleton-line skeleton-line--detail-value" />
+        </div>
+      </div>
+
+      <div className="skeleton-tags-row">
+        <span className="skeleton-tag" />
+        <span className="skeleton-tag" />
+      </div>
+    </div>
+  );
+}
+
+function ResultsSpinnerLoader() {
+  return (
+    <div className="results-loading-spinner" role="status" aria-live="polite" aria-label="Loading saved results">
+      <div className="results-loading-spinner__ring" />
+      <p>Loading your saved results...</p>
+    </div>
+  );
+}
+
 function HDBResultDashBoardPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -56,6 +110,9 @@ function HDBResultDashBoardPage() {
   const [memberRankedBlocks, setMemberRankedBlocks] = useState([]);
   const [isLoadingMemberResults, setIsLoadingMemberResults] = useState(false);
   const [hasQuizBeenTaken, setHasQuizBeenTaken] = useState(false);
+  const [showResultsFadeIn, setShowResultsFadeIn] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('match-desc');
 
   const cachedRankedBlocks = (() => {
     try {
@@ -177,6 +234,72 @@ function HDBResultDashBoardPage() {
 
   const submittedPreferences = stateSubmittedPreferences ?? storedSubmittedPreferences;
 
+  useEffect(() => {
+    if (!isLoadingMemberResults && rankedBlocks.length > 0) {
+      const animationTimer = window.setTimeout(() => {
+        setShowResultsFadeIn(true);
+      }, 20);
+      return () => window.clearTimeout(animationTimer);
+    }
+    setShowResultsFadeIn(false);
+    return undefined;
+  }, [isLoadingMemberResults, rankedBlocks.length]);
+
+  const filteredAndSortedResults = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
+    const filteredResults = rankedBlocks.filter((item) => {
+      const block = item?.hdbBlock ?? item ?? {};
+      const estimatedPrice = getSafeNumber(item?.estimatedPrice ?? block?.estimatedPrice);
+      const remainingLeaseYears = getSafeNumber(block?.remainingLeaseYears);
+
+      const searchableFields = [
+        block?.blockNumber,
+        block?.streetName,
+        block?.postalCode,
+        block?.town,
+        estimatedPrice,
+        estimatedPrice !== null ? estimatedPrice.toLocaleString() : null,
+        remainingLeaseYears
+      ];
+
+      const searchableText = searchableFields
+        .filter((value) => value !== null && value !== undefined)
+        .map((value) => String(value).toLowerCase())
+        .join(' ');
+
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      return searchableText.includes(normalizedQuery);
+    });
+
+    return [...filteredResults].sort((a, b) => {
+      const blockA = a?.hdbBlock ?? a ?? {};
+      const blockB = b?.hdbBlock ?? b ?? {};
+
+      const matchA = getSafeNumber(a?.globalMatchIndex ?? blockA?.globalMatchIndex);
+      const matchB = getSafeNumber(b?.globalMatchIndex ?? blockB?.globalMatchIndex);
+      const priceA = getSafeNumber(a?.estimatedPrice ?? blockA?.estimatedPrice);
+      const priceB = getSafeNumber(b?.estimatedPrice ?? blockB?.estimatedPrice);
+      const leaseA = getSafeNumber(blockA?.remainingLeaseYears);
+      const leaseB = getSafeNumber(blockB?.remainingLeaseYears);
+
+      switch (sortBy) {
+        case 'price-asc':
+          return (priceA ?? Number.POSITIVE_INFINITY) - (priceB ?? Number.POSITIVE_INFINITY);
+        case 'price-desc':
+          return (priceB ?? Number.NEGATIVE_INFINITY) - (priceA ?? Number.NEGATIVE_INFINITY);
+        case 'lease-desc':
+          return (leaseB ?? Number.NEGATIVE_INFINITY) - (leaseA ?? Number.NEGATIVE_INFINITY);
+        case 'match-desc':
+        default:
+          return (matchB ?? Number.NEGATIVE_INFINITY) - (matchA ?? Number.NEGATIVE_INFINITY);
+      }
+    });
+  }, [rankedBlocks, searchQuery, sortBy]);
+
   const summaryData = useMemo(() => {
     if (!submittedPreferences) {
       return null;
@@ -260,10 +383,31 @@ function HDBResultDashBoardPage() {
   }
 
   if (isAuthenticated && isLoadingMemberResults) {
+    const isSkeletonMode = LOADING_UI_VARIANT === 'skeleton';
+
+    if (isSkeletonMode) {
+      return (
+        <div className="results-page">
+          <div className="results-loading-header">
+            <div className="results-loading-chip">Syncing your profile data</div>
+            <h1>Preparing your personalized matches</h1>
+            <p>Just a moment while we pull your latest saved recommendations.</p>
+          </div>
+
+          <section className="results-panel">
+            <div className="results-grid results-grid--loading" aria-live="polite" aria-busy="true">
+              {skeletonCardIndices.map((index) => (
+                <ResultsSkeletonCard key={`skeleton-card-${index}`} />
+              ))}
+            </div>
+          </section>
+        </div>
+      );
+    }
+
     return (
       <div className="no-results-container">
-        <h2>Loading Your Saved Results...</h2>
-        <p>Retrieving your latest personalized recommendations from your profile.</p>
+        <ResultsSpinnerLoader />
       </div>
     );
   }
@@ -371,13 +515,45 @@ function HDBResultDashBoardPage() {
 
       <div className="results-header">
         <h1>Your Personalized HDB Matches</h1>
-        <p>We found {rankedBlocks.length} blocks tailored to your lifestyle preferences.</p>
+        <p>We found {filteredAndSortedResults.length} blocks tailored to your lifestyle preferences.</p>
+
+        <div className="results-topbar flex flex-col md:flex-row justify-center items-center gap-4 w-full max-w-5xl mx-auto mb-10" role="region" aria-label="Search and sort results">
+          <div className="results-topbar-search-wrap w-full md:w-[60%]">
+            <Search size={16} className="results-topbar-search-icon" aria-hidden="true" />
+            <input
+              type="text"
+              className="results-topbar-input rounded-full border border-gray-300 shadow-sm h-12 px-10 w-full focus:ring-0 focus:outline-none"
+              placeholder="Search by street name..."
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              aria-label="Global search"
+            />
+          </div>
+
+          <select
+            className="results-topbar-select rounded-full border border-gray-300 shadow-sm h-12 px-6 w-full md:w-[30%] bg-white"
+            value={sortBy}
+            onChange={(event) => setSortBy(event.target.value)}
+            aria-label="Sort results"
+          >
+            <option value="match-desc">Highest Match % (Default)</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+            <option value="lease-desc">Lease: Newest First (Longest lease remaining)</option>
+          </select>
+        </div>
       </div>
 
       <div className="results-layout">
       <section className="results-panel">
-        <div className="results-grid">
-          {rankedBlocks.map((item, index) => {
+        {filteredAndSortedResults.length === 0 ? (
+          <div className="results-empty-filter-state">
+            <SearchX size={18} strokeWidth={2} aria-hidden="true" />
+            <span>No matches found</span>
+          </div>
+        ) : (
+        <div className={`results-grid ${showResultsFadeIn ? 'results-grid--fade-in' : ''}`}>
+          {filteredAndSortedResults.map((item, index) => {
             const block = item?.hdbBlock ?? item ?? {};
             const blockId = block?.blockId ?? "N/A";
             const town = formatTown(block?.town);
@@ -502,6 +678,7 @@ function HDBResultDashBoardPage() {
             );
           })}
         </div>
+        )}
       </section>
     </div>
       
