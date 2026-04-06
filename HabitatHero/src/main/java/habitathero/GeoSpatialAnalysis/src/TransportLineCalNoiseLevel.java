@@ -20,10 +20,11 @@ public class TransportLineCalNoiseLevel {
 
     public JSONObject calNoiseLevel(JSONObject transportLineMinDistResult) {
         System.out.println("Calculating noise level for transport result");
-        if (transportLineMinDistResult.has("error")) {
-            System.out.println("Error calculating transport distance: " + transportLineMinDistResult.getString("error"));
+        if ("ERROR".equalsIgnoreCase(transportLineMinDistResult.optString("status", ""))) {
+            System.out.println("Error calculating transport distance: " + transportLineMinDistResult.optString("message", "Unknown error"));
             JSONObject errorResult = new JSONObject();
-            errorResult.put("error", transportLineMinDistResult.getString("error"));
+            errorResult.put("status", "ERROR");
+            errorResult.put("message", transportLineMinDistResult.optString("message", "Transport distance calculation failed"));
             return errorResult;
         }
 
@@ -47,6 +48,8 @@ public class TransportLineCalNoiseLevel {
         for (String key : transportLineMinDistResult.keySet()) {
             result.put(key, transportLineMinDistResult.get(key));
         }
+        result.put("status", "OK");
+        result.put("message", "NIL");
 
         System.out.printf("Calculated noise level: %f\n", splNew);
         return result;

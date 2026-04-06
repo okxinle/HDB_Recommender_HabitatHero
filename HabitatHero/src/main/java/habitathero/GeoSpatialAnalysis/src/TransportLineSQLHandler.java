@@ -64,12 +64,15 @@ public class TransportLineSQLHandler extends SQLDbConnect {
                 result.put("distance_meters", distance);
                 result.put("hdb_latitude", hdb_latitude);
                 result.put("hdb_longitude", hdb_longitude);
+                result.put("status", "OK");
+                result.put("message", "NIL");
 
                 System.out.println("Nearest line OBJECTID: " + objectId);
                 System.out.println("Rail Type: " + rail_type);
                 System.out.println("Distance (meters): " + distance);
             } else {
-                result.put("error", "No transport lines found");
+                result.put("status", "ERROR");
+                result.put("message", "No transport lines found");
             }
 
             rs.close();
@@ -78,7 +81,8 @@ public class TransportLineSQLHandler extends SQLDbConnect {
 
         } catch (Exception e) {
             e.printStackTrace();
-            result.put("error", e.getMessage());
+            result.put("status", "ERROR");
+            result.put("message", e.getMessage());
         }
 
         return result;
@@ -138,12 +142,15 @@ public class TransportLineSQLHandler extends SQLDbConnect {
                 result.put("geojson_geom", geojson_geom);
                 result.put("hdb_latitude", hdb_latitude);
                 result.put("hdb_longitude", hdb_longitude);
+                result.put("status", "OK");
+                result.put("message", "NIL");
 
                 System.out.println("Nearest line OBJECTID: " + objectId);
                 System.out.println("Rail Type: " + rail_type);
                 System.out.println("Distance (meters): " + distance);
             } else {
-                result.put("error", "No MRT or LRT transport lines found within " + radius + " meters");
+                result.put("status", "ERROR");
+                result.put("message", "No MRT or LRT transport lines found within " + radius + " meters");
             }
 
             rs.close();
@@ -152,7 +159,8 @@ public class TransportLineSQLHandler extends SQLDbConnect {
 
         } catch (Exception e) {
             e.printStackTrace();
-            result.put("error", e.getMessage());
+            result.put("status", "ERROR");
+            result.put("message", e.getMessage());
         }
 
         result.put("search_radius", radius);
@@ -166,8 +174,8 @@ public class TransportLineSQLHandler extends SQLDbConnect {
     private JSONObject invalidPostalCodeResult(String postalCode, Double radius) {
         System.out.println("ERROR: Invalid postal code");
         JSONObject result = new JSONObject();
-        result.put("status", "INVALID_INPUT");
-        result.put("error", "Invalid postal code: unable to resolve coordinates");
+        result.put("status", "ERROR");
+        result.put("message", "Invalid postal code: unable to resolve coordinates");
         result.put("postalCode", postalCode == null ? "" : postalCode);
         if (radius != null) {
             result.put("search_radius", radius);

@@ -107,8 +107,8 @@ public class TransportLineCalResultSQLHandler extends SQLDbConnect {
             stmt.setObject(6, noiseResult != null && noiseResult.has("hdb_longitude") ? noiseResult.optDouble("hdb_longitude") : null);
             stmt.setObject(7, noiseResult != null && noiseResult.has("search_radius") ? noiseResult.optDouble("search_radius") : null);
             stmt.setObject(8, noiseResult != null && noiseResult.has("noise_level_db") ? noiseResult.optDouble("noise_level_db") : null);
-            stmt.setString(9, noiseResult != null ? (noiseResult.has("error") ? "ERROR" : "OK") : null);
-            stmt.setString(10, noiseResult != null ? noiseResult.optString("error", null) : null);
+            stmt.setString(9, noiseResult != null ? noiseResult.optString("status", "OK") : null);
+            stmt.setString(10, noiseResult != null ? noiseResult.optString("message", null) : null);
             stmt.setString(11, noiseResult != null ? noiseResult.toString() : null);
 
             stmt.executeUpdate();
@@ -124,7 +124,7 @@ public class TransportLineCalResultSQLHandler extends SQLDbConnect {
         JSONObject result = new JSONObject();
 
         if (postalCode == null || postalCode.isEmpty()) {
-            result.put("status", "INVALID_INPUT");
+            result.put("status", "ERROR");
             result.put("message", "postalCode is required");
             return result;
         }
@@ -159,10 +159,22 @@ public class TransportLineCalResultSQLHandler extends SQLDbConnect {
                 putNullable(result, "noiseResultJson", rs.getString("noise_result_json"));
                 putNullable(result, "createdAt", rs.getTimestamp("created_at"));
                 putNullable(result, "updatedAt", rs.getTimestamp("updated_at"));
+
+                String storedStatus = rs.getString("noise_status");
+                String storedMessage = rs.getString("noise_message");
+                if ("OK".equalsIgnoreCase(storedStatus)) {
+                    result.put("status", "OK");
+                    result.put("message", "NIL");
+                } else {
+                    result.put("status", "ERROR");
+                    result.put("message", (storedMessage == null || storedMessage.isEmpty())
+                            ? "Transport line calculation unavailable"
+                            : storedMessage);
+                }
             } else {
                 System.out.println("Noise result not found");
                 result.put("postalCode", postalCode);
-                result.put("status", "NOT_FOUND");
+                result.put("status", "ERROR");
                 result.put("message", "Transport line calculation result not found for postal code");
             }
 

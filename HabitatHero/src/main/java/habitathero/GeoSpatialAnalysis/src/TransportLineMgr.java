@@ -111,8 +111,7 @@ public class TransportLineMgr {
 
     private boolean isUsableStoredResult(JSONObject result) {
         return result != null && !result.isEmpty()
-                && !"NOT_FOUND".equalsIgnoreCase(result.optString("status", ""))
-                && !"INVALID_INPUT".equalsIgnoreCase(result.optString("status", ""));
+                && "OK".equalsIgnoreCase(result.optString("status", ""));
     }
 
     private boolean isInvalidAnalysisResult(JSONObject result) {
@@ -121,7 +120,7 @@ public class TransportLineMgr {
         }
 
         String status = result.optString("status", "");
-        return "INVALID_INPUT".equalsIgnoreCase(status) || result.has("error");
+        return !"OK".equalsIgnoreCase(status);
     }
 
 }
