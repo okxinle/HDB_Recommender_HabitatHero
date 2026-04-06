@@ -11,7 +11,6 @@ import java.util.stream.Collectors;
 import org.json.JSONObject;
 import org.springframework.stereotype.Service;
 
-import habitathero.GeoSpatialAnalysis.src.Coordinate;
 import habitathero.GeoSpatialAnalysis.src.HDBBuildingMgr;
 import habitathero.GeoSpatialAnalysis.src.TransportLineMgr;
 import habitathero.boundary.RecommendationRequest;
