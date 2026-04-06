@@ -49,7 +49,7 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
 
         JSONArray coordinates = geomJson.optJSONArray("coordinates");
         if (coordinates == null || coordinates.length() == 0) {
-            output.put("status", "INVALID_GEOMETRY");
+            output.put("status", "ERROR");
             output.put("message", "No coordinates available");
             return output;
         }
@@ -57,7 +57,7 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
         // Outer ring only (Polygon geography). If MultiPolygon, first polygon outer ring.
         JSONArray ring = getOuterRing(coordinates);
         if (ring == null || ring.length() < 4) {
-            output.put("status", "INVALID_GEOMETRY");
+            output.put("status", "ERROR");
             output.put("message", "Polygon ring must have at least 4 points");
             return output;
         }
@@ -69,6 +69,7 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
 
         output.put("postalCode", postalCode);
         output.put("status", "OK");
+        output.put("message", "NIL");
         output.put("perimeter", perimeter);
         output.put("eastAzimuth", eastAzimuth);
         output.put("westAzimuth", westAzimuth);
@@ -120,25 +121,29 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
         JSONObject output = new JSONObject();
 
         if (geomJson == null || geomJson.isEmpty()) {
-            output.put("status", "NOT_FOUND");
+            output.put("status", "ERROR");
+            output.put("message", "Building geometry not found");
             return output;
         }
 
         JSONArray coordinates = geomJson.optJSONArray("coordinates");
         if (coordinates == null || coordinates.length() == 0) {
-            output.put("status", "INVALID_GEOMETRY");
+            output.put("status", "ERROR");
+            output.put("message", "No coordinates available");
             return output;
         }
 
         JSONArray ring = getOuterRing(coordinates);
         if (ring == null || ring.length() < 4) {
-            output.put("status", "INVALID_GEOMETRY");
+            output.put("status", "ERROR");
+            output.put("message", "Polygon ring must have at least 4 points");
             return output;
         }
 
         double perimeter = computePerimeter(ring);
         if (perimeter <= 0.0) {
-            output.put("status", "INVALID_GEOMETRY");
+            output.put("status", "ERROR");
+            output.put("message", "Invalid polygon perimeter");
             return output;
         }
 
@@ -149,7 +154,8 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
         JSONObject output = new JSONObject();
 
         if (ring == null || ring.length() < 4 || perimeter <= 0.0) {
-            output.put("status", "INVALID_GEOMETRY");
+            output.put("status", "ERROR");
+            output.put("message", "Invalid polygon geometry");
             return output;
         }
 
@@ -186,6 +192,7 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
         double sunlightIndex = averageScore / perimeter;
 
         output.put("status", "OK");
+        output.put("message", "NIL");
         output.put("startAzimuth", startAzimuth);
         output.put("endAzimuth", endAzimuth);
         output.put("stepDegrees", stepDegrees);
@@ -239,8 +246,8 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
         System.out.println("ERROR: Invalid postal code");
         JSONObject output = new JSONObject();
         output.put("postalCode", postalCode);
-        output.put("status", "INVALID_INPUT");
-        output.put("error", "Invalid postal code: unable to resolve coordinates");
+        output.put("status", "ERROR");
+        output.put("message", "Invalid postal code: unable to resolve coordinates");
         return output;
     }
 
@@ -419,19 +426,22 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
 
         if (geomJson == null || geomJson.isEmpty()) {
             output.put("postalCode", postalCode);
-            output.put("status", "NOT_FOUND");
+            output.put("status", "ERROR");
+            output.put("message", "Building geometry not found");
             return output;
         }
 
         JSONArray coordinates = geomJson.optJSONArray("coordinates");
         if (coordinates == null || coordinates.length() == 0) {
-            output.put("status", "INVALID_GEOMETRY");
+            output.put("status", "ERROR");
+            output.put("message", "No coordinates available");
             return output;
         }
 
         JSONArray ring = getOuterRing(coordinates);
         if (ring == null || ring.length() < 4) {
-            output.put("status", "INVALID_GEOMETRY");
+            output.put("status", "ERROR");
+            output.put("message", "Polygon ring must have at least 4 points");
             return output;
         }
 
@@ -441,6 +451,7 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
 
         output.put("postalCode", postalCode);
         output.put("status", "OK");
+        output.put("message", "NIL");
         output.put("azimuth", normalizeAzimuth(azimuth));
         output.put("perimeter", perimeter);
         output.put("score", score);

@@ -156,7 +156,7 @@ public class HDBBuildingSunFacingResultSQLHandler extends SQLDbConnect{
         JSONObject result = new JSONObject();
 
         if (postalCode == null || postalCode.isEmpty()) {
-            result.put("status", "INVALID_INPUT");
+            result.put("status", "ERROR");
             result.put("message", "postalCode is required");
             return result;
         }
@@ -182,8 +182,17 @@ public class HDBBuildingSunFacingResultSQLHandler extends SQLDbConnect{
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
                 result.put("postalCode", rs.getString("postal_code"));
-                result.put("status", rs.getString("status"));
-                result.put("message", rs.getString("message"));
+                String storedStatus = rs.getString("status");
+                String storedMessage = rs.getString("message");
+                if ("OK".equalsIgnoreCase(storedStatus)) {
+                    result.put("status", "OK");
+                    result.put("message", "NIL");
+                } else {
+                    result.put("status", "ERROR");
+                    result.put("message", (storedMessage == null || storedMessage.isEmpty())
+                            ? "Sun facing analysis unavailable"
+                            : storedMessage);
+                }
                 result.put("perimeter", rs.getDouble("perimeter"));
                 result.put("eastAzimuth", rs.getDouble("east_azimuth"));
                 result.put("westAzimuth", rs.getDouble("west_azimuth"));
@@ -204,7 +213,7 @@ public class HDBBuildingSunFacingResultSQLHandler extends SQLDbConnect{
             } else {
                 System.out.println("Sun-facing result not found");
                 result.put("postalCode", postalCode);
-                result.put("status", "NOT_FOUND");
+                result.put("status", "ERROR");
                 result.put("message", "Sun facing analysis result not found for postal code");
             }
 

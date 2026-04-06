@@ -1,5 +1,6 @@
 package habitathero.GeoSpatialAnalysis.src;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class MainSpatialMgr {
@@ -29,6 +30,10 @@ public class MainSpatialMgr {
 
     public JSONObject getNoiseLevel(String postalCode) {
         return transportLineMgr.getNoiseLevel(postalCode);
+    }
+
+    public JSONObject getNoiseLevel(String postalCode, double radius) {
+        return transportLineMgr.getNoiseLevel(postalCode, radius);
     }
 
     public JSONObject getSunFacing(String postal_code) {
@@ -62,6 +67,7 @@ public class MainSpatialMgr {
     // Comprehensive analysis integrating all managers and analyzers
     public JSONObject getComprehensiveLocationAnalysis(String postal_code) {
         JSONObject comprehensive = new JSONObject();
+        JSONArray issues = new JSONArray();
         
         try {
             // Building info
@@ -72,8 +78,9 @@ public class MainSpatialMgr {
             
             // Noise level analysis (TransportLineMgr integration)
             JSONObject noiseResult = getNoiseLevel(postal_code);
-            if (noiseResult.has("error")) {
-                comprehensive.put("noiseLevel_dBA", "Error: " + noiseResult.getString("error"));
+            if ("ERROR".equalsIgnoreCase(noiseResult.optString("status", ""))) {
+                comprehensive.put("noiseLevel_dBA", JSONObject.NULL);
+                issues.put("Noise: " + noiseResult.optString("message", "Unknown error"));
             } else {
                 comprehensive.put("noiseLevel_dBA", noiseResult.optDouble("noise_level_db", 0.0));
             }
@@ -81,16 +88,29 @@ public class MainSpatialMgr {
             // Sun exposure analysis (HDBBuildingSunFacingAnalysis integration)
             JSONObject sunAnalysis = getSunFacing(postal_code);
             comprehensive.put("sunExposure", sunAnalysis);
+            if ("ERROR".equalsIgnoreCase(sunAnalysis.optString("status", ""))) {
+                issues.put("Sun exposure: " + sunAnalysis.optString("message", "Unknown error"));
+            }
             
             // Future development risk (LandUseMgr integration)
             JSONObject devRisk = getFutureDevelopmentRisk(postal_code, 500.0);  // 500m radius
             comprehensive.put("futureDevRisk_500m", devRisk);
+            if ("ERROR".equalsIgnoreCase(devRisk.optString("status", ""))) {
+                issues.put("Future development risk: " + devRisk.optString("message", "Unknown error"));
+            }
             
-            comprehensive.put("status", "OK");
+            if (issues.length() > 0) {
+                comprehensive.put("status", "ERROR");
+                comprehensive.put("message", issues.join(" | "));
+                comprehensive.put("issues", issues);
+            } else {
+                comprehensive.put("status", "OK");
+                comprehensive.put("message", "NIL");
+            }
             
         } catch (Exception e) {
             comprehensive.put("status", "ERROR");
-            comprehensive.put("error", e.getMessage());
+            comprehensive.put("message", e.getMessage());
             e.printStackTrace();
         }
         

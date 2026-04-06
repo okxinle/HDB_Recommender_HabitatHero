@@ -96,8 +96,7 @@ public class HDBBuildingMgr {
 
     private boolean isUsableStoredResult(JSONObject result) {
         return result != null && !result.isEmpty()
-                && !"NOT_FOUND".equalsIgnoreCase(result.optString("status", ""))
-                && !"INVALID_INPUT".equalsIgnoreCase(result.optString("status", ""));
+                && "OK".equalsIgnoreCase(result.optString("status", ""));
     }
 
     private boolean isInvalidAnalysisResult(JSONObject result) {
@@ -106,10 +105,7 @@ public class HDBBuildingMgr {
         }
 
         String status = result.optString("status", "");
-        return "INVALID_INPUT".equalsIgnoreCase(status)
-                || "NOT_FOUND".equalsIgnoreCase(status)
-                || "INVALID_GEOMETRY".equalsIgnoreCase(status)
-                || result.has("error");
+        return !"OK".equalsIgnoreCase(status);
     }
 
     private boolean matchesAzimuths(JSONObject result, double expectedEast, double expectedWest) {

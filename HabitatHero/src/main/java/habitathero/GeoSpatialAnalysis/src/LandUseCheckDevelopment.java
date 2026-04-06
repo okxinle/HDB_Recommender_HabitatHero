@@ -96,19 +96,21 @@ public class LandUseCheckDevelopment extends SQLDbConnect {
 
             System.out.println("Future development risk result contains " + developments.length() + " development(s)");
 
-            if (developments.isEmpty()) {
-                result.put("message", "No future development found within distance");
-            } else {
-                result.put("message", "Future development risk calculated successfully");
-            }
-
             rs.close();
             pstmt.close();
             super.closeConnection();
 
         } catch (Exception e) {
             e.printStackTrace();
-            result.put("error", e.getMessage());
+            result.put("status", "ERROR");
+            result.put("message", e.getMessage());
+            result.put("developments", developments);
+            result.put("search_distance", distance);
+            result.put("latitude", latitude);
+            result.put("longitude", longitude);
+            result.put("developmentCount", developments.length());
+            result.put("postalCode", postalCode);
+            return result;
         }
 
         result.put("developments", developments);
@@ -117,6 +119,7 @@ public class LandUseCheckDevelopment extends SQLDbConnect {
         result.put("longitude", longitude);
         result.put("developmentCount", developments.length());
         result.put("status", "OK");
+        result.put("message", "NIL");
         result.put("postalCode", postalCode);
         return result;
     }
@@ -125,7 +128,7 @@ public class LandUseCheckDevelopment extends SQLDbConnect {
         System.out.println("ERROR: Invalid postal code");
         JSONObject result = new JSONObject();
         result.put("postalCode", postalCode == null ? "" : postalCode);
-        result.put("status", "INVALID_INPUT");
+        result.put("status", "ERROR");
         result.put("message", "Invalid postal code: unable to resolve coordinates");
         result.put("search_distance", distance);
         return result;

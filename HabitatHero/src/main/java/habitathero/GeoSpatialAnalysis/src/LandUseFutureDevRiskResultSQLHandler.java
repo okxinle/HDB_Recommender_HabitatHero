@@ -115,7 +115,7 @@ public class LandUseFutureDevRiskResultSQLHandler extends SQLDbConnect {
         JSONObject result = new JSONObject();
 
         if (postalCode == null || postalCode.isEmpty()) {
-            result.put("status", "INVALID_INPUT");
+            result.put("status", "ERROR");
             result.put("message", "postalCode is required");
             return result;
         }
@@ -139,8 +139,8 @@ public class LandUseFutureDevRiskResultSQLHandler extends SQLDbConnect {
                 putNullable(result, "latitude", rs.getObject("latitude"));
                 putNullable(result, "longitude", rs.getObject("longitude"));
                 putNullable(result, "developmentCount", rs.getObject("development_count"));
-                putNullable(result, "status", rs.getString("status"));
-                putNullable(result, "message", rs.getString("message"));
+                String storedStatus = rs.getString("status");
+                String storedMessage = rs.getString("message");
 
                 String json = rs.getString("future_dev_risk_json");
                 if (json != null && !json.isEmpty()) {
@@ -150,12 +150,22 @@ public class LandUseFutureDevRiskResultSQLHandler extends SQLDbConnect {
                     }
                 }
 
+                if ("OK".equalsIgnoreCase(storedStatus)) {
+                    result.put("status", "OK");
+                    result.put("message", "NIL");
+                } else {
+                    result.put("status", "ERROR");
+                    result.put("message", (storedMessage == null || storedMessage.isEmpty())
+                            ? "Future development risk unavailable"
+                            : storedMessage);
+                }
+
                 putNullable(result, "createdAt", rs.getTimestamp("created_at"));
                 putNullable(result, "updatedAt", rs.getTimestamp("updated_at"));
             } else {
                 System.out.println("Future development risk result not found in cache");
                 result.put("postalCode", postalCode);
-                result.put("status", "NOT_FOUND");
+                result.put("status", "ERROR");
                 result.put("message", "Future development risk result not found for postal code");
             }
 
