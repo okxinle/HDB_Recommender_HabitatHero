@@ -1,8 +1,10 @@
 package habitathero.control;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -13,6 +15,7 @@ import habitathero.GeoSpatialAnalysis.src.Coordinate;
 import habitathero.GeoSpatialAnalysis.src.HDBBuildingMgr;
 import habitathero.GeoSpatialAnalysis.src.TransportLineMgr;
 import habitathero.boundary.RecommendationRequest;
+import habitathero.entity.AmenityLocation;
 import habitathero.entity.CommuterProfile;
 import habitathero.entity.HDBBlock;
 import habitathero.entity.HDBDataConstants;
@@ -70,6 +73,8 @@ public class RecommendationEngine {
         if (candidateList.isEmpty()) {
             throw new ZeroMatchesException();
         }
+
+        Map<String, ResaleTransactionRepository.TownPsfView> townPriceBenchmarks = loadTownPriceBenchmarks(candidateList);
 
         multiCommuterService.annotateCommuteScores(candidateList, request.getCommuterProfile());
 
@@ -132,11 +137,35 @@ public class RecommendationEngine {
                     : normalizedLivability;
 
             block.setEstimatedPrice(candidate.getAverageResalePrice());
+            block.setFloorAreaSqm(candidate.getAverageFloorAreaSqm());
             block.setRemainingLeaseYears((int) Math.round(candidate.getAverageRemainingLease()));
             block.setGlobalMatchIndex(100.0 * combinedScore);
             block.setConvenienceScore(clamp01(convenienceScore));
             block.setConvenienceFactors(convenienceEvaluation.getAmenityMatches());
             block.setMatchedAmenities(convenienceEvaluation.getMatchedAmenities());
+
+            String townKey = normalizeTownKey(block.getTown());
+            ResaleTransactionRepository.TownPsfView townBenchmark = townPriceBenchmarks.get(townKey);
+            if (townBenchmark != null && townBenchmark.getAvgPsf() != null) {
+                block.setTownAveragePsf(townBenchmark.getAvgPsf());
+                block.setTownTransactionCount(townBenchmark.getTransactionCount() == null ? 0L : townBenchmark.getTransactionCount());
+            }
+
+            Map<String, AmenityLocation> nearestAmenities = new LinkedHashMap<>();
+            if (convenienceEvaluation.getNearestAmenities() != null) {
+                nearestAmenities.putAll(convenienceEvaluation.getNearestAmenities());
+            }
+
+            // Transport pipeline already calculates nearest rail-line distance.
+            // Surface it as MRT accessibility metadata for frontend walkability.
+            if (noiseLevelResult != null) {
+                double distanceMeters = noiseLevelResult.optDouble("distance_meters", Double.NaN);
+                if (!Double.isNaN(distanceMeters) && distanceMeters >= 0) {
+                    nearestAmenities.put("mrtStation", new AmenityLocation("Nearest MRT", null, null, distanceMeters));
+                }
+            }
+
+            block.setNearestAmenities(nearestAmenities);
             rankedBlocks.add(block);
         }
 
@@ -146,6 +175,36 @@ public class RecommendationEngine {
 
         rankedBlocks.sort(Comparator.comparingDouble(HDBBlock::getGlobalMatchIndex).reversed());
         return rankedBlocks;
+    }
+
+    private Map<String, ResaleTransactionRepository.TownPsfView> loadTownPriceBenchmarks(List<BlockCandidateView> candidateList) {
+        List<String> towns = candidateList.stream()
+                .map(candidate -> candidate.getBlock() == null ? null : candidate.getBlock().getTown())
+                .map(this::normalizeTownKey)
+                .filter(town -> town != null && !town.isBlank())
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (towns.isEmpty()) {
+            return Map.of();
+        }
+
+        return resaleTransactionRepository.findAveragePsfByTowns(towns).stream()
+                .filter(view -> view.getTown() != null && !view.getTown().isBlank())
+                .collect(Collectors.toMap(
+                        view -> normalizeTownKey(view.getTown()),
+                        view -> view,
+                        (left, right) -> left,
+                        LinkedHashMap::new));
+    }
+
+    private String normalizeTownKey(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed.toUpperCase(Locale.ROOT);
     }
 
     private List<BlockCandidateView> fetchCandidates(StructuralConstraints constraints) {

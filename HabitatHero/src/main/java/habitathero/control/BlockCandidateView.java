@@ -6,6 +6,7 @@ public class BlockCandidateView {
 
     private HDBBlock block;
     private double averageResalePrice;
+    private double averageFloorAreaSqm;
     private double averageRemainingLease;
     private long transactionCount;
 
@@ -18,10 +19,12 @@ public class BlockCandidateView {
 
     public BlockCandidateView(HDBBlock block,
                               Double averageResalePrice,
+                              Double averageFloorAreaSqm,
                               Double averageRemainingLease,
                               Long transactionCount) {
         this.block = block;
         this.averageResalePrice = averageResalePrice == null ? 0.0 : averageResalePrice;
+        this.averageFloorAreaSqm = averageFloorAreaSqm == null ? 0.0 : averageFloorAreaSqm;
         this.averageRemainingLease = averageRemainingLease == null ? 0.0 : averageRemainingLease;
         this.transactionCount = transactionCount == null ? 0L : transactionCount;
     }
@@ -40,6 +43,14 @@ public class BlockCandidateView {
 
     public void setAverageResalePrice(double averageResalePrice) {
         this.averageResalePrice = averageResalePrice;
+    }
+
+    public double getAverageFloorAreaSqm() {
+        return averageFloorAreaSqm;
+    }
+
+    public void setAverageFloorAreaSqm(double averageFloorAreaSqm) {
+        this.averageFloorAreaSqm = averageFloorAreaSqm;
     }
 
     public double getAverageRemainingLease() {

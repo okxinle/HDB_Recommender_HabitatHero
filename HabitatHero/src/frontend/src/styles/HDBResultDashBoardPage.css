@@ -154,7 +154,7 @@
   border: 1px solid #bfe6e1;
   border-radius: 14px;
   padding: 18px;
-  margin-bottom: 22px;
+  margin-bottom: 34px;
 }
 
 .choice-summary-header {
@@ -252,6 +252,12 @@
   gap: 6px;
 }
 
+.view-details-btn--compact {
+  width: auto;
+  margin-top: 0;
+  padding: 10px 16px;
+}
+
 .details-link {
   text-decoration: none;
 }
@@ -298,6 +304,107 @@
   border: 1px solid #bfe6e1;
   border-radius: 16px;
   padding: 25px;
+  transition: box-shadow 200ms ease;
+}
+
+.result-card--premium:hover {
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.result-header-row--premium {
+  align-items: flex-start;
+}
+
+.result-title--premium {
+  font-size: clamp(28px, 2.1vw, 34px);
+  line-height: 1.15;
+  margin: 0;
+}
+
+.result-postal--muted {
+  margin-top: 8px;
+  color: #6b7280;
+  font-size: 15px;
+}
+
+.match-badge--premium {
+  border-radius: 999px;
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 800;
+  padding: 12px 20px;
+  color: #0f766e;
+  background: #e6f4f1;
+}
+
+.result-divider {
+  margin: 16px 0 18px;
+  border: 0;
+  border-top: 1px solid #e5e7eb;
+}
+
+.result-stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.result-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.stat-value--warning {
+  color: #ea580c;
+}
+
+.stat-value--success {
+  color: #15803d;
+}
+
+.result-insights-row {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.insight-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #dbe4ea;
+  background: #f8fbfc;
+  font-size: 13px;
+  color: #334155;
+}
+
+.insight-value--success {
+  color: #15803d;
+}
+
+.insight-value--warning {
+  color: #ea580c;
+}
+
+.insight-value--danger {
+  color: #dc2626;
+}
+
+.result-footer-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .results-loading-header {
@@ -516,6 +623,16 @@
 
   .results-topbar-select {
     width: 100%;
+    min-width: 0;
+  }
+
+  .result-title--premium {
+    font-size: 34px;
+  }
+
+  .match-badge--premium {
+    font-size: 24px;
+    padding: 10px 16px;
   }
 }
 
@@ -525,12 +642,12 @@
   }
 
   .results-topbar-search-wrap {
-    width: 60%;
+    width: 66%;
   }
 
   .results-topbar-select {
-    width: 30%;
-    min-width: 280px;
+    width: 33%;
+    min-width: 260px;
   }
 }
 

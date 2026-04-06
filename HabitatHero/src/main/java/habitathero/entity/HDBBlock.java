@@ -44,10 +44,22 @@ public class HDBBlock {
     private double convenienceScore;
 
     @Transient
+    private double floorAreaSqm;
+
+    @Transient
+    private double townAveragePsf;
+
+    @Transient
+    private long townTransactionCount;
+
+    @Transient
     private Map<String, Boolean> convenienceFactors;
 
     @Transient
     private Map<String, List<String>> matchedAmenities;
+
+    @Transient
+    private Map<String, AmenityLocation> nearestAmenities;
     
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
@@ -68,8 +80,12 @@ public class HDBBlock {
     public boolean isFutureRiskFlag() { return futureRiskFlag; }
     public double getGlobalMatchIndex() { return globalMatchIndex; }
     public double getConvenienceScore() { return convenienceScore; }
+    public double getFloorAreaSqm() { return floorAreaSqm; }
+    public double getTownAveragePsf() { return townAveragePsf; }
+    public long getTownTransactionCount() { return townTransactionCount; }
     public Map<String, Boolean> getConvenienceFactors() { return convenienceFactors; }
     public Map<String, List<String>> getMatchedAmenities() { return matchedAmenities; }
+    public Map<String, AmenityLocation> getNearestAmenities() { return nearestAmenities; }
     public Coordinates getCoordinates() { return coordinates; }
 
     // ── Setters ───────────────────────────────────────────────────────────────
@@ -85,8 +101,12 @@ public class HDBBlock {
     public void setFutureRiskFlag(boolean futureRiskFlag) { this.futureRiskFlag = futureRiskFlag; }
     public void setGlobalMatchIndex(double globalMatchIndex) { this.globalMatchIndex = globalMatchIndex; }
     public void setConvenienceScore(double convenienceScore) { this.convenienceScore = convenienceScore; }
+    public void setFloorAreaSqm(double floorAreaSqm) { this.floorAreaSqm = floorAreaSqm; }
+    public void setTownAveragePsf(double townAveragePsf) { this.townAveragePsf = townAveragePsf; }
+    public void setTownTransactionCount(long townTransactionCount) { this.townTransactionCount = townTransactionCount; }
     public void setConvenienceFactors(Map<String, Boolean> convenienceFactors) { this.convenienceFactors = convenienceFactors; }
     public void setMatchedAmenities(Map<String, List<String>> matchedAmenities) { this.matchedAmenities = matchedAmenities; }
+    public void setNearestAmenities(Map<String, AmenityLocation> nearestAmenities) { this.nearestAmenities = nearestAmenities; }
     public void setCoordinates(Coordinates coordinates) { this.coordinates = coordinates; }
 
     @Override

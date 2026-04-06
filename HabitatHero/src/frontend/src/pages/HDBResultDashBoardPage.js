@@ -47,6 +47,14 @@ const formatConvenienceMatch = (value) => {
   return score === null ? 'N/A' : `${Math.round(score * 100)}%`;
 };
 
+const getFactorMode = (submittedPreferences, factorName) => {
+  const softConstraints = Array.isArray(submittedPreferences?.softConstraints)
+    ? submittedPreferences.softConstraints
+    : [];
+  const factor = softConstraints.find((item) => item?.preferenceName === factorName);
+  return factor?.mode || 'ignore';
+};
+
 const skeletonCardIndices = Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => index);
 
 function ResultsSkeletonCard() {
@@ -283,6 +291,8 @@ function HDBResultDashBoardPage() {
       const matchB = getSafeNumber(b?.globalMatchIndex ?? blockB?.globalMatchIndex);
       const priceA = getSafeNumber(a?.estimatedPrice ?? blockA?.estimatedPrice);
       const priceB = getSafeNumber(b?.estimatedPrice ?? blockB?.estimatedPrice);
+      const floorAreaA = getSafeNumber(a?.floorAreaSqm ?? blockA?.floorAreaSqm);
+      const floorAreaB = getSafeNumber(b?.floorAreaSqm ?? blockB?.floorAreaSqm);
       const leaseA = getSafeNumber(blockA?.remainingLeaseYears);
       const leaseB = getSafeNumber(blockB?.remainingLeaseYears);
 
@@ -291,6 +301,10 @@ function HDBResultDashBoardPage() {
           return (priceA ?? Number.POSITIVE_INFINITY) - (priceB ?? Number.POSITIVE_INFINITY);
         case 'price-desc':
           return (priceB ?? Number.NEGATIVE_INFINITY) - (priceA ?? Number.NEGATIVE_INFINITY);
+        case 'area-desc':
+          return (floorAreaB ?? Number.NEGATIVE_INFINITY) - (floorAreaA ?? Number.NEGATIVE_INFINITY);
+        case 'area-asc':
+          return (floorAreaA ?? Number.POSITIVE_INFINITY) - (floorAreaB ?? Number.POSITIVE_INFINITY);
         case 'lease-desc':
           return (leaseB ?? Number.NEGATIVE_INFINITY) - (leaseA ?? Number.NEGATIVE_INFINITY);
         case 'match-desc':
@@ -363,6 +377,15 @@ function HDBResultDashBoardPage() {
       convenienceMode: convenienceConfig.mode || 'ignore',
       amenities,
       factorModes
+    };
+  }, [submittedPreferences]);
+
+  const cardVisibilityConfig = useMemo(() => {
+    return {
+      solarMode: getFactorMode(submittedPreferences, 'solarOrientation'),
+      acousticMode: getFactorMode(submittedPreferences, 'acousticComfort'),
+      convenienceMode: getFactorMode(submittedPreferences, 'convenience'),
+      commuterEnabled: Boolean(submittedPreferences?.commuterProfile?.enabled)
     };
   }, [submittedPreferences]);
 
@@ -518,7 +541,7 @@ function HDBResultDashBoardPage() {
         <p>We found {filteredAndSortedResults.length} blocks tailored to your lifestyle preferences.</p>
 
         <div className="results-topbar flex flex-col md:flex-row justify-center items-center gap-4 w-full max-w-5xl mx-auto mb-10" role="region" aria-label="Search and sort results">
-          <div className="results-topbar-search-wrap w-full md:w-[60%]">
+          <div className="results-topbar-search-wrap w-full md:w-[66%]">
             <Search size={16} className="results-topbar-search-icon" aria-hidden="true" />
             <input
               type="text"
@@ -531,7 +554,7 @@ function HDBResultDashBoardPage() {
           </div>
 
           <select
-            className="results-topbar-select rounded-full border border-gray-300 shadow-sm h-12 px-6 w-full md:w-[30%] bg-white"
+            className="results-topbar-select rounded-full border border-gray-300 shadow-sm h-12 px-6 w-full md:w-[33%] bg-white"
             value={sortBy}
             onChange={(event) => setSortBy(event.target.value)}
             aria-label="Sort results"
@@ -539,6 +562,8 @@ function HDBResultDashBoardPage() {
             <option value="match-desc">Highest Match % (Default)</option>
             <option value="price-asc">Price: Low to High</option>
             <option value="price-desc">Price: High to Low</option>
+            <option value="area-desc">Floor Area: Large to Small</option>
+            <option value="area-asc">Floor Area: Small to Large</option>
             <option value="lease-desc">Lease: Newest First (Longest lease remaining)</option>
           </select>
         </div>
@@ -567,6 +592,12 @@ function HDBResultDashBoardPage() {
             const estimatedPrice = getSafeNumber(
               item?.estimatedPrice ?? block?.estimatedPrice
             );
+            const floorAreaSqm = getSafeNumber(
+              item?.floorAreaSqm ?? block?.floorAreaSqm
+            );
+            const floorAreaSqft = floorAreaSqm === null
+              ? null
+              : floorAreaSqm * 10.7639;
             const remainingLeaseYears = getSafeNumber(block?.remainingLeaseYears);
             const convenienceScore = getSafeNumber(
               item?.convenienceScore ?? block?.convenienceScore
@@ -578,6 +609,7 @@ function HDBResultDashBoardPage() {
             const convenienceMatchText = hasConvenienceBreakdown
               ? formatConvenienceMatch(convenienceScore)
               : 'Unavailable';
+            const convenienceMatchPercent = convenienceScore === null ? null : Math.round(convenienceScore * 100);
 
             const commuteFairnessScore = getSafeNumber(
               item?.commuteMetrics?.commuteFairnessScore
@@ -595,51 +627,93 @@ function HDBResultDashBoardPage() {
               globalMatchIndex !== null && globalMatchIndex > 75;
 
             const noiseRiskLevel = block?.noiseRiskLevel ?? "";
+            const normalizedNoiseRisk = String(noiseRiskLevel).toLowerCase();
+            const leaseIsAging = remainingLeaseYears !== null && remainingLeaseYears < 60;
+            const convenienceIsStrong = convenienceMatchPercent !== null && convenienceMatchPercent > 80;
+
+            const shouldShowNoiseInsight = cardVisibilityConfig.acousticMode !== 'ignore';
+            const shouldShowSunInsight = cardVisibilityConfig.solarMode !== 'ignore';
+            const shouldShowTransportInsight = cardVisibilityConfig.commuterEnabled;
+
+            const hasNearbyMrt =
+              convenienceFactors?.mrtStation ??
+              convenienceFactors?.mrt ??
+              convenienceFactors?.train ??
+              false;
+            const noiseClassName = normalizedNoiseRisk.includes('high')
+              ? 'insight-value--danger'
+              : normalizedNoiseRisk.includes('moderate') || normalizedNoiseRisk.includes('medium')
+                ? 'insight-value--warning'
+                : 'insight-value--success';
 
             return (
-              <div key={`${blockId}-${index}`} className="result-card">
-                <div className="result-header-row">
+              <div key={`${blockId}-${index}`} className="result-card result-card--premium">
+                <div className="result-header-row result-header-row--premium">
                   <div>
-                    <h3 className="result-title">Block {blockNumber} {streetName}</h3>
-                    <p className="result-postal">
+                    <h3 className="result-title result-title--premium">Block {blockNumber} {streetName}</h3>
+                    <p className="result-postal result-postal--muted">
                       Town: {town} | Postal: {postalCode}
                     </p>
                   </div>
 
-                  <div className="result-side">
-                    <div
-                      className={`match-badge ${
-                        isHighMatch ? "high" : "med"
-                      }`}
-                    >
-                      {formatMatchScore(globalMatchIndex)}
+                  <div className="result-side result-side--premium">
+                    <div className={`match-badge match-badge--premium ${isHighMatch ? 'high' : 'med'}`}>
+                      {globalMatchIndex === null ? 'N/A' : `${globalMatchIndex.toFixed(1)}%`}
                     </div>
-                    <Link to={`/result-detail/blkid-${blockId}`} state={{ block, result: item }} className='details-link'>
-                    <button className="view-details-btn">
-                      View Details
-                      <ArrowRight size={14} />
-                    </button>
-                  </Link>
                   </div>
                 </div>
 
-                <hr />
+                <hr className="result-divider" />
 
-                <div className="result-details-row">
-                  <div className="detail-item">
-                    <span>Estimated Price: </span>
-                    <strong>{formatCurrency(estimatedPrice)}</strong>
+                <div className="result-stats-row">
+                  <div className="result-stat-pill">
+                    <span>💰</span>
+                    <span>Estimated Price: <strong>{formatCurrency(estimatedPrice)}</strong></span>
                   </div>
 
-                  <div className="detail-item">
-                    <span>Lease Remaining: </span>
-                    <strong>{formatLeaseYears(remainingLeaseYears)}</strong>
+                  <div className="result-stat-pill">
+                    <span>📏</span>
+                    <span>
+                      Floor Area: <strong>{floorAreaSqm === null ? 'N/A' : `${Math.round(floorAreaSqft)} sqft`}</strong>
+                    </span>
                   </div>
 
-                  <div className="detail-item">
-                    <span>Convenience Match: </span>
-                    <strong>{convenienceMatchText}</strong>
+                  <div className="result-stat-pill">
+                    <span>⏳</span>
+                    <span>
+                      Lease Remaining:{' '}
+                      <strong className={leaseIsAging ? 'stat-value--warning' : ''}>{formatLeaseYears(remainingLeaseYears)}</strong>
+                    </span>
                   </div>
+
+                  <div className="result-stat-pill">
+                    <span>🛒</span>
+                    <span>
+                      Convenience:{' '}
+                      <strong className={convenienceIsStrong ? 'stat-value--success' : ''}>{convenienceMatchText}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="result-insights-row">
+                  {shouldShowNoiseInsight && (
+                    <span className="insight-tag">
+                      🔇 Noise Risk: <strong className={noiseClassName}>{noiseRiskLevel || 'Low'}</strong>
+                    </span>
+                  )}
+
+                  {shouldShowSunInsight && (
+                    <span className="insight-tag">
+                      ☀️ West Sun: <strong className={block?.westSunStatus ? 'insight-value--warning' : 'insight-value--success'}>{block?.westSunStatus ? 'Moderate' : 'Low'}</strong>
+                    </span>
+                  )}
+
+                  {shouldShowTransportInsight && (
+                    <span className="insight-tag">
+                      🚇 {hasNearbyMrt ? 'MRT nearby' : 'MRT not nearby'}
+                    </span>
+                  )}
+
                 </div>
 
                 {commuteFairnessScore !== null && (
@@ -661,18 +735,13 @@ function HDBResultDashBoardPage() {
                   </div>
                 )}
 
-                <div className="tags-container">
-                  {block?.westSunStatus && (
-                    <span className="tag sun">Afternoon Sun</span>
-                  )}
-
-                  {String(noiseRiskLevel).toLowerCase() === "high" && (
-                    <span className="tag noise">High Noise Risk</span>
-                  )}
-
-                  {block?.futureRiskFlag && (
-                    <span className="tag risk">Construction Risk</span>
-                  )}
+                <div className="result-footer-actions">
+                  <Link to={`/result-detail/blkid-${blockId}`} state={{ block, result: item }} className='details-link'>
+                    <button className="view-details-btn view-details-btn--compact">
+                      View Details
+                      <ArrowRight size={14} />
+                    </button>
+                  </Link>
                 </div>
               </div>
             );

@@ -42,6 +42,15 @@ public interface PoiRepository extends JpaRepository<PointOfInterest, Long> {
                         )
                     )
                 ) <= :radiusKm
+            ORDER BY (
+                    6371.0 * 2 * ASIN(
+                        SQRT(
+                            POWER(SIN(RADIANS((p.latitude - :lat) / 2.0)), 2)
+                            + COS(RADIANS(:lat)) * COS(RADIANS(p.latitude))
+                            * POWER(SIN(RADIANS((p.longitude - :lon) / 2.0)), 2)
+                        )
+                    )
+                ) ASC
             """, nativeQuery = true)
     java.util.List<PointOfInterest> findNearbyPOIs(@Param("lat") double lat,
                                                    @Param("lon") double lon,
