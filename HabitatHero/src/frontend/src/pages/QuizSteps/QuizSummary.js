@@ -8,6 +8,12 @@ export const REGION_TOWN_MAP = {
   "Central": ["Bishan", "Bukit Merah", "Bukit Timah", "Central Area", "Geylang", "Kallang/Whampoa", "Marine Parade", "Queenstown", "Toa Payoh"]
 };
 
+const FACTOR_LABELS = {
+  solarOrientation: "Solar Orientation",
+  acousticComfort: "Acoustic Comfort",
+  convenience: "Convenience"
+};
+
 function QuizSummary({ data }) {
   // Helper to find specific soft constraints in the new List format
   const getFactor = (name) => data.softConstraints.find(f => f.preferenceName === name) || {};
@@ -49,6 +55,8 @@ function QuizSummary({ data }) {
   const cp = data.commuterProfile;
 
   const displayedTowns = getDisplayedTowns(sc);
+  const selectedRegions = Array.isArray(sc.preferredRegions) ? sc.preferredRegions : [];
+  const formatList = (items) => (items.length > 0 ? items.join(", ").replace(/, ([^,]*)$/, " & $1") : "Not selected");
 
   return (
     <div className="step-content">
@@ -61,36 +69,41 @@ function QuizSummary({ data }) {
             <h3>Structural Constraints</h3>
             <Link to="/quiz?step=1" className="edit-link">Edit</Link>
           </div>
-          <div className="summary-list">
+          <div className="summary-list summary-list--structured">
 
-            <div className="summary-row">
-              <span className="summary-key">• Budget</span>
+            <div className="summary-row summary-row--structured">
+              <span className="summary-key">Budget</span>
               <span className="summary-value">
                 SGD {sc.budgetRange[0].toLocaleString()} – {sc.budgetRange[1].toLocaleString()}
               </span>
             </div>
 
-            <div className="summary-row">
-              <span className="summary-key">• Flat Type</span>
+            <div className="summary-row summary-row--structured">
+              <span className="summary-key">Flat Type</span>
               <span className="summary-value">
                 {sc.preferredFlatType || "Not selected"}
               </span>
             </div>
 
-            <div className="summary-row">
-              <span className="summary-key">• Minimum Lease</span>
+            <div className="summary-row summary-row--structured">
+              <span className="summary-key">Minimum Lease</span>
               <span className="summary-value">
                 {sc.minLeaseYears ? `${sc.minLeaseYears} years` : "Not selected"}
               </span>
             </div>
 
-            <div className="summary-row summary-row-towns">
-              <span className="summary-key">• Towns</span>
-              <span className="summary-value summary-value-towns">
-                {displayedTowns.length > 0
-                  ? displayedTowns.join(", ").replace(/, ([^,]*)$/, " & $1")
-                  : "Not selected"}
+            <div className="summary-row summary-row--structured">
+              <span className="summary-key">Preferred Regions</span>
+              <span className="summary-value">
+                {formatList(selectedRegions)}
               </span>
+            </div>
+
+            <div className="summary-block">
+              <span className="summary-key summary-key--towns">Preferred Towns</span>
+              <div className="summary-towns-box">
+                <span className="summary-value summary-value-towns">{formatList(displayedTowns)}</span>
+              </div>
             </div>
 
           </div>
@@ -106,10 +119,8 @@ function QuizSummary({ data }) {
             {["solarOrientation", "acousticComfort", "convenience"].map(key => {
               const f = getFactor(key);
               return (
-                <div key={key} className="summary-row">
-                  <span className="summary-key">
-                    • {key.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase()).trim()}
-                  </span>
+                <div key={key} className="summary-row summary-row-factor">
+                  <span className="summary-key">{FACTOR_LABELS[key] || key}</span>
                   <span className={`summary-tag ${getFactorClass(f.mode)}`}>{formatFactorMode(f)}</span>
                 </div>
               );
@@ -118,41 +129,41 @@ function QuizSummary({ data }) {
         </div>
 
         {/* Commuter Analysis Card */}
-        <div className="summary-card">
+        <div className={`summary-card summary-card-commuter ${cp.enabled ? "" : "summary-card-commuter--inactive"}`}>
           <div className="summary-card-header">
             <h3>Multi-Commuter Analysis</h3>
             <Link to="/quiz?step=3" className="edit-link">Edit</Link>
           </div>
 
           <div className="summary-list">
-            <div className="commuter-status-row">
-              <span className={`status-text ${cp.enabled ? "enabled" : "disabled"}`}>
-                {cp.enabled ? "✔ Status: ENABLED" : "✖ Status: DISABLED"}
-              </span>
-
-              {cp.enabled && (
-              <span className="summary-tag tag-fairness">
-                COMMUTE FAIRNESS SCORE = {cp.fairnessWeight.toFixed(1)}
-              </span>
-            )}
-            </div>
-
-            {cp.enabled && (
+            {cp.enabled ? (
               <>
                 <div className="summary-row">
-                  <span className="summary-key">• Commuter A Postal Code</span>
+                  <span className="summary-key">Status</span>
+                  <span className="summary-value">Enabled</span>
+                </div>
+
+                <div className="summary-row summary-row--pill-right">
+                  <span className="summary-key">Commute Fairness Score</span>
+                  <span className="summary-tag tag-fairness">{cp.fairnessWeight.toFixed(1)}</span>
+                </div>
+
+                <div className="summary-row">
+                  <span className="summary-key">Commuter A Postal Code</span>
                   <span className="summary-value">
                     {cp.destinations[0] || "Not entered"}
                   </span>
                 </div>
 
                 <div className="summary-row">
-                  <span className="summary-key">• Commuter B Postal Code</span>
+                  <span className="summary-key">Commuter B Postal Code</span>
                   <span className="summary-value">
                     {cp.destinations[1] || "Not entered"}
                   </span>
                 </div>
               </>
+            ) : (
+              <p className="summary-empty-state">This feature is currently inactive.</p>
             )}
 
           </div>
