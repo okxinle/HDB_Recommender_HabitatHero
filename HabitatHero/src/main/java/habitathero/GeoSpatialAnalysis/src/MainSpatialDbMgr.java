@@ -9,7 +9,6 @@ public class MainSpatialDbMgr {
     private LandUseFutureDevRiskResultSQLHandler landUseFutureDevRiskResultSQLHandler;
     private TransportLineCalResultSQLHandler transportLineCalResultSQLHandler;
     private DataGovMetadataMgr dataGovMetadataMgr;
-    private DataGovAPIHandler dataGovAPIHandler;
 
     private MainSpatialDbMgr() {
         this.hdbBuildingDbMgr = HDBBuildingDbMgr.getInstance();
@@ -19,9 +18,13 @@ public class MainSpatialDbMgr {
         this.landUseFutureDevRiskResultSQLHandler = LandUseFutureDevRiskResultSQLHandler.getInstance();
         this.transportLineCalResultSQLHandler = TransportLineCalResultSQLHandler.getInstance();
         this.dataGovMetadataMgr = DataGovMetadataMgr.getInstance();
-        this.dataGovAPIHandler = DataGovAPIHandler.getInstance();
     }
 
+    /**
+     * Returns the singleton instance for centralized spatial database operations.
+     *
+     * @return singleton MainSpatialDbMgr instance
+     */
     public static MainSpatialDbMgr getInstance() {
         if (instance == null) {
             instance = new MainSpatialDbMgr();
@@ -54,36 +57,57 @@ public class MainSpatialDbMgr {
         }
     }
 
+    /**
+     * Creates the SQL table for HDB building spatial data.
+     */
     public void createHDBBuildingTable() {
         System.out.println("[INIT] Creating HDB_Building table...");
         hdbBuildingDbMgr.createSQLTable();
     }
 
+    /**
+     * Creates the SQL table for land use spatial data.
+     */
     public void createLandUseTable() {
         System.out.println("[INIT] Creating LandUse table...");
         landUseDbMgr.createSQLTable();
     }
 
+    /**
+     * Creates the SQL table for transport line spatial data.
+     */
     public void createTransportLineTable() {
         System.out.println("[INIT] Creating TransportLine table...");
         transportLineDbMgr.createSQLTable();
     }
 
+    /**
+     * Creates the SQL table for transport line calculation results.
+     */
     public void createTransportLineCalResultTable() {
         System.out.println("[INIT] Creating TransportLine Cal Result table...");
         transportLineCalResultSQLHandler.createSQLTable();
     }
 
+    /**
+     * Creates the SQL table for HDB building sun-facing results.
+     */
     public void createHDBBuildingSunFacingResultTable() {
         System.out.println("[INIT] Creating HDB Building Sun Facing Result table...");
         hdbBuildingSunFacingResultSQLHandler.createSQLTable();
     }
 
+    /**
+     * Creates the SQL table for future development risk results.
+     */
     public void createLandUseFutureDevRiskResultTable() {
         System.out.println("[INIT] Creating LandUse Future Dev Risk Result table...");
         landUseFutureDevRiskResultSQLHandler.createSQLTable();
     }
 
+    /**
+     * Creates the SQL table for DataGov metadata.
+     */
     public void createMetadataTable() {
         System.out.println("[INIT] Creating Metadata table...");
         dataGovMetadataMgr.createSQLTable();
@@ -98,9 +122,9 @@ public class MainSpatialDbMgr {
         System.out.println("[IMPORT] Starting data import operations...");
 
         try {
-            importHDBBuildingGeoJson("dataset/HDBExistingBuilding.geojson");
-            importLandUseGeoJson("dataset/MasterPlan2019LandUselayer.geojson");
-            importTransportLineGeoJson("dataset/MasterPlan2019RailLinelayer.geojson");
+            importHDBBuildingGeoJson();
+            importLandUseGeoJson();
+            importTransportLineGeoJson();
 
             System.out.println("[SUCCESS] All GeoJSON datasets imported successfully.");
         } catch (Exception e) {
@@ -109,109 +133,130 @@ public class MainSpatialDbMgr {
         }
     }
 
-    public void importHDBBuildingGeoJson(String filePath) {
-        System.out.println("[IMPORT] Importing HDB Building GeoJSON from: " + filePath);
+    /**
+     * Imports HDB building GeoJSON data into SQL storage.
+     */
+    public void importHDBBuildingGeoJson() {
+        System.out.println("[IMPORT] Importing HDB Building GeoJSON...");
         hdbBuildingDbMgr.importGeoJsonToSQLDb();
     }
 
-    public void importLandUseGeoJson(String filePath) {
-        System.out.println("[IMPORT] Importing LandUse GeoJSON from: " + filePath);
+    /**
+     * Imports land use GeoJSON data into SQL storage.
+     */
+    public void importLandUseGeoJson() {
+        System.out.println("[IMPORT] Importing LandUse GeoJSON...");
         landUseDbMgr.importGeoJsonToSQLDb();
     }
 
-    public void importTransportLineGeoJson(String filePath) {
-        System.out.println("[IMPORT] Importing TransportLine GeoJSON from: " + filePath);
+    /**
+     * Imports transport line GeoJSON data into SQL storage.
+     */
+    public void importTransportLineGeoJson() {
+        System.out.println("[IMPORT] Importing TransportLine GeoJSON...");
         transportLineDbMgr.importGeoJsonToSQLDb();
     }
 
-    // ============ DATA GOV API OPERATIONS (Download & Update) ============
+    // ============ DATA DOWNLOAD OPERATIONS ============
 
     /**
-     * Download dataset from DataGov API and save to local file
-     * Checks for updates and only downloads if newer data is available
+     * Download all GeoJSON datasets from DataGov API, include prior data currency
+     * checking before download
      */
-    public boolean downloadDatasetFromAPI(String datasetId, String localFilePath) {
-        System.out.println("[API] Downloading dataset " + datasetId + " from DataGov API...");
+    public void downloadAllGeoJsonDatasets() {
+        System.out.println("[DOWNLOAD] Starting data download operations...");
 
         try {
-            Boolean result = dataGovAPIHandler.pollDownloadAndSave(datasetId, localFilePath);
+            downloadHDBBuildingGeoJson();
+            downloadLandUseGeoJson();
+            downloadTransportLineGeoJson();
 
-            if (result != null && result) {
-                System.out.println("[SUCCESS] Dataset " + datasetId + " downloaded and saved to: " + localFilePath);
-                return true;
-            } else {
-                System.out.println("[INFO] Dataset " + datasetId + " is up-to-date, no download needed.");
-                return false;
-            }
+            System.out.println("[SUCCESS] All GeoJSON datasets downloaded successfully.");
         } catch (Exception e) {
-            System.out.println("[ERROR] Failed to download dataset " + datasetId + ": " + e.getMessage());
+            System.out.println("[ERROR] Failed to download GeoJSON datasets: " + e.getMessage());
             e.printStackTrace();
-            return false;
         }
     }
 
     /**
-     * Force download dataset from DataGov API, ignoring update checks
-     * Always downloads regardless of local data currency
+     * Downloads the HDB building GeoJSON dataset.
      */
-    public boolean forceDownloadDatasetFromAPI(String datasetId, String localFilePath) {
-        System.out.println("[API] Force downloading dataset " + datasetId + " from DataGov API...");
-
-        try {
-            Boolean result = dataGovAPIHandler.pollForcedDownloadAndSave(datasetId, localFilePath);
-
-            if (result != null && result) {
-                System.out
-                        .println("[SUCCESS] Dataset " + datasetId + " force downloaded and saved to: " + localFilePath);
-                return true;
-            } else {
-                System.out.println("[ERROR] Failed to force download dataset " + datasetId);
-                return false;
-            }
-        } catch (Exception e) {
-            System.out.println("[ERROR] Exception during force download of " + datasetId + ": " + e.getMessage());
-            e.printStackTrace();
-            return false;
-        }
+    public void downloadHDBBuildingGeoJson() {
+        System.out.println("[DOWNLOAD] Downloading HDB Building GeoJSON...");
+        hdbBuildingDbMgr.downloadGeoJson();
     }
 
     /**
-     * Check if DataGov API has newer data than what's stored locally
+     * Downloads the land use GeoJSON dataset.
      */
-    public boolean isDatasetOutdated(String datasetId) {
-        System.out.println("[API] Checking if dataset " + datasetId + " is outdated...");
+    public void downloadLandUseGeoJson() {
+        System.out.println("[DOWNLOAD] Downloading LandUse GeoJSON...");
+        landUseDbMgr.downloadGeoJson();
+    }
+
+    /**
+     * Downloads the transport line GeoJSON dataset.
+     */
+    public void downloadTransportLineGeoJson() {
+        System.out.println("[DOWNLOAD] Downloading TransportLine GeoJSON...");
+        transportLineDbMgr.downloadGeoJson();
+    }
+
+    /**
+     * Force downloads the HDB building GeoJSON dataset.
+     */
+    public void forceDownloadHDBBuildingGeoJson() {
+        System.out.println("[FORCE-DOWNLOAD] Downloading HDB Building GeoJSON...");
+        hdbBuildingDbMgr.forceDownloadGeoJson();
+    }
+
+    /**
+     * Force downloads the land use GeoJSON dataset.
+     */
+    public void forceDownloadLandUseGeoJson() {
+        System.out.println("[FORCE-DOWNLOAD] Downloading LandUse GeoJSON...");
+        landUseDbMgr.forceDownloadGeoJson();
+    }
+
+    /**
+     * Force downloads the transport line GeoJSON dataset.
+     */
+    public void forceDownloadTransportLineGeoJson() {
+        System.out.println("[FORCE-DOWNLOAD] Downloading TransportLine GeoJSON...");
+        transportLineDbMgr.forceDownloadGeoJson();
+    }
+
+    /**
+     * Force downloads all GeoJSON datasets from DataGov API.
+     */
+    public void forceDownloadAllGeoJsonDatasets() {
+        System.out.println("[FORCE-DOWNLOAD] Starting forced download operations...");
 
         try {
-            Boolean isCurrent = dataGovAPIHandler.checkAPIDataCurrency(datasetId);
+            forceDownloadHDBBuildingGeoJson();
+            forceDownloadLandUseGeoJson();
+            forceDownloadTransportLineGeoJson();
 
-            if (isCurrent == null) {
-                System.out.println("[INFO] Could not determine currency status for dataset " + datasetId);
-                return false;
-            }
-
-            boolean isOutdated = !isCurrent;
-            String status = isOutdated ? "OUTDATED" : "CURRENT";
-            System.out.println("[INFO] Dataset " + datasetId + " is " + status);
-
-            return isOutdated;
+            System.out.println("[SUCCESS] All GeoJSON datasets force downloaded successfully.");
         } catch (Exception e) {
-            System.out.println("[ERROR] Failed to check API currency for " + datasetId + ": " + e.getMessage());
+            System.out.println("[ERROR] Failed to force download GeoJSON datasets: " + e.getMessage());
             e.printStackTrace();
-            return false;
         }
     }
 
     // ============ COMPREHENSIVE WORKFLOWS ============
 
     /**
-     * Complete initial setup: create tables + import all data from local GeoJSON
-     * files
+     * Complete setup: create tables, download latest datasets, then import data.
      */
-    public void setupDatabaseFromLocalFiles() {
-        System.out.println("\n===== INITIAL DATABASE SETUP FROM LOCAL FILES =====");
+    public void setupDatabase() {
+        System.out.println("\n===== DATABASE SETUP START =====");
+
         initializeAllDatabaseTables();
+        downloadAllGeoJsonDatasets();
         importAllGeoJsonDatasets();
-        System.out.println("===== SETUP COMPLETE =====\n");
+
+        System.out.println("===== DATABASE SETUP COMPLETE =====\n");
     }
 
     /**
@@ -221,80 +266,28 @@ public class MainSpatialDbMgr {
     public void refreshAllGeoJsonDataFromAPI() {
         System.out.println("\n===== REFRESHING DATA FROM DATAGOV API =====");
 
-        // Refresh HDB Building data
-        refreshHDBBuildingGeoJsonFromAPI();
-
-        // Refresh Land Use data
-        refreshLandUseGeoJsonFromAPI();
-
-        // Refresh Transport Line data
-        refreshTransportLineGeoJsonFromAPI();
+        downloadAllGeoJsonDatasets();
+        importAllGeoJsonDatasets();
 
         System.out.println("\n===== API REFRESH COMPLETE =====\n");
     }
 
     /**
-     * Check and refresh HDB Building data from API
+     * Force refresh data from DataGov API: bypass checks, force download all,
+     * then re-import
      */
-    private void refreshHDBBuildingGeoJsonFromAPI() {
-        System.out.println("\n--- Processing HDB Building ---");
+    public void forceRefreshAllGeoJsonDataFromAPI() {
+        System.out.println("\n===== FORCE REFRESHING DATA FROM DATAGOV API =====");
 
         try {
-            hdbBuildingDbMgr.downloadGeoJson();
-            System.out.println("[IMPORT] Re-importing HDB Building data after download...");
-            hdbBuildingDbMgr.importGeoJsonToSQLDb();
-            System.out.println("[SUCCESS] HDB Building data refreshed");
+            forceDownloadAllGeoJsonDatasets();
+
+            importAllGeoJsonDatasets();
+            System.out.println("\n===== API FORCE REFRESH COMPLETE =====\n");
         } catch (Exception e) {
-            System.out.println("[ERROR] Failed to refresh HDB Building: " + e.getMessage());
+            System.out.println("[ERROR] Failed to force refresh GeoJSON datasets: " + e.getMessage());
             e.printStackTrace();
         }
-    }
-
-    /**
-     * Check and refresh Land Use data from API
-     */
-    private void refreshLandUseGeoJsonFromAPI() {
-        System.out.println("\n--- Processing Land Use ---");
-
-        try {
-            landUseDbMgr.downloadGeoJson();
-            System.out.println("[IMPORT] Re-importing Land Use data after download...");
-            landUseDbMgr.importGeoJsonToSQLDb();
-            System.out.println("[SUCCESS] Land Use data refreshed");
-        } catch (Exception e) {
-            System.out.println("[ERROR] Failed to refresh Land Use: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Check and refresh Transport Line data from API
-     */
-    private void refreshTransportLineGeoJsonFromAPI() {
-        System.out.println("\n--- Processing Transport Line ---");
-
-        try {
-            System.out.println("[API] Transport Line data is outdated, downloading...");
-            transportLineDbMgr.downloadGeoJson();
-            System.out.println("[IMPORT] Re-importing Transport Line data after download...");
-            transportLineDbMgr.importGeoJsonToSQLDb();
-            System.out.println("[SUCCESS] Transport Line data refreshed");
-
-        } catch (Exception e) {
-            System.out.println("[ERROR] Failed to refresh Transport Line: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Comprehensive setup and refresh: tables + import from files + check API for
-     * updates
-     */
-    public void setupAndSyncDatabase() {
-        System.out.println("\n===== COMPREHENSIVE DATABASE SETUP AND SYNC =====");
-        refreshAllGeoJsonDataFromAPI(); //download all GeoJson data
-        setupDatabaseFromLocalFiles(); //
-        System.out.println("===== COMPREHENSIVE SETUP COMPLETE =====\n");
     }
 
 }
