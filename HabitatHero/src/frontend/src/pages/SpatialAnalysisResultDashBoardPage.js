@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Circle, MapContainer, Marker, Popup, Polygon, TileLayer } from 'react-leaflet';
+import { DollarSign, Clock, MapPin, BarChart3 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import '../styles/SpatialAnalysisResultDashBoardPage.css';
@@ -89,6 +90,15 @@ const formatStreet = (value) => {
 
   return value.toLowerCase().replace(/(^\w|\s\w)/g, (char) => char.toUpperCase());
 };
+
+const formatTown = (town) => {
+  if (!town) return 'N/A';
+
+  return town
+    .toLowerCase()
+    .replace(/(^|\s|\/)\S/g, (char) => char.toUpperCase());
+};
+
 
 const haversineMeters = (lat1, lon1, lat2, lon2) => {
   const toRad = (deg) => (deg * Math.PI) / 180;
@@ -590,16 +600,65 @@ function SpatialAnalysisResultDashBoardPage() {
 
   const reserveSite = RESERVE_SITE;
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <div className="spatial-report-page">
-      <header className="report-header-band">
-        <div className="report-header-band__inner">
-          <h1 className="report-header-band__title">
-            Block {blockNumber} {formatStreet(streetName)}
-          </h1>
-          <p className="report-header-band__subtitle">Singapore {postalCode}</p>
+
+      <div className="breadcrumb">
+        <span onClick={() => navigate('/results')} className="breadcrumb-link">
+          Your Personalized HDB Matches
+        </span>
+        <span className="breadcrumb-sep">›</span>
+        <span>HDB Block Details</span>
+      </div>
+
+      <section className="report-block-summary">
+        <div className="block-banner">
+          Block {blockNumber} {formatStreet(streetName)} Singapore {postalCode}
+          <div className="coordinates">
+            {block?.coordinates
+              ? `${block.coordinates.lat.toFixed(6)}, ${block.coordinates.lng.toFixed(6)}`
+              : 'N/A'}
+          </div>
         </div>
-      </header>
+      </section>
+
+      <div className="block-summary-grid">
+        <div className="summary-card-item summary-card-item--row">
+          <div className="summary-icon"><DollarSign size={18} /></div>
+          <div className="summary-content">
+            <span>Estimated Price</span>
+            <strong>$571,000</strong>
+          </div>
+        </div>
+
+        <div className="summary-card-item summary-card-item--row">
+          <div className="summary-icon"><Clock size={18} /></div>
+          <div className="summary-content">
+            <span>Lease Remaining</span>
+            <strong>57 years</strong>
+          </div>
+        </div>
+
+        <div className="summary-card-item summary-card-item--row">
+          <div className="summary-icon"><MapPin size={18} /></div>
+          <div className="summary-content">
+            <span>Town</span>
+            <strong>Ang Mo Kio</strong>
+          </div>
+        </div>
+
+        <div className="summary-card-item summary-card-item--row">
+          <div className="summary-icon"><BarChart3 size={18} /></div>
+          <div className="summary-content">
+            <span>Match Score</span>
+            <strong>100.0%</strong>
+          </div>
+        </div>
+      </div>
 
       <section className="report-map-shell">
         <div className="report-map-frame">
