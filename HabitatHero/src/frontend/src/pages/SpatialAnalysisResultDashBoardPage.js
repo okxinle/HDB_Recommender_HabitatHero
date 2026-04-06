@@ -616,9 +616,9 @@ function SpatialAnalysisResultDashBoardPage() {
               center={blockPosition}
               radius={150}
               pathOptions={{
-                color: '#e2c481',
+                color: '#dc3545',
                 dashArray: '6,6',
-                fillColor: '#e2c481',
+                fillColor: '#dc3545',
                 fillOpacity: 0.12,
               }}
             />
