@@ -63,14 +63,16 @@ public class DataPipelineService {
                 String paginatedUrl = BASE_API_URL + "&limit=" + limit + "&offset=" + offset;
                 System.out.println("Fetching 1000 records starting from offset: " + offset + "...");
 
-                ResponseEntity<Map> response = restTemplate.exchange(
-                    paginatedUrl, HttpMethod.GET, entity, Map.class
+                ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    paginatedUrl, HttpMethod.GET, entity, new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>(){}
                 );
 
                 Map<String, Object> body = response.getBody();
                 if (body == null || !body.containsKey("result")) break;
                 
+                @SuppressWarnings("unchecked")
                 Map<String, Object> result = (Map<String, Object>) body.get("result");
+                @SuppressWarnings("unchecked")
                 List<Map<String, Object>> records = (List<Map<String, Object>>) result.get("records");
 
                 if (records == null || records.isEmpty()) {
