@@ -119,8 +119,21 @@ function HDBResultDashBoardPage() {
   const [isLoadingMemberResults, setIsLoadingMemberResults] = useState(false);
   const [hasQuizBeenTaken, setHasQuizBeenTaken] = useState(false);
   const [showResultsFadeIn, setShowResultsFadeIn] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('match-desc');
+
+  const [searchQuery, setSearchQuery] = useState(() => {
+    return sessionStorage.getItem('resultsSearchQuery') || '';
+  });
+  const [sortBy, setSortBy] = useState(() => {
+    return sessionStorage.getItem('resultsSortBy') || 'match-desc';
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem('resultsSearchQuery', searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    sessionStorage.setItem('resultsSortBy', sortBy);
+  }, [sortBy]);
 
   const cachedRankedBlocks = (() => {
     try {
@@ -189,7 +202,7 @@ function HDBResultDashBoardPage() {
 
         if (!isMounted) return;
         setMemberRankedBlocks(latestResults);
-        
+
         // Mark quiz as taken if there are results from backend
         if (latestResults.length > 0) {
           setHasQuizBeenTaken(true);
@@ -504,7 +517,7 @@ function HDBResultDashBoardPage() {
 
       <section className="choice-summary-card">
         <div className="choice-summary-header">
-          <h2>Your Choices Summary</h2>
+          <h2>Your Preferences Summary</h2>
           <button type="button" className="edit-preferences-btn" onClick={handleEditPreferences}>
             Edit Preferences
           </button>
@@ -516,11 +529,11 @@ function HDBResultDashBoardPage() {
           <div className="choice-summary-grid">
             <div className="choice-summary-item"><strong>Budget:</strong> {summaryData.budgetText}</div>
             <div className="choice-summary-item"><strong>Flat Type:</strong> {summaryData.flatType}</div>
-            <div className="choice-summary-item"><strong>Min Lease:</strong> {summaryData.minLeaseYears}</div>
+            <div className="choice-summary-item"><strong>Minimum Lease:</strong> {summaryData.minLeaseYears}</div>
             <div className="choice-summary-item"><strong>Preferred Regions:</strong> {summaryData.regionsText}</div>
             <div className="choice-summary-item"><strong>Preferred Towns:</strong> {summaryData.townsText}</div>
             <div className="choice-summary-item">
-              <strong>Commuter Analysis:</strong> {summaryData.commuterEnabled ? 'Enabled' : 'Disabled'}
+              <strong>Multi-Commuter Analysis:</strong> {summaryData.commuterEnabled ? 'Enabled' : 'Disabled'}
               {summaryData.commuterEnabled && summaryData.commuterDestinations.length > 0 && (
                 <span> ({summaryData.commuterDestinations.join(' & ')})</span>
               )}
@@ -750,7 +763,7 @@ function HDBResultDashBoardPage() {
         )}
       </section>
     </div>
-      
+
     </div>
   );
 }

@@ -42,6 +42,20 @@
   text-align: center;
 }
 
+.results-header h1 {
+  margin: 0;
+  font-size: 38px;
+  line-height: 1.15;
+  color: #0f2f3b;
+}
+
+.results-header p {
+  margin: 12px auto 0;
+  color: #4f6270;
+  line-height: 1.55;
+  margin-bottom: 40px;
+}
+
 .results-topbar {
   width: min(100%, 1024px);
   margin: 16px auto 40px;
@@ -68,6 +82,7 @@
 
 .results-topbar-input,
 .results-topbar-select {
+  font-family: inherit;
   width: 100%;
   height: 48px;
   border: 1px solid #d1d5db;
@@ -172,6 +187,7 @@
 }
 
 .edit-preferences-btn {
+  font-family: inherit;
   border: none;
   border-radius: 10px;
   background: #00786e;

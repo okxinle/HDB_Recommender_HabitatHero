@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Circle, MapContainer, Marker, Popup, Polygon, TileLayer } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -442,6 +442,7 @@ const sanitizePlaceNames = (key, placeNames, nearestValue) => {
 
 function SpatialAnalysisResultDashBoardPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { blockId } = useParams();
 
   const block = location.state?.block ?? {};
@@ -709,7 +710,6 @@ function SpatialAnalysisResultDashBoardPage() {
             <strong className="price-savings__value">{intelligence.savingsText}</strong>
           </div>
         </article>
-
         <article className="intelligence-card intelligence-card--walk">
           <div className="intelligence-card__header">
             <h2 className="intelligence-card__title">🚶 PEDESTRIAN ACCESS</h2>
