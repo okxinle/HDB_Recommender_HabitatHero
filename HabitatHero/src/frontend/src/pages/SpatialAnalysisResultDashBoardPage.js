@@ -1,5 +1,5 @@
-import React from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { useLocation, useNavigate, useParams, Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polygon } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -17,36 +17,59 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
+const convenienceLabelMap = {
+  school: 'School',
+  hawkerCentre: 'Hawker Centre',
+  supermarket: 'Supermarket',
+  park: 'Park',
+  hospital: 'Hospital',
+  playground: 'Playground',
+  parentsAddress: "Parents' Home"
+};
+
+const formatTown = (value) =>
+  value?.toLowerCase().replace(/(^|\s|\/)\S/g, (char) => char.toUpperCase()) ?? '';
+
+const formatCurrency = (value) => {
+  const num = Number(value);
+  return value && Number.isFinite(num) ? `$${num.toLocaleString()}` : 'N/A';
+};
+
+const formatMatchScore = (value) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? `${num.toFixed(1)}%` : 'N/A';
+};
+
+const formatConvenienceLabel = (key) => convenienceLabelMap[key] || key;
+
 function SpatialAnalysisResultDashBoardPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { blockId } = useParams();
 
   const block = location.state?.block ?? {};
   const result = location.state?.result ?? {};
 
-  const blockNumber = block?.blockNumber ?? blockId?.replace("hdb", "") ?? "N/A";
-  const streetName = block?.streetName ?? "";
-  const postalCode = block?.postalCode ?? "N/A";
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
-  const formatStreet = (value) =>
-    value?.toLowerCase().replace(/(^\w|\s\w)/g, (char) => char.toUpperCase());
+  const blockNumber = block?.blockNumber ?? blockId?.replace('hdb', '') ?? 'N/A';
+  const streetName = block?.streetName ?? '';
+  const town = block?.town ?? 'N/A';
+  const postalCode = block?.postalCode ?? 'N/A';
+
+  const estimatedPrice = result?.estimatedPrice ?? block?.estimatedPrice ?? null;
+  const remainingLease = block?.remainingLeaseYears ?? 'N/A';
+  const matchScore = result?.globalMatchIndex ?? block?.globalMatchIndex ?? null;
+
+  const blockPosition = [
+    block?.coordinates?.lat ?? 1.3696,
+    block?.coordinates?.lng ?? 103.8495
+  ];
 
   const matchedAmenities = result?.matchedAmenities ?? block?.matchedAmenities ?? {};
   const matchedAmenitiesEntries = Object.entries(matchedAmenities);
-
-  const convenienceLabelMap = {
-    school: 'School',
-    hawkerCentre: 'Hawker Centre',
-    supermarket: 'Supermarket',
-    park: 'Park',
-    hospital: 'Hospital',
-    playground: 'Playground',
-    parentsAddress: "Parents' Home"
-  };
-
-  const formatConvenienceLabel = (key) => convenienceLabelMap[key] || key;
-
-  const blockPosition = [block?.coordinates?.lat, block?.coordinates?.lng];
 
   const reserveSite = [
     [1.3679, 103.8535],
@@ -58,36 +81,60 @@ function SpatialAnalysisResultDashBoardPage() {
   return (
     <div className="result-detail-page">
 
+      <div className="breadcrumb">
+        <Link to="/results" className="breadcrumb-link">Your Personalized HDB Matches</Link>
+        <span className="breadcrumb-separator">&gt;</span>
+        <span className="breadcrumb-current">HDB Block Details</span>
+      </div>
+
       <div className="header">
-        <h1>Your Personalized HDB Matches</h1>
-        <p>Ranked by lifestyle compatibility based on your preferences.</p>
+        <h1>HDB Block Details</h1>
+        <p>Detailed spatial insights based on your selected match</p>
       </div>
 
       <div className="block-banner">
-        Block {blockNumber} {formatStreet(streetName)} Singapore {postalCode}
+        Block {blockNumber} {formatTown(streetName)} {formatTown(town)} Singapore {postalCode}
+        <div className="coordinates">
+          {block?.coordinates
+            ? `${block.coordinates.lat.toFixed(6)}, ${block.coordinates.lng.toFixed(6)}`
+            : 'N/A'}
+        </div>
       </div>
 
-      <p>
-        <strong>Coordinates:</strong>{" "}
-        {block?.coordinates? `${block.coordinates.lat}, ${block.coordinates.lng}`:"N/A"}
-      </p>
+      <div className="summary-row">
+        <div className="summary-item">
+          <span>Match Score</span>
+          <strong>{formatMatchScore(matchScore)}</strong>
+        </div>
+
+        <div className="summary-item">
+          <span>Estimated Price</span>
+          <strong>{formatCurrency(estimatedPrice)}</strong>
+        </div>
+
+        <div className="summary-item">
+          <span>Lease Remaining</span>
+          <strong>{remainingLease !== 'N/A' ? `${remainingLease} years` : 'N/A'}</strong>
+        </div>
+
+        <div className="summary-item">
+          <span>Town</span>
+          <strong>{formatTown(town)}</strong>
+        </div>
+      </div>
 
       <div className="layout">
 
         <div className="map-section">
           <div className="map-wrapper">
 
-            <MapContainer
-              center={blockPosition}
-              zoom={16}
-              className="map"
-            >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
+            <MapContainer center={blockPosition} zoom={16} className="map">
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
               <Marker position={blockPosition}>
-                <Popup>Block {blockNumber} {formatStreet(streetName)}</Popup>
+                <Popup>
+                  Block {blockNumber} {formatTown(streetName)}
+                </Popup>
               </Marker>
 
               <Circle
@@ -110,9 +157,9 @@ function SpatialAnalysisResultDashBoardPage() {
             </MapContainer>
 
             <div className="legend">
-                <div className="legend-item">☀ West Sun Risk</div>
-                <div className="legend-item">⭕ Noise Risk Buffer</div>
-                <div className="legend-item">▧ URA Reserve Site</div>
+              <div className="legend-item">☀ West Sun Risk</div>
+              <div className="legend-item">⭕ Noise Risk Buffer</div>
+              <div className="legend-item">▧ URA Reserve Site</div>
             </div>
 
           </div>
@@ -144,14 +191,17 @@ function SpatialAnalysisResultDashBoardPage() {
           </div>
 
           <div className="card">
-            <h3>CONVENIENCE FACTORS</h3>
+            <h3>CONVENIENCE MATCH</h3>
             {matchedAmenitiesEntries.length === 0 ? (
-              <p>No matched amenities found for this block.</p>
+              <p>No matched amenities found.</p>
             ) : (
               <ul>
                 {matchedAmenitiesEntries.map(([key, placeNames]) => (
                   <li key={key}>
-                    {formatConvenienceLabel(key)}: {Array.isArray(placeNames) && placeNames.length > 0 ? placeNames.join(', ') : 'No places found'}
+                    {formatConvenienceLabel(key)}:{' '}
+                    {Array.isArray(placeNames) && placeNames.length > 0
+                      ? placeNames.join(', ')
+                      : 'No places found'}
                   </li>
                 ))}
               </ul>
