@@ -69,40 +69,40 @@ function QuizSummary({ data }) {
             <h3>Structural Constraints</h3>
             <Link to="/quiz?step=1" className="edit-link">Edit</Link>
           </div>
-          <div className="summary-list summary-list--structured">
+          <div className="summary-list">
 
-            <div className="summary-row summary-row--structured">
+            <div className="summary-row">
               <span className="summary-key">Budget</span>
               <span className="summary-value">
                 SGD {sc.budgetRange[0].toLocaleString()} – {sc.budgetRange[1].toLocaleString()}
               </span>
             </div>
 
-            <div className="summary-row summary-row--structured">
+            <div className="summary-row">
               <span className="summary-key">Flat Type</span>
               <span className="summary-value">
                 {sc.preferredFlatType || "Not selected"}
               </span>
             </div>
 
-            <div className="summary-row summary-row--structured">
+            <div className="summary-row">
               <span className="summary-key">Minimum Lease</span>
               <span className="summary-value">
                 {sc.minLeaseYears ? `${sc.minLeaseYears} years` : "Not selected"}
               </span>
             </div>
 
-            <div className="summary-row summary-row--structured">
+            <div className="summary-row">
               <span className="summary-key">Preferred Regions</span>
               <span className="summary-value">
                 {formatList(selectedRegions)}
               </span>
             </div>
 
-            <div className="summary-block">
-              <span className="summary-key summary-key--towns">Preferred Towns</span>
-              <div className="summary-towns-box">
-                <span className="summary-value summary-value-towns">{formatList(displayedTowns)}</span>
+            <div className="summary-row">
+              <span className="summary-key">Preferred Towns</span>
+              <div className="summary-value">
+                {formatList(displayedTowns)}
               </div>
             </div>
 
