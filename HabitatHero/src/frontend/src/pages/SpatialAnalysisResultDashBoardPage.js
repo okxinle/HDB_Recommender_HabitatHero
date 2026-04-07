@@ -725,6 +725,26 @@ const normalizeResultItem = (item) => {
   return item;
 };
 
+const getSunlightExposureRating = (pct) => {
+  if (pct >= 80) return { label: 'Excellent', color: '#166534' };
+  if (pct >= 60) return { label: 'Good', color: '#15803d' };
+  if (pct >= 40) return { label: 'Moderate', color: '#b45309' };
+  return { label: 'Low', color: '#b42318' };
+};
+
+const getSunlightDescription = (result) => {
+  if (!result || result.status !== 'OK') return 'Sunlight data pending...';
+  
+  const isWestHot = result.westScoreRelativeExposurePct > 70;
+  const isBright = result.sunlightIndexRelativeExposurePct > 60;
+  
+  let advice = isBright ? "Very bright interiors. " : "Moderate natural light. ";
+  if (isWestHot) advice += "Expect afternoon heat (West Sun).";
+  else advice += "Shielded from harsh afternoon sun.";
+  
+  return advice;
+};
+
 function SpatialAnalysisResultDashBoardPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -1109,6 +1129,24 @@ function SpatialAnalysisResultDashBoardPage() {
     window.scrollTo(0, 0);
   }, []);
 
+  const [sunAnalysis, setSunAnalysis] = useState(null);
+
+  useEffect(() => {
+    const pc = String(postalCode ?? '').trim();
+    if (!pc || pc === 'N/A') return;
+
+    const fetchSunData = async () => {
+      try {
+        const response = await fetch(`http://localhost:8080/api/hdb/sun-facing?postalCode=${pc}`);
+        const data = await response.json();
+        if (data.status === 'OK') setSunAnalysis(data);
+      } catch (err) {
+        console.error("Sun analysis fetch failed", err);
+      }
+    };
+    fetchSunData();
+  }, [postalCode]);
+
   return (
     <div className="spatial-report-page">
 
@@ -1237,13 +1275,36 @@ function SpatialAnalysisResultDashBoardPage() {
       <section className="report-grid">
         <article className="intelligence-card">
           <div className="intelligence-card__header">
-            <h2 className="intelligence-card__title">☀️ WEST SUN EXPOSURE</h2>
-            <span className={`status-badge status-badge--${sunBadgeTone}`}>
-              {hdbBlock?.westSunStatus ? 'MODERATE' : 'GOOD'}
+            <h2 className="intelligence-card__title">☀️ SUN EXPOSURE & HEAT</h2>
+            <span className={`status-badge status-badge--${
+              !sunAnalysis ? 'neutral' : sunAnalysis.westScoreRelativeExposurePct > 75 ? 'moderate' : 'good'
+            }`}>
+              {!sunAnalysis ? 'ANALYZING...' : sunAnalysis.westScoreRelativeExposurePct > 75 ? 'HIGH EXPOSURE' : 'WELL SHIELDED'}
             </span>
           </div>
-          <p className="intelligence-card__text">Peak Window: <strong>{peakWindow}</strong></p>
-          <p className="intelligence-card__text">HabitatHero Tip: Suggests solar films or black-out curtains.</p>
+
+          <p className="intelligence-card__text">
+            Orientation: <strong>{sunAnalysis?.dominant || 'Calculating...'}</strong>
+          </p>
+          
+          <p className="intelligence-card__text">
+            Natural Light Index: <strong>{sunAnalysis ? formatPercent(sunAnalysis.sunlightIndexRelativeExposurePct, 0) : '...'}</strong>
+          </p>
+
+          <p className="intelligence-card__text">
+            Afternoon Heat Risk: <strong>{sunAnalysis ? formatPercent(sunAnalysis.westScoreRelativeExposurePct, 1) : '...'}</strong>
+          </p>
+
+          <div className="intelligence-card__tip">
+            <p className="intelligence-card__text">
+              <strong>HabitatHero Tip:</strong> {
+                !sunAnalysis ? "Analyzing building geometry for solar heat gain..." :
+                sunAnalysis.westScoreRelativeExposurePct > 70 
+                  ? "This block has high afternoon sun exposure. We highly recommend solar films or blackout curtains." 
+                  : "Great thermal comfort! This building is naturally shielded from harsh afternoon rays."
+              }
+            </p>
+          </div>
         </article>
 
         <article className="intelligence-card">

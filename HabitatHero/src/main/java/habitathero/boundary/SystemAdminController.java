@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import habitathero.GeoSpatialAnalysis.src.HDBBuildingDbMgr;
+import habitathero.GeoSpatialAnalysis.src.HDBBuildingSunFacingResultSQLHandler;
 import habitathero.GeoSpatialAnalysis.src.LandUseDbMgr;
 import habitathero.control.BackfillCoordinatesService;
 import habitathero.control.DataPipelineService;
@@ -173,6 +175,45 @@ public class SystemAdminController {
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
                 "error", "HDB coordinate re-ingestion failed: " + e.getMessage()
+            ));
+        }
+    }
+
+    @PostMapping("/init-hdb-building-dataset")
+    public ResponseEntity<?> initializeHdbBuildingDataset() {
+        try {
+            HDBBuildingDbMgr hdbBuildingDbMgr = HDBBuildingDbMgr.getInstance();
+            
+            boolean tableReady = hdbBuildingDbMgr.createSQLTable();
+            
+            boolean downloadedGeoJson = hdbBuildingDbMgr.forceDownloadGeoJson();
+            
+            boolean importedToDb = downloadedGeoJson && hdbBuildingDbMgr.importGeoJsonToSQLDb();
+            
+            HDBBuildingSunFacingResultSQLHandler.getInstance().createSQLTable();
+
+            if (!tableReady || !downloadedGeoJson || !importedToDb) {
+                return ResponseEntity.status(500).body(Map.of(
+                    "status", "ERROR",
+                    "message", "HDB Building initialization incomplete.",
+                    "tableReady", tableReady,
+                    "downloadedGeoJson", downloadedGeoJson,
+                    "importedToDb", importedToDb
+                ));
+            }
+
+            return ResponseEntity.ok(Map.of(
+                "status", "SUCCESS",
+                "message", "HDB Building dataset initialized and imported successfully.",
+                "tableReady", tableReady,
+                "downloadedGeoJson", downloadedGeoJson,
+                "importedToDb", importedToDb,
+                "resultsTable", "sun_facing_analysis_result verified"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "status", "ERROR",
+                "message", "HDB Building dataset initialization failed: " + e.getMessage()
             ));
         }
     }
