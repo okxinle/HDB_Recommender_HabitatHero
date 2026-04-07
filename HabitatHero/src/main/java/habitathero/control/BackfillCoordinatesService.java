@@ -38,19 +38,6 @@ public class BackfillCoordinatesService {
         LIMIT 1
         """;
 
-    private static final String MATCH_BY_BLOCK_ONLY_SPATIAL_SQL = """
-        SELECT
-            postal_cod,
-            ST_Y(ST_Centroid(ST_Collect(geom))) AS latitude,
-            ST_X(ST_Centroid(ST_Collect(geom))) AS longitude
-        FROM hdb_building
-        WHERE blk_no = ?
-          AND postal_cod IS NOT NULL
-          AND TRIM(postal_cod) <> ''
-        GROUP BY postal_cod
-        LIMIT 1
-        """;
-
         private static final String MATCH_BY_BLOCK_AND_STREET_LOOKUP_SQL = """
                 SELECT
                         postal_cod,
@@ -67,24 +54,17 @@ public class BackfillCoordinatesService {
                 LIMIT 1
                 """;
 
-        private static final String MATCH_BY_BLOCK_ONLY_LOOKUP_SQL = """
-                SELECT
-                        postal_cod,
-                        latitude,
-                        longitude
-                FROM hdb_building_lookup
-                WHERE blk_no = ?
-                    AND postal_cod IS NOT NULL
-                    AND TRIM(postal_cod) <> ''
-                LIMIT 1
-                """;
-
     private final IHDBRepository hdbRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final GeocodingService geocodingService;
 
-    public BackfillCoordinatesService(IHDBRepository hdbRepository, JdbcTemplate jdbcTemplate) {
+    public BackfillCoordinatesService(
+            IHDBRepository hdbRepository,
+            JdbcTemplate jdbcTemplate,
+            GeocodingService geocodingService) {
         this.hdbRepository = hdbRepository;
         this.jdbcTemplate = jdbcTemplate;
+        this.geocodingService = geocodingService;
     }
 
     @Transactional
@@ -137,15 +117,31 @@ public class BackfillCoordinatesService {
         return new BackfillSummary(scannedCount, updatedCount, scannedCount - updatedCount, source.tableName());
     }
 
+    @Transactional
+    public int clearAllGeoData() {
+        int updated = jdbcTemplate.update("""
+            UPDATE hdb_blocks
+            SET postal_code = NULL,
+                coordinates = NULL
+            WHERE postal_code IS NOT NULL
+               OR coordinates IS NOT NULL
+            """);
+
+        log.warn("Cleared geo columns for {} hdb_blocks rows before re-ingestion.", updated);
+        return updated;
+    }
+
     private GeocodeResult findGeocodeForBlock(String blockNumber, String streetName, SpatialSource source) {
         if (blockNumber == null || blockNumber.isBlank()) {
             return null;
         }
 
+        if (streetName == null || streetName.isBlank()) {
+            return null;
+        }
+
         String exactSql = source.usesSpatialFunctions() ? MATCH_BY_BLOCK_AND_STREET_SPATIAL_SQL
                 : MATCH_BY_BLOCK_AND_STREET_LOOKUP_SQL;
-        String blockOnlySql = source.usesSpatialFunctions() ? MATCH_BY_BLOCK_ONLY_SPATIAL_SQL
-                : MATCH_BY_BLOCK_ONLY_LOOKUP_SQL;
 
         List<GeocodeResult> exactMatches = jdbcTemplate.query(
                 exactSql,
@@ -158,12 +154,9 @@ public class BackfillCoordinatesService {
             return exactMatches.get(0);
         }
 
-        List<GeocodeResult> fallbackMatches = jdbcTemplate.query(
-        blockOnlySql,
-                geocodeRowMapper(),
-                blockNumber.trim());
-
-        return fallbackMatches.isEmpty() ? null : fallbackMatches.get(0);
+        return geocodingService.getGeocodeByAddress(blockNumber.trim(), streetName.trim())
+            .map(g -> new GeocodeResult(g.postalCode(), g.latitude(), g.longitude()))
+            .orElse(null);
     }
 
     private RowMapper<GeocodeResult> geocodeRowMapper() {

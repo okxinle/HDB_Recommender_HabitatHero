@@ -112,6 +112,28 @@ public class SystemAdminController {
         }
     }
 
+    @PostMapping("/reingest-hdb-coordinates")
+    public ResponseEntity<?> reingestHdbCoordinates() {
+        try {
+            HdbSpatialImportService.ImportResult importResult = hdbSpatialImportService.initializeAndImportHdbBuilding();
+            int clearedRows = backfillCoordinatesService.clearAllGeoData();
+            BackfillCoordinatesService.BackfillSummary backfillSummary = backfillCoordinatesService.backfillMissingCoordinates();
+
+            return ResponseEntity.ok(Map.of(
+                "message", "HDB coordinate ingestion rerun completed successfully.",
+                "clearedRows", clearedRows,
+                "sourceTable", importResult.sourceTable(),
+                "importedRows", importResult.hdbBuildingRows(),
+                "updatedBlocks", backfillSummary.updatedBlocks(),
+                "unresolvedBlocks", backfillSummary.unresolvedBlocks()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "HDB coordinate re-ingestion failed: " + e.getMessage()
+            ));
+        }
+    }
+
     @PostMapping("/pois/load")
     public ResponseEntity<?> loadPois(@RequestBody List<PointOfInterest> pois) {
         if (pois == null || pois.isEmpty()) {

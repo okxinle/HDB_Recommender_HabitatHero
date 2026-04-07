@@ -145,6 +145,49 @@ This final step matches our pricing records to the spatial map so they can be pl
 * **Auth:** Go to the Authorization tab -> Select "Bearer Token" -> Paste your JWT Admin token.
 * **Expected:** `200 OK`. The response payload will show `candidatesScanned`, `updatedBlocks`, and `unresolvedBlocks`. Check your terminal to watch the service batch-process the coordinates!
 
+## After Pull: HDB Coordinate Refresh (Team Runbook)
+
+Use this after pulling latest backend changes related to HDB coordinate mapping.
+
+### 1. Pull and run backend
+```bash
+git pull
+cd .\HabitatHero
+mvn clean spring-boot:run
+```
+
+### 2. Login as admin and get JWT
+* **Method:** POST
+* **URL:** `http://localhost:8080/api/auth/login`
+* **Body (raw JSON):**
+  ```json
+   {
+      "email": "test@habitathero.com",
+      "password": "password123"
+  }
+  ```
+
+### 3. (Recommended) set OneMap API token before starting backend
+In PowerShell:
+```powershell
+$env:ONEMAP_API_TOKEN="<your_onemap_token>"
+```
+
+This reduces OneMap throttling and improves backfill completion.
+
+### 4. Run only backfill first
+* **Method:** POST
+* **URL:** `http://localhost:8080/api/admin/backfill-coordinates`
+* **Auth:** `Authorization: Bearer <admin_jwt>`
+
+Repeat this endpoint a few times until `unresolvedBlocks` stabilizes.
+
+### 5. Use reingest only for full reset
+* **Method:** POST
+* **URL:** `http://localhost:8080/api/admin/reingest-hdb-coordinates`
+
+This endpoint clears existing `postal_code/coordinates` and rebuilds from scratch. Do not use this unless a full reset is intended.
+
 ## POI Data Ingestion (Functional Steps 1-6)
 
 Use this flow when you want live Singapore POI data for Convenience scoring.
