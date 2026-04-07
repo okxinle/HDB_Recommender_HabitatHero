@@ -83,6 +83,14 @@ const formatPercent = (value, digits = 1) => {
   return `${value.toFixed(digits)}%`;
 };
 
+const formatLeaseYears = (value) => {
+  if (value === null) {
+    return 'N/A';
+  }
+
+  return `${Math.round(value)} years`;
+};
+
 const formatStreet = (value) => {
   if (!value) {
     return '';
@@ -461,6 +469,15 @@ function SpatialAnalysisResultDashBoardPage() {
   const blockNumber = block?.blockNumber ?? blockId?.replace('hdb', '') ?? 'N/A';
   const streetName = block?.streetName ?? '';
   const postalCode = block?.postalCode ?? 'N/A';
+  const estimatedPrice = pickFirstNumber([result?.estimatedPrice, block?.estimatedPrice]);
+  const remainingLeaseYears = pickFirstNumber([result?.remainingLeaseYears, block?.remainingLeaseYears]);
+  const town = formatTown(result?.town ?? block?.town);
+  const matchScore = pickFirstNumber([
+    result?.globalMatchIndex,
+    result?.matchScore,
+    block?.globalMatchIndex,
+    block?.matchScore,
+  ]);
 
   const blockLat = pickFirstNumber([block?.coordinates?.lat, block?.coordinates?.latitude]);
   const blockLng = pickFirstNumber([block?.coordinates?.lng, block?.coordinates?.lon, block?.coordinates?.longitude]);
@@ -631,7 +648,7 @@ function SpatialAnalysisResultDashBoardPage() {
           <div className="summary-icon"><DollarSign size={18} /></div>
           <div className="summary-content">
             <span>Estimated Price</span>
-            <strong>$571,000</strong>
+            <strong>{formatCurrency(estimatedPrice)}</strong>
           </div>
         </div>
 
@@ -639,7 +656,7 @@ function SpatialAnalysisResultDashBoardPage() {
           <div className="summary-icon"><Clock size={18} /></div>
           <div className="summary-content">
             <span>Lease Remaining</span>
-            <strong>57 years</strong>
+            <strong>{formatLeaseYears(remainingLeaseYears)}</strong>
           </div>
         </div>
 
@@ -647,7 +664,7 @@ function SpatialAnalysisResultDashBoardPage() {
           <div className="summary-icon"><MapPin size={18} /></div>
           <div className="summary-content">
             <span>Town</span>
-            <strong>Ang Mo Kio</strong>
+            <strong>{town}</strong>
           </div>
         </div>
 
@@ -655,7 +672,7 @@ function SpatialAnalysisResultDashBoardPage() {
           <div className="summary-icon"><BarChart3 size={18} /></div>
           <div className="summary-content">
             <span>Match Score</span>
-            <strong>100.0%</strong>
+            <strong>{formatPercent(matchScore, 1)}</strong>
           </div>
         </div>
       </div>
