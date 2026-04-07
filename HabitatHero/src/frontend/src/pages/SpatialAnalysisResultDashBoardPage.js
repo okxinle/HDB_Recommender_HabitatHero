@@ -110,6 +110,39 @@ const formatTown = (town) => {
     .replace(/(^|\s|\/)\S/g, (char) => char.toUpperCase());
 };
 
+const inferDevelopmentIntent = ({ gpr, luDesc, luText }) => {
+  const haystack = [gpr, luDesc, luText]
+    .filter((value) => typeof value === 'string' && value.trim().length > 0)
+    .join(' ')
+    .toUpperCase();
+
+  if (!haystack) {
+    return 'Unspecified future development plot';
+  }
+
+  if (haystack.includes('MRT') || haystack.includes('RAIL') || haystack.includes('TRANSPORT')) {
+    return 'Transport infrastructure (possible MRT/rail/road works)';
+  }
+
+  if (haystack.includes('RESERVE SITE')) {
+    return 'Reserved site (future use not finalized yet)';
+  }
+
+  if (haystack.includes('RESIDENTIAL') || haystack.includes('PUBLIC HOUSING') || haystack.includes('HOUSING')) {
+    return 'Residential development (possible future housing)';
+  }
+
+  if (haystack.includes('COMMERCIAL') || haystack.includes('MIXED USE')) {
+    return 'Commercial or mixed-use development';
+  }
+
+  if (haystack.includes('PARK') || haystack.includes('OPEN SPACE') || haystack.includes('RECREATION')) {
+    return 'Parks or recreational development';
+  }
+
+  return 'Planned development zone (URA)';
+};
+
 
 const haversineMeters = (lat1, lon1, lat2, lon2) => {
   const toRad = (deg) => (deg * Math.PI) / 180;
@@ -784,6 +817,37 @@ function SpatialAnalysisResultDashBoardPage() {
     return developments.flatMap((development) => parseGeoJsonGeometry(development?.geom));
   }, [futureDevRisk]);
 
+  const nearestFutureDevelopment = useMemo(() => {
+    const developments = Array.isArray(futureDevRisk?.developments)
+      ? futureDevRisk.developments
+      : [];
+
+    if (developments.length === 0) {
+      return null;
+    }
+
+    const sorted = [...developments].sort((a, b) => {
+      const aDistance = Number(a?.distance_meters);
+      const bDistance = Number(b?.distance_meters);
+
+      if (!Number.isFinite(aDistance) && !Number.isFinite(bDistance)) {
+        return 0;
+      }
+
+      if (!Number.isFinite(aDistance)) {
+        return 1;
+      }
+
+      if (!Number.isFinite(bDistance)) {
+        return -1;
+      }
+
+      return aDistance - bDistance;
+    });
+
+    return sorted[0] ?? null;
+  }, [futureDevRisk]);
+
   const matchedAmenities = normalizeSourceObject(hdbBlock?.matchedAmenities ?? resultMeta?.matchedAmenities);
   const matchedAmenitiesEntries = Object.entries(matchedAmenities);
   const nearestAmenities = normalizeSourceObject(hdbBlock?.nearestAmenities ?? resultMeta?.nearestAmenities);
@@ -912,9 +976,28 @@ function SpatialAnalysisResultDashBoardPage() {
       ? 'Strong buffer against nearby future development pressure.'
       : 'Moderate exposure to future development changes nearby.';
 
+  const nearestDistanceText = Number.isFinite(Number(nearestFutureDevelopment?.distance_meters))
+    ? `${Math.round(Number(nearestFutureDevelopment.distance_meters))} m`
+    : null;
+
+  const nearestGprText = String(nearestFutureDevelopment?.gpr ?? '').trim();
+  const nearestLuDescText = String(nearestFutureDevelopment?.lu_desc ?? '').trim();
+  const nearestLuTextText = String(nearestFutureDevelopment?.lu_text ?? '').trim();
+  const nearestIntentText = inferDevelopmentIntent({
+    gpr: nearestGprText,
+    luDesc: nearestLuDescText,
+    luText: nearestLuTextText,
+  });
+
+  const hasDescriptiveData = nearestLuDescText || nearestLuTextText;
+
   const viewRiskSourceCopy = hasFutureRiskPolygons
-    ? 'Score derived from distance to nearest returned future development polygon.'
-    : 'Future development polygon data unavailable from current query.';
+    ? `Nearest future planned development zone (URA): ${nearestDistanceText ?? 'distance unavailable'}.`
+    : 'No mapped future development zone found within the selected radius.';
+
+  const viewRiskCopyDetailed = hasFutureRiskPolygons && hasDescriptiveData
+    ? `Likely nearby change: ${nearestIntentText}.`
+    : null;
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -1060,7 +1143,7 @@ function SpatialAnalysisResultDashBoardPage() {
               <div className={futureProgressClass} style={{ width: `${viewProtectionScore ?? 0}%` }} />
             </div>
           </div>
-          <p className="intelligence-card__text">{viewRiskCopy}</p>
+          {viewRiskCopyDetailed && <p className="intelligence-card__text">{viewRiskCopyDetailed}</p>}
           <p className="intelligence-card__text intelligence-card__text--source">{viewRiskSourceCopy}</p>
         </article>
 
