@@ -1076,9 +1076,8 @@ function SpatialAnalysisResultDashBoardPage() {
   const hasNearbyMrtSignal = Boolean(
     matchedAmenities?.mrtStation?.length || matchedAmenities?.mrt?.length || matchedAmenities?.train?.length
   );
-  const noiseSignature = hasNearbyMrtSignal ? 'Periodic: Train Rumble' : 'Constant: White Noise';
+  const noiseSignature = hasNearbyMrtSignal ? 'Periodic: Train Rumble' : 'Constant - White Noise';
 
-  const peakWindow = hdbBlock?.westSunStatus ? '2:30 PM - 5:00 PM' : '1:30 PM - 3:30 PM';
   const sunBadgeTone = hdbBlock?.westSunStatus ? 'moderate' : 'good';
   const noiseBadgeTone = hasNearbyMrtSignal ? 'moderate' : 'good';
 
@@ -1146,6 +1145,26 @@ function SpatialAnalysisResultDashBoardPage() {
     };
     fetchSunData();
   }, [postalCode]);
+
+  const [noiseData, setNoiseData] = useState(null);
+
+  const noiseLevel = noiseData?.noise_level_db || 0;
+
+  useEffect(() => {
+      const fetchNoise = async () => {
+          try {
+              const response = await fetch(`http://localhost:8080/api/hdb/noise-analysis?postalCode=${postalCode}`);
+              const data = await response.json();
+              if (data.status === "OK") {
+                  setNoiseData(data);
+              }
+          } catch (err) {
+              console.error("Noise fetch failed", err);
+          }
+      };
+      if (postalCode) fetchNoise();
+  }, [postalCode]);
+  
 
   return (
     <div className="spatial-report-page">
@@ -1311,10 +1330,60 @@ function SpatialAnalysisResultDashBoardPage() {
           <div className="intelligence-card__header">
             <h2 className="intelligence-card__title">🔊 NOISE RISK ASSESSMENT</h2>
             <span className={`status-badge status-badge--${noiseBadgeTone}`}>
-              {hasNearbyMrtSignal ? 'MODERATE' : 'GOOD'}
+              {noiseLevel > 75 ? 'HIGH' : noiseLevel > 60 ? 'MODERATE' : 'GOOD'}
             </span>
           </div>
-          <p className="intelligence-card__text">Noise Signature: <strong>{noiseSignature}</strong></p>
+          
+          <div className="intelligence-card__content">
+            <p className="intelligence-card__text">
+              Noise Signature: <strong>{noiseSignature}</strong>
+            </p>
+
+            <div className="spatial-details-grid" style={{ display: 'flex', gap: '8px', margin: '12px 0' }}>
+              <div className="detail-chip" style={{ background: '#f8f9fa', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', border: '1px solid #eee' }}>
+                🚆 <strong>Source:</strong> {noiseData?.rail_type || 'N/A'}
+              </div>
+              <div className="detail-chip" style={{ background: '#f8f9fa', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', border: '1px solid #eee' }}>
+                📏 <strong>Distance:</strong> {noiseData?.distance_meters ? `${Math.round(noiseData.distance_meters)}m` : 'Scanning...'}
+              </div>
+            </div>
+
+            <div className="noise-meter-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '4px' }}>
+              <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>Acoustic Intensity</span>
+              <span style={{ fontSize: '16px', fontWeight: 'bold', color: noiseBadgeTone === 'danger' ? '#ff4d4f' : '#333' }}>
+                {noiseLevel.toFixed(1)} <span style={{ fontSize: '10px', fontWeight: 'normal' }}>dBA</span>
+              </span>
+            </div>
+
+            <div className="noise-meter-container" style={{ position: 'relative', marginTop: '12px' }}>
+              <div style={{ background: '#eee', height: '8px', borderRadius: '4px', overflow: 'hidden' }}>
+                <div 
+                  style={{ 
+                    width: `${Math.min((noiseLevel / 100) * 100, 100)}%`, 
+                    height: '100%', 
+                    backgroundColor: noiseBadgeTone === 'danger' ? '#ff4d4f' : noiseBadgeTone === 'warning' ? '#faad14' : '#52c41a',
+                    transition: 'width 0.8s ease-out'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#999', marginTop: '4px' }}>
+                <span>30dB (Quiet)</span>
+                <span>60dB (NEA Limit)</span>
+                <span>90dB (Loud)</span>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '12px', color: '#555', marginTop: '10px', fontStyle: 'italic' }}>
+              {noiseLevel > 65 
+                ? "💡 High noise area: Double-glazed windows recommended." 
+                : "💡 Ambient noise is within comfortable residential limits."}
+            </p>
+            
+            <p className="intelligence-card__subtext" style={{ fontSize: '10px', color: '#999', marginTop: '8px' }}>
+              *Analysis based on the closest aboveground track segment to your block.
+            </p>
+          </div>
         </article>
 
         <article className="intelligence-card intelligence-card--future">
