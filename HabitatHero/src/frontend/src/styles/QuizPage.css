@@ -712,13 +712,6 @@
   border-color: #bfe4dd;
 }
 
-.summary-structural-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
-  gap: 24px;
-  align-items: start;
-}
-
 .summary-list {
   display: flex;
   flex-direction: column;
@@ -727,12 +720,12 @@
   flex: 1;
 }
 
-.summary-row {
-  display: grid;
-  grid-template-columns: 400px minmax(0, 1fr);
-  align-items: start;
+.summary-list .summary-row {
+  display: flex;
+  justify-content: space-between; 
+  align-items: center;
   gap: 16px;
-  padding: 5px 0;
+  padding: 12px 0;
   width: 100%;
 }
 
@@ -748,7 +741,6 @@
 }
 
 .summary-value {
-  display: block;
   font-size: 16px;
   font-weight: 700;
   color: #111827;
