@@ -36,6 +36,9 @@ public class LandUseGeoJsonImporter extends SQLDbConnect {
 
             // connect to postgres api to access Database
             super.connectSQL();
+            if (conn == null) {
+                throw new IllegalStateException("PostgreSQL connection is not initialized.");
+            }
 
             // Tokenize geojson file for efficient file streaming and reading
             JSONTokener tokener = new JSONTokener(new FileReader(landUseGeoJsonDbPath));
@@ -74,77 +77,77 @@ public class LandUseGeoJsonImporter extends SQLDbConnect {
                     geom = EXCLUDED.geom
             """;
             
-            PreparedStatement stmt = conn.prepareStatement(sql);
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                // extract every geojson entry and place into sql querying syntax through
+                // PreparedStatement
+                for (int i = 0; i < features.length(); i++) {
+                    JSONObject feature = features.getJSONObject(i);
+                    JSONObject properties = feature.optJSONObject("properties");
+                    JSONObject geometry = feature.optJSONObject("geometry");
 
-            // extract every geojson entry and place into sql querying syntax through
-            // PreparedStatement
-            for (int i = 0; i < features.length(); i++) {
-                JSONObject feature = features.getJSONObject(i);
-                JSONObject properties = feature.optJSONObject("properties");
-                JSONObject geometry = feature.optJSONObject("geometry");
-
-                if (properties == null || geometry == null) {
-                    lastSkippedCount++;
-                    continue;
-                }
-    
-                if (!properties.has("OBJECTID")) {
-                    lastSkippedCount++;
-                    continue;
-                }
-
-                int objectId = properties.optInt("OBJECTID", -1);
-                if (objectId < 0) {
-                    lastSkippedCount++;
-                    continue;
-                }
-    
-                String luDesc = properties.optString("LU_DESC", null);
-                String luText = properties.optString("LU_TEXT", null);
-                String gpr = properties.optString("GPR", null);
-                String whiQMx = properties.optString("WHI_Q_MX", null);
-                String gprBMn = properties.optString("GPR_B_MN", null);
-                String incCrc = properties.optString("INC_CRC", null);
-                String fmelUpd = properties.optString("FMEL_UPD_D", null);
-    
-                Double shapeArea = properties.optDouble("SHAPE.AREA", Double.NaN);
-                Double shapeLen = properties.optDouble("SHAPE.LEN", Double.NaN);
-    
-                try {
-                    stmt.setInt(1, objectId);
-                    stmt.setString(2, luDesc);
-                    stmt.setString(3, luText);
-                    stmt.setString(4, gpr);
-                    stmt.setString(5, whiQMx);
-                    stmt.setString(6, gprBMn);
-                    stmt.setString(7, incCrc);
-                    stmt.setString(8, fmelUpd);
-
-                    if (shapeArea == null || Double.isNaN(shapeArea)) {
-                        stmt.setNull(9, Types.DOUBLE);
-                    } else {
-                        stmt.setDouble(9, shapeArea);
+                    if (properties == null || geometry == null) {
+                        lastSkippedCount++;
+                        continue;
                     }
 
-                    if (shapeLen == null || Double.isNaN(shapeLen)) {
-                        stmt.setNull(10, Types.DOUBLE);
-                    } else {
-                        stmt.setDouble(10, shapeLen);
+                    if (!properties.has("OBJECTID")) {
+                        lastSkippedCount++;
+                        continue;
                     }
 
-                    stmt.setString(11, geometry.toString());
-                    stmt.executeUpdate();
-                    lastImportedCount++;
-                } catch (Exception rowError) {
-                    lastSkippedCount++;
-                    if (lastErrorMessage.isEmpty()) {
-                        lastErrorMessage = "First row error at index " + i + " (OBJECTID=" + objectId + "): "
-                                + rowError.getMessage();
+                    int objectId = properties.optInt("OBJECTID", -1);
+                    if (objectId < 0) {
+                        lastSkippedCount++;
+                        continue;
+                    }
+
+                    String luDesc = properties.optString("LU_DESC", null);
+                    String luText = properties.optString("LU_TEXT", null);
+                    String gpr = properties.optString("GPR", null);
+                    String whiQMx = properties.optString("WHI_Q_MX", null);
+                    String gprBMn = properties.optString("GPR_B_MN", null);
+                    String incCrc = properties.optString("INC_CRC", null);
+                    String fmelUpd = properties.optString("FMEL_UPD_D", null);
+
+                    Double shapeArea = properties.optDouble("SHAPE.AREA", Double.NaN);
+                    Double shapeLen = properties.optDouble("SHAPE.LEN", Double.NaN);
+
+                    try {
+                        stmt.setInt(1, objectId);
+                        stmt.setString(2, luDesc);
+                        stmt.setString(3, luText);
+                        stmt.setString(4, gpr);
+                        stmt.setString(5, whiQMx);
+                        stmt.setString(6, gprBMn);
+                        stmt.setString(7, incCrc);
+                        stmt.setString(8, fmelUpd);
+
+                        if (shapeArea == null || Double.isNaN(shapeArea)) {
+                            stmt.setNull(9, Types.DOUBLE);
+                        } else {
+                            stmt.setDouble(9, shapeArea);
+                        }
+
+                        if (shapeLen == null || Double.isNaN(shapeLen)) {
+                            stmt.setNull(10, Types.DOUBLE);
+                        } else {
+                            stmt.setDouble(10, shapeLen);
+                        }
+
+                        stmt.setString(11, geometry.toString());
+                        stmt.executeUpdate();
+                        lastImportedCount++;
+                    } catch (Exception rowError) {
+                        lastSkippedCount++;
+                        if (lastErrorMessage.isEmpty()) {
+                            lastErrorMessage = "First row error at index " + i + " (OBJECTID=" + objectId + "): "
+                                    + rowError.getMessage();
+                        }
                     }
                 }
+            } finally {
+                super.closeConnection();
             }
-            stmt.close();
-            super.closeConnection();
 
             if (lastImportedCount == 0) {
                 if (lastErrorMessage.isEmpty()) {

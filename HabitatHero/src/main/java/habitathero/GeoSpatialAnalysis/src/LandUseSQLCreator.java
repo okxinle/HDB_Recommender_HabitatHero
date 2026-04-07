@@ -40,6 +40,9 @@ public class LandUseSQLCreator extends SQLDbConnect {
     
         try {
             super.connectSQL();
+            if (conn == null) {
+                throw new IllegalStateException("PostgreSQL connection is not initialized.");
+            }
             Statement stmt = conn.createStatement();
     
             // Check if table exists
