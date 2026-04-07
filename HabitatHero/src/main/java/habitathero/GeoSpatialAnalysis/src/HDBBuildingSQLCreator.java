@@ -20,6 +20,7 @@ public class HDBBuildingSQLCreator extends SQLDbConnect {
 
     public boolean createSQLTable() {
         String checkSql = "SELECT to_regclass('public.hdb_building_dataset')";
+        String createExtension = "CREATE EXTENSION IF NOT EXISTS postgis;";
         String createTableSQL = """
                 CREATE TABLE IF NOT EXISTS HDB_Building_Dataset (
                     OBJECTID INTEGER PRIMARY KEY,
@@ -55,6 +56,7 @@ public class HDBBuildingSQLCreator extends SQLDbConnect {
             }
 
             // Table does not exist, create it
+            stmt.executeUpdate(createExtension);
             stmt.executeUpdate(createTableSQL);
             stmt.close();
             super.closeConnection();

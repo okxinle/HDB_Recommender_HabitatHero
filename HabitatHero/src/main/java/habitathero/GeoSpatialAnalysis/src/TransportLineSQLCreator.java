@@ -20,6 +20,7 @@ public class TransportLineSQLCreator extends SQLDbConnect {
 
     public boolean createSQLTable() {
         String checkSql = "SELECT to_regclass('public.Transport_Line_Dataset')";
+        String createExtension = "CREATE EXTENSION IF NOT EXISTS postgis;";
         String createTableSQL = """
                 CREATE TABLE IF NOT EXISTS Transport_Line_Dataset (
                     OBJECTID INTEGER PRIMARY KEY,
@@ -52,6 +53,7 @@ public class TransportLineSQLCreator extends SQLDbConnect {
             }
 
             // Table does not exist, create it
+            stmt.executeUpdate(createExtension);
             stmt.executeUpdate(createTableSQL);
             stmt.close();
             super.closeConnection();

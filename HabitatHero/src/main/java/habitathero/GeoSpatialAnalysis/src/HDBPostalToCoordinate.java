@@ -82,7 +82,7 @@ public class HDBPostalToCoordinate extends SQLDbConnect {
                 SELECT
                     ST_X(ST_Centroid(ST_Collect(geom))) AS longitude,
                     ST_Y(ST_Centroid(ST_Collect(geom))) AS latitude
-                FROM hdb_building
+                FROM hdb_building_dataset
                 WHERE postal_cod = ?
                 GROUP BY postal_cod
                 LIMIT 1

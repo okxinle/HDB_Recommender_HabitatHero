@@ -22,7 +22,7 @@ public class HDBBuildingSunFacingResultSQLHandler extends SQLDbConnect{
         return instance;
     }
 
-    public void createSQLTable() {
+    public boolean createSQLTable() {
         String checkSql = "SELECT to_regclass('public.sun_facing_analysis_result')";
         String createTableSQL = """
                     CREATE TABLE IF NOT EXISTS sun_facing_analysis_result (
@@ -60,7 +60,7 @@ public class HDBBuildingSunFacingResultSQLHandler extends SQLDbConnect{
                     System.out.println("sun_facing_analysis_result table exists: " + rs.getString(1));
                     stmt.close();
                     super.closeConnection();
-                    return;
+                    return true;
                 }
             }
 
@@ -68,8 +68,10 @@ public class HDBBuildingSunFacingResultSQLHandler extends SQLDbConnect{
             stmt.close();
             super.closeConnection();
             System.out.println("sun_facing_analysis_result table created successfully.");
+            return true;
         } catch (Exception e) {
             e.printStackTrace();
+            return false;
         }
     }
 

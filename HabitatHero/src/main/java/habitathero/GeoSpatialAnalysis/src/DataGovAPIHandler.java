@@ -125,8 +125,14 @@ public class DataGovAPIHandler {
     public Boolean pollDownloadAndSave(String dataset_id, String localFilePath) {
 
         // Check if API data is newer
-        if (!checkAPIDataCurrency(dataset_id)) {
-            System.out.println("\nDownload terminated: local data is current\n");
+        Boolean hasNewerData = checkAPIDataCurrency(dataset_id);
+        if (hasNewerData == null) {
+            System.out.println("\nDownload skipped: unable to determine data currency due to metadata/database error\n");
+            return false;
+        }
+
+        if (!hasNewerData) {
+            System.out.println("\nDownload skipped: local data is current\n");
             return false;
         }
 
@@ -134,16 +140,22 @@ public class DataGovAPIHandler {
     }
 
     public Boolean checkAPIDataCurrency(String dataset_id) {
-        Boolean currencyStatus = false;
+        Boolean currencyStatus;
 
         try {
             // Fetch metadata from API and local database
             JSONObject metadataApi = DataGovMetadataMgr.getInstance().fetchAPIMetadata(dataset_id);
             JSONObject metadataSql = DataGovMetadataMgr.getInstance().retrieveSQLMetadata(dataset_id);
 
-            if (metadataApi == null || metadataSql == null) {
-                System.out.println("Metadata cannot be found or fetched for dataset: " + dataset_id);
-                return false;
+            if (metadataApi == null) {
+                System.out.println("Unable to fetch DataGov metadata for dataset: " + dataset_id);
+                return null;
+            }
+
+            if (metadataSql == null) {
+                System.out.println("No local metadata found for dataset: " + dataset_id);
+                System.out.println("Assuming first-time sync is required. Proceeding with download.");
+                return true;
             }
 
             // Extract lastUpdatedAt from API and SQL metadata
@@ -157,10 +169,11 @@ public class DataGovAPIHandler {
 
             if (apiLastUpdatedStr == null) {
                 System.out.println("Missing lastUpdatedAt in API metadata.\n");
-                return false;
+                return null;
             } else if (sqlLastUpdatedStr == null) {
-                System.out.println("Missing lastUpdatedAt in SQL metadata.\n");
-                return false;
+                System.out.println("Missing lastUpdatedAt in SQL metadata for dataset: " + dataset_id);
+                System.out.println("Treating local metadata as stale. Proceeding with download.");
+                return true;
             }
 
             OffsetDateTime apiDatasetDateTime = OffsetDateTime.parse(apiLastUpdatedStr);
@@ -183,7 +196,8 @@ public class DataGovAPIHandler {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println("Unable to determine data currency for dataset " + dataset_id + ": " + e.getMessage());
+            return null;
         }
 
         return currencyStatus;

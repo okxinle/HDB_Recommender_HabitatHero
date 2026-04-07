@@ -25,7 +25,7 @@ public class LandUseFutureDevRiskResultSQLHandler extends SQLDbConnect {
         return instance;
     }
 
-    public void createSQLTable() {
+    public boolean createSQLTable() {
         String checkSql = "SELECT to_regclass('public.land_use_future_dev_risk_result')";
         String createTableSQL = """
                 CREATE TABLE IF NOT EXISTS land_use_future_dev_risk_result (
@@ -51,7 +51,7 @@ public class LandUseFutureDevRiskResultSQLHandler extends SQLDbConnect {
                     System.out.println("land_use_future_dev_risk_result table already exists");
                     stmt.close();
                     super.closeConnection();
-                    return;
+                    return true;
                 }
             }
 
@@ -59,8 +59,10 @@ public class LandUseFutureDevRiskResultSQLHandler extends SQLDbConnect {
             stmt.close();
             super.closeConnection();
             System.out.println("land_use_future_dev_risk_result table created successfully");
+            return true;
         } catch (Exception e) {
             e.printStackTrace();
+            return false;
         }
     }
 

@@ -29,8 +29,8 @@ public class DataGovMetadataMgr {
         return datasetMetadataFetcher.getMetadata(dataset_id);
     }
 
-    public void createSQLTable(){
-        datasetMetadataSQLHandler.createSQLTable();
+    public boolean createSQLTable(){
+        return datasetMetadataSQLHandler.createSQLTable();
     }
 
     public void upsertSQLMetadata(JSONObject metadata){
