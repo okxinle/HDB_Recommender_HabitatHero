@@ -1,3 +1,4 @@
 HabitatHero/data/
 *.db
-*.db-journaldataset/MasterPlan2019LandUselayer.geojson
+*.db-journal
+dataset/MasterPlan2019LandUselayer.geojson
