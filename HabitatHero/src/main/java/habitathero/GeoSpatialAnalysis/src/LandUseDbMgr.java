@@ -36,6 +36,22 @@ public class LandUseDbMgr {
         return landUseDbImporter.importGeoJsonToSQLDb(LOCALFILEPATH);
     }
 
+    public String getLastImportErrorMessage() {
+        return landUseDbImporter.getLastErrorMessage();
+    }
+
+    public int getLastImportedCount() {
+        return landUseDbImporter.getLastImportedCount();
+    }
+
+    public int getLastSkippedCount() {
+        return landUseDbImporter.getLastSkippedCount();
+    }
+
+    public int getLastTotalFeatures() {
+        return landUseDbImporter.getLastTotalFeatures();
+    }
+
     public Boolean checkCurrency() {
         return dataGovAPIHandler.checkAPIDataCurrency(DATASET_ID);
     }

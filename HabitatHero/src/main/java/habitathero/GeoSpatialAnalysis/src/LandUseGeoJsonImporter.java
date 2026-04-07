@@ -1,6 +1,7 @@
 package habitathero.GeoSpatialAnalysis.src;
 
 import java.sql.PreparedStatement;
+import java.sql.Types;
 import java.io.FileReader;
 
 import org.json.JSONArray;
@@ -9,6 +10,10 @@ import org.json.JSONTokener;
 
 public class LandUseGeoJsonImporter extends SQLDbConnect {
     private static LandUseGeoJsonImporter instance;
+    private volatile String lastErrorMessage = "";
+    private volatile int lastImportedCount = 0;
+    private volatile int lastSkippedCount = 0;
+    private volatile int lastTotalFeatures = 0;
 
     // SymbolLineMgr singleton call this class constructor only once
     private LandUseGeoJsonImporter() {
@@ -24,6 +29,11 @@ public class LandUseGeoJsonImporter extends SQLDbConnect {
 
     public boolean importGeoJsonToSQLDb(String landUseGeoJsonDbPath) {
         try {
+            lastErrorMessage = "";
+            lastImportedCount = 0;
+            lastSkippedCount = 0;
+            lastTotalFeatures = 0;
+
             // connect to postgres api to access Database
             super.connectSQL();
 
@@ -31,6 +41,7 @@ public class LandUseGeoJsonImporter extends SQLDbConnect {
             JSONTokener tokener = new JSONTokener(new FileReader(landUseGeoJsonDbPath));
             JSONObject geojson = new JSONObject(tokener);
             JSONArray features = geojson.getJSONArray("features");
+            lastTotalFeatures = features.length();
 
             // format for SQL command to create/update row entries from geojson file
             String sql = """
@@ -68,12 +79,25 @@ public class LandUseGeoJsonImporter extends SQLDbConnect {
             // extract every geojson entry and place into sql querying syntax through
             // PreparedStatement
             for (int i = 0; i < features.length(); i++) {
-
                 JSONObject feature = features.getJSONObject(i);
-                JSONObject properties = feature.getJSONObject("properties");
-                JSONObject geometry = feature.getJSONObject("geometry");
+                JSONObject properties = feature.optJSONObject("properties");
+                JSONObject geometry = feature.optJSONObject("geometry");
+
+                if (properties == null || geometry == null) {
+                    lastSkippedCount++;
+                    continue;
+                }
     
-                int objectId = properties.getInt("OBJECTID");
+                if (!properties.has("OBJECTID")) {
+                    lastSkippedCount++;
+                    continue;
+                }
+
+                int objectId = properties.optInt("OBJECTID", -1);
+                if (objectId < 0) {
+                    lastSkippedCount++;
+                    continue;
+                }
     
                 String luDesc = properties.optString("LU_DESC", null);
                 String luText = properties.optString("LU_TEXT", null);
@@ -83,35 +107,76 @@ public class LandUseGeoJsonImporter extends SQLDbConnect {
                 String incCrc = properties.optString("INC_CRC", null);
                 String fmelUpd = properties.optString("FMEL_UPD_D", null);
     
-                Double shapeArea = properties.getDouble("SHAPE.AREA");
-                Double shapeLen = properties.getDouble("SHAPE.LEN");
+                Double shapeArea = properties.optDouble("SHAPE.AREA", Double.NaN);
+                Double shapeLen = properties.optDouble("SHAPE.LEN", Double.NaN);
     
-                stmt.setInt(1, objectId);
-                stmt.setString(2, luDesc);
-                stmt.setString(3, luText);
-                stmt.setString(4, gpr);
-                stmt.setString(5, whiQMx);
-                stmt.setString(6, gprBMn);
-                stmt.setString(7, incCrc);
-                stmt.setString(8, fmelUpd);
-                stmt.setDouble(9, shapeArea);
-                stmt.setDouble(10, shapeLen);
+                try {
+                    stmt.setInt(1, objectId);
+                    stmt.setString(2, luDesc);
+                    stmt.setString(3, luText);
+                    stmt.setString(4, gpr);
+                    stmt.setString(5, whiQMx);
+                    stmt.setString(6, gprBMn);
+                    stmt.setString(7, incCrc);
+                    stmt.setString(8, fmelUpd);
 
-                stmt.setString(11, geometry.toString());
-    
-                stmt.addBatch();
+                    if (shapeArea == null || Double.isNaN(shapeArea)) {
+                        stmt.setNull(9, Types.DOUBLE);
+                    } else {
+                        stmt.setDouble(9, shapeArea);
+                    }
+
+                    if (shapeLen == null || Double.isNaN(shapeLen)) {
+                        stmt.setNull(10, Types.DOUBLE);
+                    } else {
+                        stmt.setDouble(10, shapeLen);
+                    }
+
+                    stmt.setString(11, geometry.toString());
+                    stmt.executeUpdate();
+                    lastImportedCount++;
+                } catch (Exception rowError) {
+                    lastSkippedCount++;
+                    if (lastErrorMessage.isEmpty()) {
+                        lastErrorMessage = "First row error at index " + i + " (OBJECTID=" + objectId + "): "
+                                + rowError.getMessage();
+                    }
+                }
             }
-
-            stmt.executeBatch();
             stmt.close();
             super.closeConnection();
 
-            System.out.println("Land Use GeoJSON successfully imported");
+            if (lastImportedCount == 0) {
+                if (lastErrorMessage.isEmpty()) {
+                    lastErrorMessage = "Import completed with zero inserted rows.";
+                }
+                return false;
+            }
+
+            System.out.println("Land Use GeoJSON import complete. Imported=" + lastImportedCount
+                    + ", Skipped=" + lastSkippedCount + ", Total=" + lastTotalFeatures);
             return true;
 
         } catch (Exception e) {
+            lastErrorMessage = e.getMessage() == null ? e.toString() : e.getMessage();
             e.printStackTrace();
             return false;
         }
+    }
+
+    public String getLastErrorMessage() {
+        return lastErrorMessage;
+    }
+
+    public int getLastImportedCount() {
+        return lastImportedCount;
+    }
+
+    public int getLastSkippedCount() {
+        return lastSkippedCount;
+    }
+
+    public int getLastTotalFeatures() {
+        return lastTotalFeatures;
     }
 }

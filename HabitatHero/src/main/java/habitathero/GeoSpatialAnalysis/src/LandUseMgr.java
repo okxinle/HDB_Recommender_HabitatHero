@@ -60,6 +60,12 @@ public class LandUseMgr {
         return computedResult;
     }
 
+    public JSONObject getFutureDevRiskByCoordinate(double latitude, double longitude, double distance) {
+        System.out.println("Starting future development risk lookup for coordinates ("
+                + latitude + ", " + longitude + ") with distance " + distance);
+        return landUseChkDev.calFutureDevRiskByCoordinate(latitude, longitude, distance);
+    }
+
     private JSONObject calFutureDevRisk(String postalCode){
         return landUseChkDev.calFutureDevRisk(postalCode);
     }

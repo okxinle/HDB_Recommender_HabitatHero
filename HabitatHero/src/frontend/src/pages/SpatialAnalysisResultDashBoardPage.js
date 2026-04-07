@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Circle, MapContainer, Marker, Popup, Polygon, TileLayer } from 'react-leaflet';
 import { DollarSign, Clock, MapPin, BarChart3 } from 'lucide-react';
@@ -19,12 +19,6 @@ L.Icon.Default.mergeOptions({
 });
 
 const WALKING_METERS_PER_MINUTE = 80;
-const RESERVE_SITE = [
-  [1.3679, 103.8535],
-  [1.3687, 103.8553],
-  [1.3669, 103.8563],
-  [1.3661, 103.8546],
-];
 
 const getSafeNumber = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : null);
 
@@ -75,6 +69,20 @@ const formatCompactCurrency = (value) => {
   return `$${absoluteValue}`;
 };
 
+const formatFloorArea = (sqft, sqm) => {
+  const CONVERSION_FACTOR = 10.7639;
+  
+  if (typeof sqft === 'number' && Number.isFinite(sqft)) {
+    return `${Math.round(sqft)} sqft`;
+  }
+
+  if (typeof sqm === 'number' && Number.isFinite(sqm)) {
+    return `${Math.round(sqm * CONVERSION_FACTOR)} sqft`;
+  }
+
+  return 'N/A';
+};
+
 const formatPercent = (value, digits = 1) => {
   if (value === null) {
     return 'N/A';
@@ -83,7 +91,7 @@ const formatPercent = (value, digits = 1) => {
   return `${value.toFixed(digits)}%`;
 };
 
-const formatLeaseYears = (value) => {
+const formatLeaseRemaining = (value) => {
   if (value === null) {
     return 'N/A';
   }
@@ -118,6 +126,119 @@ const haversineMeters = (lat1, lon1, lat2, lon2) => {
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return earthRadius * c;
+};
+
+const parseGeoJsonGeometry = (rawGeom) => {
+  if (!rawGeom) {
+    return [];
+  }
+
+  let geometry = rawGeom;
+  if (typeof rawGeom === 'string') {
+    try {
+      geometry = JSON.parse(rawGeom);
+    } catch {
+      return [];
+    }
+  }
+
+  if (!geometry || typeof geometry !== 'object') {
+    return [];
+  }
+
+  const toLatLngRing = (ring) => {
+    if (!Array.isArray(ring)) {
+      return null;
+    }
+
+    const converted = ring
+      .map((point) => {
+        if (!Array.isArray(point) || point.length < 2) {
+          return null;
+        }
+
+        const lng = point[0];
+        const lat = point[1];
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+          return null;
+        }
+
+        return [lat, lng];
+      })
+      .filter(Boolean);
+
+    return converted.length >= 3 ? converted : null;
+  };
+
+  if (geometry.type === 'Polygon') {
+    const outerRing = toLatLngRing(geometry.coordinates?.[0]);
+    return outerRing ? [outerRing] : [];
+  }
+
+  if (geometry.type === 'MultiPolygon') {
+    return geometry.coordinates
+      .map((polygon) => toLatLngRing(polygon?.[0]))
+      .filter(Boolean);
+  }
+
+  return [];
+};
+
+const isPointInsideRing = (lat, lng, ring) => {
+  if (!Array.isArray(ring) || ring.length < 3) {
+    return false;
+  }
+
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const yi = ring[i][0];
+    const xi = ring[i][1];
+    const yj = ring[j][0];
+    const xj = ring[j][1];
+
+    const intersects = ((yi > lat) !== (yj > lat))
+      && (lng < ((xj - xi) * (lat - yi)) / ((yj - yi) || Number.EPSILON) + xi);
+
+    if (intersects) {
+      inside = !inside;
+    }
+  }
+
+  return inside;
+};
+
+const getMinDistanceToRings = (lat, lng, rings) => {
+  if (!Array.isArray(rings) || rings.length === 0) {
+    return null;
+  }
+
+  let minDistance = null;
+  for (const ring of rings) {
+    if (!Array.isArray(ring) || ring.length === 0) {
+      continue;
+    }
+
+    if (isPointInsideRing(lat, lng, ring)) {
+      return 0;
+    }
+
+    for (const point of ring) {
+      if (!Array.isArray(point) || point.length < 2) {
+        continue;
+      }
+
+      const distance = haversineMeters(lat, lng, point[0], point[1]);
+      if (!Number.isFinite(distance)) {
+        continue;
+      }
+
+      if (minDistance === null || distance < minDistance) {
+        minDistance = distance;
+      }
+    }
+  }
+
+  return minDistance;
 };
 
 const extractAmenityObject = (value) => {
@@ -463,26 +584,118 @@ function SpatialAnalysisResultDashBoardPage() {
   const navigate = useNavigate();
   const { blockId } = useParams();
 
-  const block = location.state?.block ?? {};
-  const result = location.state?.result ?? {};
+  const block = useMemo(() => location.state?.block ?? {}, [location.state?.block]);
+  const result = useMemo(() => location.state?.result ?? {}, [location.state?.result]);
+  const embeddedFutureDevRisk = result?.futureDevRisk_500m ?? result?.futureDevRisk ?? null;
+  const [futureDevRisk, setFutureDevRisk] = useState(
+    embeddedFutureDevRisk
+  );
 
   const blockNumber = block?.blockNumber ?? blockId?.replace('hdb', '') ?? 'N/A';
   const streetName = block?.streetName ?? '';
   const postalCode = block?.postalCode ?? 'N/A';
-  const estimatedPrice = pickFirstNumber([result?.estimatedPrice, block?.estimatedPrice]);
-  const remainingLeaseYears = pickFirstNumber([result?.remainingLeaseYears, block?.remainingLeaseYears]);
-  const town = formatTown(result?.town ?? block?.town);
-  const matchScore = pickFirstNumber([
-    result?.globalMatchIndex,
-    result?.matchScore,
-    block?.globalMatchIndex,
-    block?.matchScore,
-  ]);
+
+  const summaryStats = useMemo(() => {
+    const estimatedPrice = pickFirstNumber([
+      result?.estimatedPrice,
+      block?.estimatedPrice,
+      result?.priceInsights?.estimatedPrice,
+    ]);
+
+    const leaseRemainingYears = pickFirstNumber([
+      block?.remainingLeaseYears,
+      result?.remainingLeaseYears,
+      block?.leaseRemaining,
+      result?.leaseRemaining,
+    ]);
+
+    const town = formatTown(result?.town ?? block?.town);
+
+    const rawMatchScore = pickFirstNumber([
+      result?.globalMatchIndex,
+      block?.globalMatchIndex,
+      result?.matchScore,
+      block?.matchScore,
+    ]);
+
+    const normalizedMatchScore =
+      rawMatchScore === null
+        ? null
+        : rawMatchScore <= 1
+          ? rawMatchScore * 100
+          : rawMatchScore;
+
+    return {
+      estimatedPriceText: formatCurrency(estimatedPrice),
+      leaseRemainingText: formatLeaseRemaining(leaseRemainingYears),
+      townText: town,
+      matchScoreText: formatPercent(normalizedMatchScore, 1),
+    };
+  }, [block, result]);
 
   const blockLat = pickFirstNumber([block?.coordinates?.lat, block?.coordinates?.latitude]);
   const blockLng = pickFirstNumber([block?.coordinates?.lng, block?.coordinates?.lon, block?.coordinates?.longitude]);
   const hasValidBlockPosition = blockLat !== null && blockLng !== null;
   const blockPosition = hasValidBlockPosition ? [blockLat, blockLng] : [1.3521, 103.8198];
+
+  useEffect(() => {
+    if (embeddedFutureDevRisk) {
+      setFutureDevRisk(embeddedFutureDevRisk);
+      return;
+    }
+
+    const normalizedPostalCode = String(postalCode ?? '').trim();
+    if (!normalizedPostalCode || normalizedPostalCode === 'N/A') {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const fetchFutureRisk = async () => {
+      try {
+        const queryParams = new URLSearchParams({
+          postalCode: normalizedPostalCode,
+          distance: '500',
+        });
+
+        if (hasValidBlockPosition) {
+          queryParams.set('latitude', String(blockLat));
+          queryParams.set('longitude', String(blockLng));
+        }
+
+        const response = await fetch(
+          `http://localhost:8080/api/hdb/future-development-risk?${queryParams.toString()}`,
+          {
+            method: 'GET',
+            signal: controller.signal,
+          }
+        );
+
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || !payload || payload.status !== 'OK') {
+          return;
+        }
+
+        setFutureDevRisk(payload);
+      } catch (error) {
+        if (error?.name !== 'AbortError') {
+          console.error('Failed to fetch future development risk:', error);
+        }
+      }
+    };
+
+    fetchFutureRisk();
+
+    return () => controller.abort();
+  }, [postalCode, embeddedFutureDevRisk, hasValidBlockPosition, blockLat, blockLng]);
+
+  const futureRiskPolygons = useMemo(() => {
+    const developments = Array.isArray(futureDevRisk?.developments)
+      ? futureDevRisk.developments
+      : [];
+
+    return developments.flatMap((development) => parseGeoJsonGeometry(development?.geom));
+  }, [futureDevRisk]);
 
   const matchedAmenities = normalizeSourceObject(result?.matchedAmenities ?? block?.matchedAmenities);
   const matchedAmenitiesEntries = Object.entries(matchedAmenities);
@@ -508,6 +721,9 @@ function SpatialAnalysisResultDashBoardPage() {
     const estimatedPrice = pickFirstNumber([result?.estimatedPrice, block?.estimatedPrice]);
     const floorAreaSqm = pickFirstNumber([result?.floorAreaSqm, block?.floorAreaSqm]);
     const floorAreaSqft = floorAreaSqm === null ? null : floorAreaSqm * 10.7639;
+
+    const remainingLease = pickFirstNumber([block?.remainingLeaseYears, result?.remainingLeaseYears, result?.remainingLease, block?.remainingLease]);
+    const rawScore = pickFirstNumber([result?.globalMatchIndex, block?.globalMatchIndex, result?.matchScore]);
 
     const townAveragePsf = pickPositiveNumber([
       result?.townAveragePsf,
@@ -561,6 +777,8 @@ function SpatialAnalysisResultDashBoardPage() {
           : `~${formatCompactCurrency(Math.abs(estimatedSavings))} above town average`;
 
     return {
+      remainingLease: remainingLease !== null ? `${remainingLease} years` : 'N/A',
+      matchScore: rawScore !== null ? formatPercent(rawScore, 1) : 'N/A',
       estimatedPrice,
       floorAreaSqm,
       floorAreaSqft,
@@ -598,24 +816,28 @@ function SpatialAnalysisResultDashBoardPage() {
   const noiseBadgeTone = hasNearbyMrtSignal ? 'moderate' : 'good';
 
   const reserveDistance = hasValidBlockPosition
-    ? haversineMeters(blockLat, blockLng, 1.3674, 103.8549)
+    ? getMinDistanceToRings(blockLat, blockLng, futureRiskPolygons)
     : null;
 
   const viewProtectionScore = reserveDistance === null
-    ? 70
+    ? null
     : Math.max(20, Math.min(95, Math.round(100 - reserveDistance / 30)));
 
-  const futureProgressClass = viewProtectionScore >= 80
+  const futureProgressClass = viewProtectionScore !== null && viewProtectionScore >= 80
     ? 'progress-bar__fill progress-bar__fill--good'
     : 'progress-bar__fill progress-bar__fill--moderate';
 
-  const viewRiskCopy = viewProtectionScore >= 80
-    ? 'Strong buffer against nearby future development pressure.'
-    : 'Moderate exposure to future development changes nearby.';
+  const hasFutureRiskPolygons = futureRiskPolygons.length > 0;
 
-  const viewRiskSourceCopy = 'Score derived from distance to the highlighted reserve-site polygon.';
+  const viewRiskCopy = !hasFutureRiskPolygons
+    ? 'No mapped future development polygons were found for this block radius.'
+    : viewProtectionScore !== null && viewProtectionScore >= 80
+      ? 'Strong buffer against nearby future development pressure.'
+      : 'Moderate exposure to future development changes nearby.';
 
-  const reserveSite = RESERVE_SITE;
+  const viewRiskSourceCopy = hasFutureRiskPolygons
+    ? 'Score derived from distance to nearest returned future development polygon.'
+    : 'Future development polygon data unavailable from current query.';
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -648,7 +870,7 @@ function SpatialAnalysisResultDashBoardPage() {
           <div className="summary-icon"><DollarSign size={18} /></div>
           <div className="summary-content">
             <span>Estimated Price</span>
-            <strong>{formatCurrency(estimatedPrice)}</strong>
+            <strong>{summaryStats.estimatedPriceText}</strong>
           </div>
         </div>
 
@@ -656,7 +878,7 @@ function SpatialAnalysisResultDashBoardPage() {
           <div className="summary-icon"><Clock size={18} /></div>
           <div className="summary-content">
             <span>Lease Remaining</span>
-            <strong>{formatLeaseYears(remainingLeaseYears)}</strong>
+            <strong>{summaryStats.leaseRemainingText}</strong>
           </div>
         </div>
 
@@ -664,7 +886,7 @@ function SpatialAnalysisResultDashBoardPage() {
           <div className="summary-icon"><MapPin size={18} /></div>
           <div className="summary-content">
             <span>Town</span>
-            <strong>{town}</strong>
+            <strong>{summaryStats.townText}</strong>
           </div>
         </div>
 
@@ -672,7 +894,7 @@ function SpatialAnalysisResultDashBoardPage() {
           <div className="summary-icon"><BarChart3 size={18} /></div>
           <div className="summary-content">
             <span>Match Score</span>
-            <strong>{formatPercent(matchScore, 1)}</strong>
+            <strong>{summaryStats.matchScoreText}</strong>
           </div>
         </div>
       </div>
@@ -699,21 +921,24 @@ function SpatialAnalysisResultDashBoardPage() {
               }}
             />
 
-            <Polygon
-              positions={reserveSite}
-              pathOptions={{
-                color: '#d8aa43',
-                fillColor: '#d8aa43',
-                fillOpacity: 0.36,
-                weight: 2,
-              }}
-            />
+            {futureRiskPolygons.map((polygon, index) => (
+              <Polygon
+                key={`future-risk-${index}`}
+                positions={polygon}
+                pathOptions={{
+                  color: '#d8aa43',
+                  fillColor: '#d8aa43',
+                  fillOpacity: 0.36,
+                  weight: 2,
+                }}
+              />
+            ))}
           </MapContainer>
 
           <div className="report-map-legend">
             <div className="report-map-legend__item">☀ West Sun Risk</div>
             <div className="report-map-legend__item">🔊 Noise Buffer</div>
-            <div className="report-map-legend__item">▧ URA Reserve Site</div>
+            <div className="report-map-legend__item">▧ Future Development Risk Zone</div>
           </div>
         </div>
       </section>
@@ -755,9 +980,9 @@ function SpatialAnalysisResultDashBoardPage() {
             <h2 className="intelligence-card__title">🏗️ FUTURE DEVELOPMENT</h2>
           </div>
           <div className="score-block">
-            <div className="score-block__value">{viewProtectionScore}%</div>
+            <div className="score-block__value">{viewProtectionScore === null ? 'N/A' : `${viewProtectionScore}%`}</div>
             <div className="progress-bar" aria-hidden="true">
-              <div className={futureProgressClass} style={{ width: `${viewProtectionScore}%` }} />
+              <div className={futureProgressClass} style={{ width: `${viewProtectionScore ?? 0}%` }} />
             </div>
           </div>
           <p className="intelligence-card__text">{viewRiskCopy}</p>
