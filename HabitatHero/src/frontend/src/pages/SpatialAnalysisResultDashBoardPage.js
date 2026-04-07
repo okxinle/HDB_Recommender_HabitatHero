@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Circle, MapContainer, Marker, Popup, Polygon, TileLayer } from 'react-leaflet';
-import { DollarSign, Clock, MapPin, BarChart3 } from 'lucide-react';
+import { DollarSign, Clock, MapPin, BarChart3, Ruler } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import '../styles/SpatialAnalysisResultDashBoardPage.css';
@@ -631,7 +631,7 @@ function SpatialAnalysisResultDashBoardPage() {
           <div className="summary-icon"><DollarSign size={18} /></div>
           <div className="summary-content">
             <span>Estimated Price</span>
-            <strong>$571,000</strong>
+            <strong>{intelligence.estimatedPrice ? formatCurrency(intelligence.estimatedPrice) : 'N/A'}</strong>
           </div>
         </div>
 
@@ -639,7 +639,52 @@ function SpatialAnalysisResultDashBoardPage() {
           <div className="summary-icon"><Clock size={18} /></div>
           <div className="summary-content">
             <span>Lease Remaining</span>
-            <strong>57 years</strong>
+            <strong>{pickFirstNumber([
+          block?.remainingLeaseYears,
+          result?.remainingLeaseYears,
+          result?.remainingLease,
+          block?.remainingLease
+        ]) !== null
+          ? `${pickFirstNumber([
+              block?.remainingLeaseYears,
+              result?.remainingLeaseYears,
+              result?.remainingLease,
+              block?.remainingLease
+            ])} years`
+          : 'N/A'}</strong>
+          </div>
+        </div>
+
+        <div className="summary-card-item summary-card-item--row">
+          <div className="summary-icon"><Ruler size={18} /></div>
+          <div className="summary-content">
+            <span>Floor Area</span>
+            <strong>{(() => {
+            const sqft = pickFirstNumber([
+              block?.floorAreaSqft,
+              block?.floor_area_sqft,
+              result?.floorAreaSqft,
+              result?.floor_area_sqft,
+            ]);
+
+            const sqm = pickFirstNumber([
+              block?.floorAreaSqm,
+              block?.floor_area_sqm,
+              result?.floorAreaSqm,
+              result?.floor_area_sqm,
+            ]);
+
+            if (sqft !== null) {
+              return `${Math.round(sqft)} sqft`;
+            }
+
+            if (sqm !== null) {
+              return `${Math.round(sqm * 10.7639)} sqft`;
+            }
+
+            return 'N/A';
+            })()}
+            </strong>
           </div>
         </div>
 
@@ -647,7 +692,7 @@ function SpatialAnalysisResultDashBoardPage() {
           <div className="summary-icon"><MapPin size={18} /></div>
           <div className="summary-content">
             <span>Town</span>
-            <strong>Ang Mo Kio</strong>
+            <strong>{formatTown(block?.town)}</strong>
           </div>
         </div>
 
@@ -655,7 +700,20 @@ function SpatialAnalysisResultDashBoardPage() {
           <div className="summary-icon"><BarChart3 size={18} /></div>
           <div className="summary-content">
             <span>Match Score</span>
-            <strong>100.0%</strong>
+            <strong> {pickFirstNumber([
+          result?.globalMatchIndex,
+          block?.globalMatchIndex,
+          result?.matchScore
+        ]) !== null
+          ? formatPercent(
+              pickFirstNumber([
+                result?.globalMatchIndex,
+                block?.globalMatchIndex,
+                result?.matchScore
+              ]),
+              1
+            )
+          : 'N/A'}</strong>
           </div>
         </div>
       </div>
