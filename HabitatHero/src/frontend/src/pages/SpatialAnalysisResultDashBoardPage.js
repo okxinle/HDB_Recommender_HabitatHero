@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Circle, MapContainer, Marker, Popup, Polygon, TileLayer } from 'react-leaflet';
-import { DollarSign, Clock, MapPin, BarChart3 } from 'lucide-react';
+import { DollarSign, Clock, MapPin, BarChart3, Ruler } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import '../styles/SpatialAnalysisResultDashBoardPage.css';
@@ -84,6 +84,14 @@ const formatLeaseRemaining = (value) => {
   }
 
   return `${Math.round(value)} years`;
+};
+
+const formatFloorArea = (sqm) => {
+  if (sqm === null || sqm <= 0) {
+    return 'N/A';
+  }
+
+  return `${Math.round(sqm * 10.7639)} sqft`;
 };
 
 const formatStreet = (value) => {
@@ -664,6 +672,11 @@ function SpatialAnalysisResultDashBoardPage() {
       resultMeta?.leaseRemaining,
     ]);
 
+    const floorAreaSqm = pickFirstNumber([
+      hdbBlock?.floorAreaSqm,
+      resultMeta?.floorAreaSqm,
+    ]);
+
     const town = formatTown(hdbBlock?.town ?? resultMeta?.town);
 
     const rawMatchScore = pickFirstNumber([
@@ -683,6 +696,7 @@ function SpatialAnalysisResultDashBoardPage() {
     return {
       estimatedPriceText: formatCurrency(estimatedPrice),
       leaseRemainingText: formatLeaseRemaining(leaseRemainingYears),
+      floorAreaText: formatFloorArea(floorAreaSqm),
       townText: town,
       matchScoreText: formatPercent(normalizedMatchScore, 1),
     };
@@ -869,16 +883,6 @@ function SpatialAnalysisResultDashBoardPage() {
     [nearestAmenities, matchedAmenities, blockLat, blockLng]
   );
 
-  const nearestMrtDistanceMeters = useMemo(
-    () => getNearestDistanceByKeys(nearestAmenities, blockLat, blockLng, ['mrtStation', 'mrt', 'train']),
-    [nearestAmenities, blockLat, blockLng]
-  );
-
-  const nearestMrtName = useMemo(
-    () => getNearestAmenityNameByKeys(nearestAmenities, matchedAmenities, ['mrtStation', 'mrt', 'train']),
-    [nearestAmenities, matchedAmenities]
-  );
-
   const hasNearbyMrtSignal = Boolean(
     matchedAmenities?.mrtStation?.length || matchedAmenities?.mrt?.length || matchedAmenities?.train?.length
   );
@@ -952,6 +956,14 @@ function SpatialAnalysisResultDashBoardPage() {
           <div className="summary-content">
             <span>Lease Remaining</span>
             <strong>{summaryStats.leaseRemainingText}</strong>
+          </div>
+        </div>
+
+        <div className="summary-card-item summary-card-item--row">
+          <div className="summary-icon"><Ruler size={18} /></div>
+          <div className="summary-content">
+            <span>Floor Area</span>
+            <strong>{summaryStats.floorAreaText}</strong>
           </div>
         </div>
 
@@ -1036,16 +1048,6 @@ function SpatialAnalysisResultDashBoardPage() {
             </span>
           </div>
           <p className="intelligence-card__text">Noise Signature: <strong>{noiseSignature}</strong></p>
-          <p className="intelligence-card__text">
-            Distance to nearest MRT:{' '}
-            <strong>
-              {nearestMrtDistanceMeters !== null
-                ? `${Math.round(nearestMrtDistanceMeters)}m`
-                : nearestMrtName
-                  ? `Nearby (${nearestMrtName})`
-                  : 'Not detected'}
-            </strong>
-          </p>
         </article>
 
         <article className="intelligence-card intelligence-card--future">
