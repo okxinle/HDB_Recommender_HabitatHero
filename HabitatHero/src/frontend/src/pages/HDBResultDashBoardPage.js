@@ -4,6 +4,7 @@ import { SearchX, ArrowRight, Search } from 'lucide-react';
 import '../styles/HDBResultDashBoardPage.css';
 
 const TEMP_RESULTS_KEY = 'temporaryGuestResults';
+const DETAIL_RESULTS_CACHE_KEY = 'detailResultsCache';
 const MEMBER_RESULTS_AVAILABLE_KEY = 'memberResultsAvailable';
 const RESULTS_PREFERENCES_KEY = 'resultsSubmittedPreferences';
 const LOADING_UI_VARIANT = 'skeleton';
@@ -27,14 +28,24 @@ const PREFERENCE_LABEL_MAP = {
 
 const getSafeNumber = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : null);
 
-const formatMatchScore = (value) => {
-  const score = getSafeNumber(value);
-  return score === null ? 'N/A Match' : `${score.toFixed(1)}% Match`;
-};
-
 const formatCurrency = (value) => {
   const amount = getSafeNumber(value);
   return amount === null ? 'N/A' : `$${amount.toLocaleString()}`;
+};
+
+const normalizeResultItem = (item) => {
+  if (!item || typeof item !== 'object') {
+    return {};
+  }
+
+  if (item.hdbBlock && typeof item.hdbBlock === 'object') {
+    return {
+      ...item.hdbBlock,
+      ...item,
+    };
+  }
+
+  return item;
 };
 
 const formatLeaseYears = (value) => {
@@ -240,6 +251,12 @@ function HDBResultDashBoardPage() {
     return stateRankedBlocks ?? cachedRankedBlocks;
   }, [isAuthenticated, memberRankedBlocks, stateRankedBlocks, cachedRankedBlocks]);
 
+  useEffect(() => {
+    if (Array.isArray(rankedBlocks) && rankedBlocks.length > 0) {
+      sessionStorage.setItem(DETAIL_RESULTS_CACHE_KEY, JSON.stringify(rankedBlocks));
+    }
+  }, [rankedBlocks]);
+
   const hasFreshNavigationResults =
     Array.isArray(stateRankedBlocks) && stateRankedBlocks.length > 0;
   const usingSessionFallback =
@@ -270,8 +287,8 @@ function HDBResultDashBoardPage() {
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
     const filteredResults = rankedBlocks.filter((item) => {
-      const block = item?.hdbBlock ?? item ?? {};
-      const estimatedPrice = getSafeNumber(item?.estimatedPrice ?? block?.estimatedPrice);
+      const block = normalizeResultItem(item);
+      const estimatedPrice = getSafeNumber(block?.estimatedPrice);
       const remainingLeaseYears = getSafeNumber(block?.remainingLeaseYears);
 
       const searchableFields = [
@@ -297,15 +314,15 @@ function HDBResultDashBoardPage() {
     });
 
     return [...filteredResults].sort((a, b) => {
-      const blockA = a?.hdbBlock ?? a ?? {};
-      const blockB = b?.hdbBlock ?? b ?? {};
+      const blockA = normalizeResultItem(a);
+      const blockB = normalizeResultItem(b);
 
-      const matchA = getSafeNumber(a?.globalMatchIndex ?? blockA?.globalMatchIndex);
-      const matchB = getSafeNumber(b?.globalMatchIndex ?? blockB?.globalMatchIndex);
-      const priceA = getSafeNumber(a?.estimatedPrice ?? blockA?.estimatedPrice);
-      const priceB = getSafeNumber(b?.estimatedPrice ?? blockB?.estimatedPrice);
-      const floorAreaA = getSafeNumber(a?.floorAreaSqm ?? blockA?.floorAreaSqm);
-      const floorAreaB = getSafeNumber(b?.floorAreaSqm ?? blockB?.floorAreaSqm);
+      const matchA = getSafeNumber(blockA?.globalMatchIndex);
+      const matchB = getSafeNumber(blockB?.globalMatchIndex);
+      const priceA = getSafeNumber(blockA?.estimatedPrice);
+      const priceB = getSafeNumber(blockB?.estimatedPrice);
+      const floorAreaA = getSafeNumber(blockA?.floorAreaSqm);
+      const floorAreaB = getSafeNumber(blockB?.floorAreaSqm);
       const leaseA = getSafeNumber(blockA?.remainingLeaseYears);
       const leaseB = getSafeNumber(blockB?.remainingLeaseYears);
 
@@ -592,31 +609,22 @@ function HDBResultDashBoardPage() {
         ) : (
         <div className={`results-grid ${showResultsFadeIn ? 'results-grid--fade-in' : ''}`}>
           {filteredAndSortedResults.map((item, index) => {
-            const block = item?.hdbBlock ?? item ?? {};
+            const block = normalizeResultItem(item);
             const blockId = block?.blockId ?? "N/A";
             const town = formatTown(block?.town);
             const postalCode = block?.postalCode ?? "N/A";
             const blockNumber = block?.blockNumber ?? "N/A";
             const streetName = formatTown(block?.streetName);
 
-            const globalMatchIndex = getSafeNumber(
-              item?.globalMatchIndex ?? block?.globalMatchIndex
-            );
-            const estimatedPrice = getSafeNumber(
-              item?.estimatedPrice ?? block?.estimatedPrice
-            );
-            const floorAreaSqm = getSafeNumber(
-              item?.floorAreaSqm ?? block?.floorAreaSqm
-            );
+            const globalMatchIndex = getSafeNumber(block?.globalMatchIndex);
+            const estimatedPrice = getSafeNumber(block?.estimatedPrice);
+            const floorAreaSqm = getSafeNumber(block?.floorAreaSqm);
             const floorAreaSqft = floorAreaSqm === null
               ? null
               : floorAreaSqm * 10.7639;
             const remainingLeaseYears = getSafeNumber(block?.remainingLeaseYears);
-            const convenienceScore = getSafeNumber(
-              item?.convenienceScore ?? block?.convenienceScore
-            );
-            const convenienceFactors =
-              item?.convenienceFactors ?? block?.convenienceFactors ?? {};
+            const convenienceScore = getSafeNumber(block?.convenienceScore);
+            const convenienceFactors = block?.convenienceFactors ?? {};
             const convenienceEntries = Object.entries(convenienceFactors);
             const hasConvenienceBreakdown = convenienceEntries.length > 0;
             const convenienceMatchText = hasConvenienceBreakdown
@@ -624,12 +632,13 @@ function HDBResultDashBoardPage() {
               : 'Unavailable';
             const convenienceMatchPercent = convenienceScore === null ? null : Math.round(convenienceScore * 100);
 
-            const commuteFairnessScore = getSafeNumber(
-              item?.commuteMetrics?.commuteFairnessScore
-            );
-            const totalCommuteBurden = getSafeNumber(
-              item?.commuteMetrics?.totalCommuteBurden
-            );
+            const commuteFairnessScore = getSafeNumber(block?.commuteMetrics?.commuteFairnessScore);
+            const totalCommuteBurden = getSafeNumber(block?.commuteMetrics?.totalCommuteBurden);
+
+            const detailState = {
+              hdbBlock: block,
+              resultMeta: item,
+            };
 
             const fairnessWidth =
               commuteFairnessScore === null
@@ -749,7 +758,7 @@ function HDBResultDashBoardPage() {
                 )}
 
                 <div className="result-footer-actions">
-                  <Link to={`/result-detail/blkid-${blockId}`} state={{ block, result: item }} className='details-link'>
+                  <Link to={`/result-detail/blkid-${blockId}`} state={detailState} className='details-link'>
                     <button className="view-details-btn view-details-btn--compact">
                       View Details
                       <ArrowRight size={14} />

@@ -19,6 +19,7 @@ L.Icon.Default.mergeOptions({
 });
 
 const WALKING_METERS_PER_MINUTE = 80;
+const DETAIL_RESULTS_CACHE_KEY = 'detailResultsCache';
 
 const getSafeNumber = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : null);
 
@@ -67,20 +68,6 @@ const formatCompactCurrency = (value) => {
     return `$${Math.round(absoluteValue / 1000)}k`;
   }
   return `$${absoluteValue}`;
-};
-
-const formatFloorArea = (sqft, sqm) => {
-  const CONVERSION_FACTOR = 10.7639;
-  
-  if (typeof sqft === 'number' && Number.isFinite(sqft)) {
-    return `${Math.round(sqft)} sqft`;
-  }
-
-  if (typeof sqm === 'number' && Number.isFinite(sqm)) {
-    return `${Math.round(sqm * CONVERSION_FACTOR)} sqft`;
-  }
-
-  return 'N/A';
 };
 
 const formatPercent = (value, digits = 1) => {
@@ -579,43 +566,111 @@ const sanitizePlaceNames = (key, placeNames, nearestValue) => {
   return cleaned.filter((name, index, self) => self.indexOf(name) === index);
 };
 
+const parseRouteBlockId = (rawBlockId) => {
+  if (!rawBlockId) {
+    return null;
+  }
+
+  const match = String(rawBlockId).match(/(\d+)/);
+  if (!match) {
+    return null;
+  }
+
+  const parsed = Number(match[1]);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const normalizeResultItem = (item) => {
+  if (!item || typeof item !== 'object') {
+    return {};
+  }
+
+  if (item.hdbBlock && typeof item.hdbBlock === 'object') {
+    return {
+      ...item.hdbBlock,
+      ...item,
+    };
+  }
+
+  return item;
+};
+
 function SpatialAnalysisResultDashBoardPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { blockId } = useParams();
 
-  const block = useMemo(() => location.state?.block ?? {}, [location.state?.block]);
-  const result = useMemo(() => location.state?.result ?? {}, [location.state?.result]);
-  const embeddedFutureDevRisk = result?.futureDevRisk_500m ?? result?.futureDevRisk ?? null;
+  const routeBlockId = useMemo(() => parseRouteBlockId(blockId), [blockId]);
+  const cachedResults = useMemo(() => {
+    try {
+      const parsed = JSON.parse(sessionStorage.getItem(DETAIL_RESULTS_CACHE_KEY) || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const stateBlock = useMemo(
+    () => normalizeResultItem(location.state?.hdbBlock ?? location.state?.block ?? location.state?.result),
+    [location.state?.hdbBlock, location.state?.block, location.state?.result]
+  );
+
+  const fallbackBlock = useMemo(() => {
+    if (routeBlockId === null || cachedResults.length === 0) {
+      return {};
+    }
+
+    const found = cachedResults.find((entry) => {
+      const normalized = normalizeResultItem(entry);
+      return Number(normalized?.blockId) === routeBlockId;
+    });
+
+    return normalizeResultItem(found);
+  }, [cachedResults, routeBlockId]);
+
+  const hdbBlock = useMemo(() => {
+    if (stateBlock && Object.keys(stateBlock).length > 0) {
+      return stateBlock;
+    }
+
+    return fallbackBlock;
+  }, [stateBlock, fallbackBlock]);
+
+  const resultMeta = useMemo(
+    () => normalizeResultItem(location.state?.resultMeta ?? location.state?.result),
+    [location.state?.resultMeta, location.state?.result]
+  );
+
+  const embeddedFutureDevRisk = resultMeta?.futureDevRisk_500m ?? resultMeta?.futureDevRisk ?? null;
   const [futureDevRisk, setFutureDevRisk] = useState(
     embeddedFutureDevRisk
   );
 
-  const blockNumber = block?.blockNumber ?? blockId?.replace('hdb', '') ?? 'N/A';
-  const streetName = block?.streetName ?? '';
-  const postalCode = block?.postalCode ?? 'N/A';
+  const blockNumber = hdbBlock?.blockNumber ?? (routeBlockId === null ? 'N/A' : String(routeBlockId));
+  const streetName = hdbBlock?.streetName ?? '';
+  const postalCode = hdbBlock?.postalCode ?? 'N/A';
 
   const summaryStats = useMemo(() => {
     const estimatedPrice = pickFirstNumber([
-      result?.estimatedPrice,
-      block?.estimatedPrice,
-      result?.priceInsights?.estimatedPrice,
+      hdbBlock?.estimatedPrice,
+      resultMeta?.estimatedPrice,
+      resultMeta?.priceInsights?.estimatedPrice,
     ]);
 
     const leaseRemainingYears = pickFirstNumber([
-      block?.remainingLeaseYears,
-      result?.remainingLeaseYears,
-      block?.leaseRemaining,
-      result?.leaseRemaining,
+      hdbBlock?.remainingLeaseYears,
+      resultMeta?.remainingLeaseYears,
+      hdbBlock?.leaseRemaining,
+      resultMeta?.leaseRemaining,
     ]);
 
-    const town = formatTown(result?.town ?? block?.town);
+    const town = formatTown(hdbBlock?.town ?? resultMeta?.town);
 
     const rawMatchScore = pickFirstNumber([
-      result?.globalMatchIndex,
-      block?.globalMatchIndex,
-      result?.matchScore,
-      block?.matchScore,
+      hdbBlock?.globalMatchIndex,
+      resultMeta?.globalMatchIndex,
+      resultMeta?.matchScore,
+      hdbBlock?.matchScore,
     ]);
 
     const normalizedMatchScore =
@@ -631,12 +686,30 @@ function SpatialAnalysisResultDashBoardPage() {
       townText: town,
       matchScoreText: formatPercent(normalizedMatchScore, 1),
     };
-  }, [block, result]);
+  }, [hdbBlock, resultMeta]);
 
-  const blockLat = pickFirstNumber([block?.coordinates?.lat, block?.coordinates?.latitude]);
-  const blockLng = pickFirstNumber([block?.coordinates?.lng, block?.coordinates?.lon, block?.coordinates?.longitude]);
+  const blockLat = pickFirstNumber([hdbBlock?.coordinates?.lat, hdbBlock?.coordinates?.latitude]);
+  const blockLng = pickFirstNumber([hdbBlock?.coordinates?.lng, hdbBlock?.coordinates?.lon, hdbBlock?.coordinates?.longitude]);
   const hasValidBlockPosition = blockLat !== null && blockLng !== null;
   const blockPosition = hasValidBlockPosition ? [blockLat, blockLng] : [1.3521, 103.8198];
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') {
+      return;
+    }
+
+    const hasCoordinates = Boolean(hdbBlock?.coordinates);
+    const hasAddress = Boolean(hdbBlock?.blockNumber && hdbBlock?.streetName && hdbBlock?.postalCode);
+    if (hasCoordinates && !hasAddress) {
+      console.warn('Detail-page data inconsistency: coordinates present but address fields missing', {
+        blockId: hdbBlock?.blockId,
+        blockNumber: hdbBlock?.blockNumber,
+        streetName: hdbBlock?.streetName,
+        postalCode: hdbBlock?.postalCode,
+        coordinates: hdbBlock?.coordinates,
+      });
+    }
+  }, [hdbBlock]);
 
   useEffect(() => {
     if (embeddedFutureDevRisk) {
@@ -697,9 +770,9 @@ function SpatialAnalysisResultDashBoardPage() {
     return developments.flatMap((development) => parseGeoJsonGeometry(development?.geom));
   }, [futureDevRisk]);
 
-  const matchedAmenities = normalizeSourceObject(result?.matchedAmenities ?? block?.matchedAmenities);
+  const matchedAmenities = normalizeSourceObject(hdbBlock?.matchedAmenities ?? resultMeta?.matchedAmenities);
   const matchedAmenitiesEntries = Object.entries(matchedAmenities);
-  const nearestAmenities = normalizeSourceObject(result?.nearestAmenities ?? block?.nearestAmenities);
+  const nearestAmenities = normalizeSourceObject(hdbBlock?.nearestAmenities ?? resultMeta?.nearestAmenities);
   const convenienceRows = useMemo(() => {
     return matchedAmenitiesEntries
       .map(([key, placeNames]) => {
@@ -718,24 +791,24 @@ function SpatialAnalysisResultDashBoardPage() {
   }, [matchedAmenitiesEntries, nearestAmenities]);
 
   const intelligence = useMemo(() => {
-    const estimatedPrice = pickFirstNumber([result?.estimatedPrice, block?.estimatedPrice]);
-    const floorAreaSqm = pickFirstNumber([result?.floorAreaSqm, block?.floorAreaSqm]);
+    const estimatedPrice = pickFirstNumber([hdbBlock?.estimatedPrice, resultMeta?.estimatedPrice]);
+    const floorAreaSqm = pickFirstNumber([hdbBlock?.floorAreaSqm, resultMeta?.floorAreaSqm]);
     const floorAreaSqft = floorAreaSqm === null ? null : floorAreaSqm * 10.7639;
 
-    const remainingLease = pickFirstNumber([block?.remainingLeaseYears, result?.remainingLeaseYears, result?.remainingLease, block?.remainingLease]);
-    const rawScore = pickFirstNumber([result?.globalMatchIndex, block?.globalMatchIndex, result?.matchScore]);
+    const remainingLease = pickFirstNumber([hdbBlock?.remainingLeaseYears, resultMeta?.remainingLeaseYears, resultMeta?.remainingLease, hdbBlock?.remainingLease]);
+    const rawScore = pickFirstNumber([hdbBlock?.globalMatchIndex, resultMeta?.globalMatchIndex, resultMeta?.matchScore]);
 
     const townAveragePsf = pickPositiveNumber([
-      result?.townAveragePsf,
-      block?.townAveragePsf,
-      result?.priceInsights?.townAveragePsf,
+      hdbBlock?.townAveragePsf,
+      resultMeta?.townAveragePsf,
+      resultMeta?.priceInsights?.townAveragePsf,
     ]);
 
     const legacyTownAveragePrice = pickFirstNumber([
-      result?.townAveragePrice,
-      result?.avgTownPrice,
-      result?.priceInsights?.townAveragePrice,
-      block?.townAveragePrice,
+      resultMeta?.townAveragePrice,
+      resultMeta?.avgTownPrice,
+      resultMeta?.priceInsights?.townAveragePrice,
+      hdbBlock?.townAveragePrice,
     ]);
 
     const currentPsf =
@@ -789,7 +862,7 @@ function SpatialAnalysisResultDashBoardPage() {
       priceBadge,
       savingsText,
     };
-  }, [block, result]);
+  }, [hdbBlock, resultMeta]);
 
   const pedestrianRows = useMemo(
     () => buildPedestrianRows(nearestAmenities, matchedAmenities, blockLat, blockLng),
@@ -811,8 +884,8 @@ function SpatialAnalysisResultDashBoardPage() {
   );
   const noiseSignature = hasNearbyMrtSignal ? 'Periodic: Train Rumble' : 'Constant: White Noise';
 
-  const peakWindow = block?.westSunStatus ? '2:30 PM - 5:00 PM' : '1:30 PM - 3:30 PM';
-  const sunBadgeTone = block?.westSunStatus ? 'moderate' : 'good';
+  const peakWindow = hdbBlock?.westSunStatus ? '2:30 PM - 5:00 PM' : '1:30 PM - 3:30 PM';
+  const sunBadgeTone = hdbBlock?.westSunStatus ? 'moderate' : 'good';
   const noiseBadgeTone = hasNearbyMrtSignal ? 'moderate' : 'good';
 
   const reserveDistance = hasValidBlockPosition
@@ -858,8 +931,8 @@ function SpatialAnalysisResultDashBoardPage() {
         <div className="block-banner">
           Block {blockNumber} {formatStreet(streetName)} Singapore {postalCode}
           <div className="coordinates">
-            {block?.coordinates
-              ? `${block.coordinates.lat.toFixed(6)}, ${block.coordinates.lng.toFixed(6)}`
+            {hdbBlock?.coordinates
+              ? `${hdbBlock.coordinates.lat.toFixed(6)}, ${hdbBlock.coordinates.lng.toFixed(6)}`
               : 'N/A'}
           </div>
         </div>
@@ -948,7 +1021,7 @@ function SpatialAnalysisResultDashBoardPage() {
           <div className="intelligence-card__header">
             <h2 className="intelligence-card__title">☀️ WEST SUN EXPOSURE</h2>
             <span className={`status-badge status-badge--${sunBadgeTone}`}>
-              {block?.westSunStatus ? 'MODERATE' : 'GOOD'}
+              {hdbBlock?.westSunStatus ? 'MODERATE' : 'GOOD'}
             </span>
           </div>
           <p className="intelligence-card__text">Peak Window: <strong>{peakWindow}</strong></p>
