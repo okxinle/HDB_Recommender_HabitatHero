@@ -143,6 +143,95 @@ const inferDevelopmentIntent = ({ gpr, luDesc, luText }) => {
   return 'Planned development zone (URA)';
 };
 
+const getFutureRiskTier = (development) => {
+  const riskScore = pickFirstNumber([
+    development?.risk_score,
+    development?.riskScore,
+    development?.risk,
+  ]);
+
+  if (riskScore !== null) {
+    if (riskScore >= 0.66) {
+      return 'high';
+    }
+    if (riskScore >= 0.33) {
+      return 'medium';
+    }
+    return 'low';
+  }
+
+  const haystack = [development?.gpr, development?.lu_desc, development?.lu_text]
+    .filter((value) => typeof value === 'string' && value.trim().length > 0)
+    .join(' ')
+    .toUpperCase();
+
+  if (haystack.includes('RESERVE SITE') || haystack.includes('MRT') || haystack.includes('RAIL') || haystack.includes('TRANSPORT')) {
+    return 'high';
+  }
+
+  if (haystack.includes('RESIDENTIAL') || haystack.includes('COMMERCIAL') || haystack.includes('MIXED USE') || haystack.includes('INDUSTRIAL')) {
+    return 'medium';
+  }
+
+  return 'low';
+};
+
+const getFutureRiskStyle = (development) => {
+  const tier = getFutureRiskTier(development);
+  const hasStructuredDescription = Boolean(
+    String(development?.lu_desc ?? '').trim() ||
+    String(development?.lu_text ?? '').trim() ||
+    String(development?.gpr ?? '').trim()
+  );
+
+  const palette = {
+    high: {
+      color: '#b42318',
+      fillColor: '#ff4d4d',
+    },
+    medium: {
+      color: '#b45309',
+      fillColor: '#ffa500',
+    },
+    low: {
+      color: '#166534',
+      fillColor: '#22c55e',
+    },
+  };
+
+  return {
+    ...palette[tier],
+    weight: 2,
+    opacity: 0.95,
+    fillOpacity: 0.3,
+    lineJoin: 'round',
+    dashArray: hasStructuredDescription ? undefined : '5, 5',
+  };
+};
+
+const getFutureRiskTitle = (development) => {
+  const rawTitle = String(development?.lu_desc ?? development?.lu_text ?? development?.gpr ?? '').trim();
+  return rawTitle || 'Future Development Zone';
+};
+
+const getFutureRiskSummary = (development) => {
+  const title = getFutureRiskTitle(development);
+  const intent = inferDevelopmentIntent({
+    gpr: development?.gpr,
+    luDesc: development?.lu_desc,
+    luText: development?.lu_text,
+  });
+  const distanceText = Number.isFinite(Number(development?.distance_meters))
+    ? `${Math.round(Number(development.distance_meters))} m away`
+    : 'Distance unavailable';
+
+  return {
+    title,
+    intent,
+    distanceText,
+  };
+};
+
 
 const haversineMeters = (lat1, lon1, lat2, lon2) => {
   const toRad = (deg) => (deg * Math.PI) / 180;
@@ -809,13 +898,30 @@ function SpatialAnalysisResultDashBoardPage() {
     return () => controller.abort();
   }, [postalCode, embeddedFutureDevRisk, hasValidBlockPosition, blockLat, blockLng]);
 
-  const futureRiskPolygons = useMemo(() => {
+  const futureRiskOverlays = useMemo(() => {
     const developments = Array.isArray(futureDevRisk?.developments)
       ? futureDevRisk.developments
       : [];
 
-    return developments.flatMap((development) => parseGeoJsonGeometry(development?.geom));
+    return developments.flatMap((development, developmentIndex) => {
+      const rings = parseGeoJsonGeometry(development?.geom);
+      const summary = getFutureRiskSummary(development);
+      const style = getFutureRiskStyle(development);
+
+      return rings.map((positions, ringIndex) => ({
+        key: `future-risk-${developmentIndex}-${ringIndex}`,
+        positions,
+        development,
+        summary,
+        style,
+      }));
+    });
   }, [futureDevRisk]);
+
+  const futureRiskPolygons = useMemo(
+    () => futureRiskOverlays.map((overlay) => overlay.positions),
+    [futureRiskOverlays]
+  );
 
   const nearestFutureDevelopment = useMemo(() => {
     const developments = Array.isArray(futureDevRisk?.developments)
@@ -1089,24 +1195,41 @@ function SpatialAnalysisResultDashBoardPage() {
               }}
             />
 
-            {futureRiskPolygons.map((polygon, index) => (
+            {futureRiskOverlays.map((overlay) => (
               <Polygon
-                key={`future-risk-${index}`}
-                positions={polygon}
-                pathOptions={{
-                  color: '#d8aa43',
-                  fillColor: '#d8aa43',
-                  fillOpacity: 0.36,
-                  weight: 2,
+                key={overlay.key}
+                positions={overlay.positions}
+                pathOptions={overlay.style}
+                eventHandlers={{
+                  mouseover: (event) => {
+                    const layer = event.target;
+                    layer.setStyle({
+                      ...overlay.style,
+                      fillOpacity: 0.5,
+                      weight: 3,
+                    });
+                    layer.bringToFront?.();
+                  },
+                  mouseout: (event) => {
+                    event.target.setStyle(overlay.style);
+                  },
                 }}
-              />
+              >
+                <Popup>
+                  <div className="future-risk-popup">
+                    <strong>{overlay.summary.title}</strong>
+                    <div>{overlay.summary.intent}</div>
+                    <div>{overlay.summary.distanceText}</div>
+                  </div>
+                </Popup>
+              </Polygon>
             ))}
           </MapContainer>
 
           <div className="report-map-legend">
             <div className="report-map-legend__item">☀ West Sun Risk</div>
             <div className="report-map-legend__item">🔊 Noise Buffer</div>
-            <div className="report-map-legend__item">▧ Future Development Risk Zone</div>
+            <div className="report-map-legend__item">▧ URA Risk Zones (High / Medium / Low)</div>
           </div>
         </div>
       </section>

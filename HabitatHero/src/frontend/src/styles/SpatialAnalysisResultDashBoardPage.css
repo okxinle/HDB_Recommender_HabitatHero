@@ -193,6 +193,23 @@
   margin-top: 8px;
 }
 
+.future-risk-popup {
+  min-width: 180px;
+  color: #111827;
+}
+
+.future-risk-popup strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.future-risk-popup div {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #4b5563;
+}
+
 .report-grid {
   max-width: 72rem;
   margin: 32px auto 0;
