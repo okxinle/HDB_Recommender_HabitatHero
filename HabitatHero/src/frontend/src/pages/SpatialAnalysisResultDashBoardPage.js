@@ -75,6 +75,20 @@ const formatCompactCurrency = (value) => {
   return `$${absoluteValue}`;
 };
 
+const formatFloorArea = (sqft, sqm) => {
+  const CONVERSION_FACTOR = 10.7639;
+  
+  if (typeof sqft === 'number' && Number.isFinite(sqft)) {
+    return `${Math.round(sqft)} sqft`;
+  }
+
+  if (typeof sqm === 'number' && Number.isFinite(sqm)) {
+    return `${Math.round(sqm * CONVERSION_FACTOR)} sqft`;
+  }
+
+  return 'N/A';
+};
+
 const formatPercent = (value, digits = 1) => {
   if (value === null) {
     return 'N/A';
@@ -492,6 +506,9 @@ function SpatialAnalysisResultDashBoardPage() {
     const floorAreaSqm = pickFirstNumber([result?.floorAreaSqm, block?.floorAreaSqm]);
     const floorAreaSqft = floorAreaSqm === null ? null : floorAreaSqm * 10.7639;
 
+    const remainingLease = pickFirstNumber([block?.remainingLeaseYears, result?.remainingLeaseYears, result?.remainingLease, block?.remainingLease]);
+    const rawScore = pickFirstNumber([result?.globalMatchIndex, block?.globalMatchIndex, result?.matchScore]);
+
     const townAveragePsf = pickPositiveNumber([
       result?.townAveragePsf,
       block?.townAveragePsf,
@@ -544,6 +561,8 @@ function SpatialAnalysisResultDashBoardPage() {
           : `~${formatCompactCurrency(Math.abs(estimatedSavings))} above town average`;
 
     return {
+      remainingLease: remainingLease !== null ? `${remainingLease} years` : 'N/A',
+      matchScore: rawScore !== null ? formatPercent(rawScore, 1) : 'N/A',
       estimatedPrice,
       floorAreaSqm,
       floorAreaSqft,
@@ -639,19 +658,7 @@ function SpatialAnalysisResultDashBoardPage() {
           <div className="summary-icon"><Clock size={18} /></div>
           <div className="summary-content">
             <span>Lease Remaining</span>
-            <strong>{pickFirstNumber([
-          block?.remainingLeaseYears,
-          result?.remainingLeaseYears,
-          result?.remainingLease,
-          block?.remainingLease
-        ]) !== null
-          ? `${pickFirstNumber([
-              block?.remainingLeaseYears,
-              result?.remainingLeaseYears,
-              result?.remainingLease,
-              block?.remainingLease
-            ])} years`
-          : 'N/A'}</strong>
+            <strong>{intelligence.remainingLease}</strong>
           </div>
         </div>
 
@@ -659,32 +666,7 @@ function SpatialAnalysisResultDashBoardPage() {
           <div className="summary-icon"><Ruler size={18} /></div>
           <div className="summary-content">
             <span>Floor Area</span>
-            <strong>{(() => {
-            const sqft = pickFirstNumber([
-              block?.floorAreaSqft,
-              block?.floor_area_sqft,
-              result?.floorAreaSqft,
-              result?.floor_area_sqft,
-            ]);
-
-            const sqm = pickFirstNumber([
-              block?.floorAreaSqm,
-              block?.floor_area_sqm,
-              result?.floorAreaSqm,
-              result?.floor_area_sqm,
-            ]);
-
-            if (sqft !== null) {
-              return `${Math.round(sqft)} sqft`;
-            }
-
-            if (sqm !== null) {
-              return `${Math.round(sqm * 10.7639)} sqft`;
-            }
-
-            return 'N/A';
-            })()}
-            </strong>
+            <strong>{intelligence.floorAreaSqft ? formatFloorArea(intelligence.floorAreaSqft) : 'N/A'}</strong>
           </div>
         </div>
 
@@ -700,21 +682,7 @@ function SpatialAnalysisResultDashBoardPage() {
           <div className="summary-icon"><BarChart3 size={18} /></div>
           <div className="summary-content">
             <span>Match Score</span>
-            <strong> {pickFirstNumber([
-          result?.globalMatchIndex,
-          block?.globalMatchIndex,
-          result?.matchScore
-        ]) !== null
-          ? formatPercent(
-              pickFirstNumber([
-                result?.globalMatchIndex,
-                block?.globalMatchIndex,
-                result?.matchScore
-              ]),
-              1
-            )
-          : 'N/A'}</strong>
-          </div>
+            <strong>{intelligence.matchScore}</strong></div>
         </div>
       </div>
 
