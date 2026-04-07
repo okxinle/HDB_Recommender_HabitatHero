@@ -35,6 +35,11 @@ public class LandUseCheckDevelopment extends SQLDbConnect {
         return calFutureDevRisk(postalCode, coords, distance);
     }
 
+    public JSONObject calFutureDevRiskByCoordinate(double latitude, double longitude, double distance) {
+        Coordinate coords = new Coordinate(latitude, longitude);
+        return calFutureDevRisk("COORDINATE_INPUT", coords, distance);
+    }
+
     private JSONObject calFutureDevRisk(String postalCode, Coordinate coords, double distance) {
         double longitude = coords.getLongitude();
         double latitude = coords.getLatitude();
@@ -57,7 +62,13 @@ public class LandUseCheckDevelopment extends SQLDbConnect {
                             ST_Buffer(ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?) AS buffer_geom
                     ) AS ref
                     WHERE
-                        GPR ILIKE '%SDP%'
+                        (
+                            GPR ILIKE '%SDP%'
+                            OR LU_DESC ILIKE '%RESERVE SITE%'
+                            OR LU_TEXT ILIKE '%RESERVE SITE%'
+                            OR LU_DESC ILIKE '%TRANSPORT%'
+                            OR LU_TEXT ILIKE '%TRANSPORT%'
+                        )
                         AND (
                             ST_Intersects(geom, ref.buffer_geom::geometry)
                             OR ST_DWithin(geom::geography, ref.ref_point, ?)

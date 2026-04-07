@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import habitathero.GeoSpatialAnalysis.src.LandUseDbMgr;
 import habitathero.control.BackfillCoordinatesService;
 import habitathero.control.DataPipelineService;
 import habitathero.control.HdbSpatialImportService;
@@ -108,6 +109,48 @@ public class SystemAdminController {
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
                 "error", "hdb_building initialization failed: " + e.getMessage()
+            ));
+        }
+    }
+
+    @PostMapping("/init-land-use")
+    public ResponseEntity<?> initializeLandUse() {
+        try {
+            LandUseDbMgr landUseDbMgr = LandUseDbMgr.getInstance();
+
+            boolean tableReady = landUseDbMgr.createSQLTable();
+            boolean downloadedGeoJson = landUseDbMgr.forceDownloadGeoJson();
+            boolean importedToDb = downloadedGeoJson && landUseDbMgr.importGeoJsonToSQLDb();
+            String importError = landUseDbMgr.getLastImportErrorMessage();
+            int importedCount = landUseDbMgr.getLastImportedCount();
+            int skippedCount = landUseDbMgr.getLastSkippedCount();
+            int totalFeatures = landUseDbMgr.getLastTotalFeatures();
+
+            if (!tableReady || !downloadedGeoJson || !importedToDb) {
+                return ResponseEntity.status(500).body(Map.of(
+                    "error", "Land use initialization incomplete.",
+                    "tableReady", tableReady,
+                    "downloadedGeoJson", downloadedGeoJson,
+                    "importedToDb", importedToDb,
+                    "totalFeatures", totalFeatures,
+                    "importedCount", importedCount,
+                    "skippedCount", skippedCount,
+                    "importError", importError == null ? "" : importError
+                ));
+            }
+
+            return ResponseEntity.ok(Map.of(
+                "message", "land_use_dataset initialized and imported successfully.",
+                "tableReady", tableReady,
+                "downloadedGeoJson", downloadedGeoJson,
+                "importedToDb", importedToDb,
+                "totalFeatures", totalFeatures,
+                "importedCount", importedCount,
+                "skippedCount", skippedCount
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "land_use_dataset initialization failed: " + e.getMessage()
             ));
         }
     }
