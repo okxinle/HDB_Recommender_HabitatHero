@@ -12,6 +12,7 @@ import HDBResultDashBoardPage from './pages/HDBResultDashBoardPage';
 import ProfilePage from './pages/ProfilePage';
 import ResourcesPage from './pages/ResourcesPage';
 import SpatialAnalysisResultDashBoardPage from './pages/SpatialAnalysisResultDashBoardPage';
+import LegalPage from './pages/LegalPage';
 
 function App() {
   useEffect(() => {
@@ -34,6 +35,7 @@ function App() {
           <Route path="/quiz" element={<QuizPage />} />
           <Route path="/results" element={<HDBResultDashBoardPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
+          <Route path="/legal" element={<LegalPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/result-detail/:blockId" element={<SpatialAnalysisResultDashBoardPage />} />
         </Routes>
