@@ -51,29 +51,28 @@ public class HDBBuildingSunFacingResultSQLHandler extends SQLDbConnect{
                     );
                 """;
 
+        boolean success = false;
         try {
             super.connectSQL();
-            Statement stmt = conn.createStatement();
-
-            try (ResultSet rs = stmt.executeQuery(checkSql)) {
+            try (Statement stmt = conn.createStatement();
+                    ResultSet rs = stmt.executeQuery(checkSql)) {
                 if (rs.next() && rs.getString(1) != null) {
                     System.out.println("sun_facing_analysis_result table exists: " + rs.getString(1));
-                    stmt.close();
-                    super.closeConnection();
-                    return true;
+                    success = true;
+                } else {
+                    stmt.executeUpdate(createTableSQL);
+                    System.out.println("sun_facing_analysis_result table created successfully.");
+                    success = true;
                 }
             }
-
-            stmt.executeUpdate(createTableSQL);
-            stmt.close();
-            super.closeConnection();
-            System.out.println("sun_facing_analysis_result table created successfully.");
-            return true;
         } catch (Exception e) {
             System.err.println("CACHE SAVE FAILED: " + e.getMessage());
             e.printStackTrace();
-            return false;
+        } finally {
+            super.closeConnection();
         }
+
+        return success;
     }
 
     // Save sun facing analysis results from calSunFacing output

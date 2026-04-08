@@ -104,7 +104,7 @@ public class SystemAdminController {
             HdbSpatialImportService.ImportResult result = hdbSpatialImportService.initializeAndImportHdbBuilding();
 
             return ResponseEntity.ok(Map.of(
-                "message", "hdb_blocks initialized and imported successfully.",
+                "message", "hdb_building_dataset initialized and imported successfully.",
                 "downloadedGeoJson", result.downloadedGeoJson(),
                 "hdbBuildingRows", result.hdbBuildingRows(),
                 "geoJsonPath", result.geoJsonPath(),
@@ -112,7 +112,7 @@ public class SystemAdminController {
             ));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
-                "error", "hdb_blocks initialization failed: " + e.getMessage()
+                "error", "hdb_building_dataset initialization failed: " + e.getMessage()
             ));
         }
     }
