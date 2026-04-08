@@ -33,7 +33,7 @@ public class HDBBuildingGeoJsonImporter extends SQLDbConnect {
             JSONArray features = geojson.getJSONArray("features");
 
             // format for SQL command to create row entires from geojson file
-            String sql = "INSERT INTO HDB_Building_Dataset " +
+            String sql = "INSERT INTO hdb_blocks " +
             "(objectid, blk_no, st_cod, entityid, postal_cod, inc_crc, fmel_upd_d, shape_area, shape_len, geom) " +
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ST_SetSRID(ST_GeomFromGeoJSON(?),4326)) " +
             "ON CONFLICT (objectid) DO UPDATE SET " +

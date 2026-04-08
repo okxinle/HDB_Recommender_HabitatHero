@@ -69,6 +69,7 @@ public class HDBBuildingSunFacingResultSQLHandler extends SQLDbConnect{
             super.closeConnection();
             System.out.println("sun_facing_analysis_result table created successfully.");
         } catch (Exception e) {
+            System.err.println("CACHE SAVE FAILED: " + e.getMessage());
             e.printStackTrace();
         }
     }

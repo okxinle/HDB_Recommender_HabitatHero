@@ -2,6 +2,8 @@ package habitathero.control;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,37 +23,27 @@ public class BackfillCoordinatesService {
     private static final Logger log = LoggerFactory.getLogger(BackfillCoordinatesService.class);
     private static final int SAVE_BATCH_SIZE = 500;
 
-    private static final String MATCH_BY_BLOCK_AND_STREET_SPATIAL_SQL = """
+    private static final String MATCH_BY_BLOCK_SPATIAL_SQL = """
         SELECT
-            postal_cod,
-            ST_Y(ST_Centroid(ST_Collect(geom))) AS latitude,
-            ST_X(ST_Centroid(ST_Collect(geom))) AS longitude
-        FROM hdb_building
-        WHERE blk_no = ?
-          AND (
-                UPPER(TRIM(st_cod)) = UPPER(TRIM(?))
-             OR REPLACE(UPPER(TRIM(st_cod)), ' ', '') = REPLACE(UPPER(TRIM(?)), ' ', '')
-          )
-          AND postal_cod IS NOT NULL
-          AND TRIM(postal_cod) <> ''
-        GROUP BY postal_cod
-        LIMIT 1
+                        postal_code AS postal_cod,
+                        (coordinates->>'lat')::double precision AS latitude,
+                        (coordinates->>'lng')::double precision AS longitude
+                FROM hdb_blocks
+                WHERE block_number = ?
+                    AND postal_code IS NOT NULL
+                    AND TRIM(postal_code) <> ''
+                    AND coordinates IS NOT NULL
         """;
 
-        private static final String MATCH_BY_BLOCK_AND_STREET_LOOKUP_SQL = """
+        private static final String MATCH_BY_BLOCK_LOOKUP_SQL = """
                 SELECT
                         postal_cod,
                         latitude,
                         longitude
                 FROM hdb_building_lookup
                 WHERE blk_no = ?
-                    AND (
-                                UPPER(TRIM(st_cod)) = UPPER(TRIM(?))
-                         OR REPLACE(UPPER(TRIM(st_cod)), ' ', '') = REPLACE(UPPER(TRIM(?)), ' ', '')
-                    )
                     AND postal_cod IS NOT NULL
                     AND TRIM(postal_cod) <> ''
-                LIMIT 1
                 """;
 
     private final IHDBRepository hdbRepository;
@@ -140,23 +132,52 @@ public class BackfillCoordinatesService {
             return null;
         }
 
-        String exactSql = source.usesSpatialFunctions() ? MATCH_BY_BLOCK_AND_STREET_SPATIAL_SQL
-                : MATCH_BY_BLOCK_AND_STREET_LOOKUP_SQL;
-
-        List<GeocodeResult> exactMatches = jdbcTemplate.query(
-                exactSql,
-                geocodeRowMapper(),
-                blockNumber.trim(),
-                streetName == null ? "" : streetName.trim(),
-                streetName == null ? "" : streetName.trim());
-
-        if (!exactMatches.isEmpty()) {
-            return exactMatches.get(0);
+        // Canonical source of truth: resolve postal+coordinates together from full address.
+        GeocodeResult addressMatch = geocodingService.getGeocodeByAddress(blockNumber.trim(), streetName.trim())
+                .map(g -> new GeocodeResult(g.postalCode(), g.latitude(), g.longitude()))
+                .orElse(null);
+        if (addressMatch != null) {
+            return addressMatch;
         }
 
-        return geocodingService.getGeocodeByAddress(blockNumber.trim(), streetName.trim())
-            .map(g -> new GeocodeResult(g.postalCode(), g.latitude(), g.longitude()))
-            .orElse(null);
+        GeocodeResult localMatch = findUniqueLocalGeocodeByBlock(blockNumber.trim(), source);
+        if (localMatch != null) {
+            return localMatch;
+        }
+
+        return null;
+    }
+
+    private GeocodeResult findUniqueLocalGeocodeByBlock(String blockNumber, SpatialSource source) {
+        String sql = source.usesSpatialFunctions() ? MATCH_BY_BLOCK_SPATIAL_SQL : MATCH_BY_BLOCK_LOOKUP_SQL;
+
+        List<GeocodeResult> candidates = jdbcTemplate.query(
+                sql,
+                geocodeRowMapper(),
+                blockNumber);
+
+        if (candidates.isEmpty()) {
+            return null;
+        }
+
+        Map<String, GeocodeResult> byPostal = new LinkedHashMap<>();
+        for (GeocodeResult candidate : candidates) {
+            if (candidate == null || candidate.postalCode() == null || candidate.postalCode().isBlank()) {
+                continue;
+            }
+            byPostal.putIfAbsent(candidate.postalCode().trim(), candidate);
+        }
+
+        if (byPostal.size() == 1) {
+            return byPostal.values().iterator().next();
+        }
+
+        if (byPostal.size() > 1) {
+            log.debug("Ambiguous local match for block {}. distinctPostals={}. Falling back to address geocoding.",
+                    blockNumber,
+                    byPostal.keySet());
+        }
+        return null;
     }
 
     private RowMapper<GeocodeResult> geocodeRowMapper() {
@@ -167,16 +188,17 @@ public class BackfillCoordinatesService {
     }
 
     private SpatialSource resolveSpatialSource() {
-        if (tableHasRows("public.hdb_building")) {
-            return new SpatialSource("hdb_building", true);
-        }
-
         if (tableHasRows("public.hdb_building_lookup")) {
             return new SpatialSource("hdb_building_lookup", false);
         }
 
+        // Legacy fallback only if lookup table is unavailable.
+        if (tableHasRows("public.hdb_blocks")) {
+            return new SpatialSource("hdb_blocks", true);
+        }
+
         throw new IllegalStateException(
-                "No spatial source is ready. Initialize hdb_building (PostGIS) or hdb_building_lookup first via /api/admin/init-hdb-building.");
+            "No spatial source is ready. Initialize hdb_blocks (PostGIS) or hdb_building_lookup first via /api/admin/init-hdb-building.");
     }
 
     private boolean tableHasRows(String qualifiedTableName) {

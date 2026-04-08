@@ -2,6 +2,7 @@ package habitathero.GeoSpatialAnalysis.src;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Statement;
 
 import org.json.JSONObject;
 
@@ -33,21 +34,30 @@ public class TransportLineSQLHandler extends SQLDbConnect {
         double hdb_latitude = coords.getLatitude();
         JSONObject result = new JSONObject();
 
-        String sql = """
-                SELECT OBJECTID, RAIL_TYPE,
-                       ST_Distance(
-                           geom::geography,
-                           ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography
-                       ) AS distance_meters,
-                       ST_AsGeoJSON(geom) AS geojson_geom
-                FROM Transport_Line_Dataset
-                WHERE GRND_LEVEL = 'ABOVEGROUND'
-                ORDER BY distance_meters
-                LIMIT 1;
-                """;
-
         try {
             super.connectSQL();
+
+            String transportDatasetTable = resolveTransportDatasetTable();
+            if (transportDatasetTable == null) {
+                result.put("status", "ERROR");
+                result.put("message", "Transport line dataset table is missing. Initialize transport line data first.");
+                super.closeConnection();
+                return result;
+            }
+
+            String sql = """
+                    SELECT OBJECTID, RAIL_TYPE,
+                           ST_Distance(
+                               geom::geography,
+                               ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography
+                           ) AS distance_meters,
+                           ST_AsGeoJSON(geom) AS geojson_geom
+                    FROM %s
+                    WHERE GRND_LEVEL = 'ABOVEGROUND'
+                    ORDER BY distance_meters
+                    LIMIT 1;
+                    """.formatted(transportDatasetTable);
+
             PreparedStatement pstmt = conn.prepareStatement(sql);
 
             pstmt.setDouble(1, hdb_longitude);
@@ -80,7 +90,6 @@ public class TransportLineSQLHandler extends SQLDbConnect {
             super.closeConnection();
 
         } catch (Exception e) {
-            e.printStackTrace();
             result.put("status", "ERROR");
             result.put("message", e.getMessage());
         }
@@ -102,27 +111,37 @@ public class TransportLineSQLHandler extends SQLDbConnect {
         double hdb_latitude = coords.getLatitude();
         JSONObject result = new JSONObject();
 
-        String sql = """
-                WITH distances AS (
-                    SELECT OBJECTID, RAIL_TYPE,
-                           ST_Distance(
-                               geom::geography,
-                               ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography
-                           ) AS distance_meters,
-                           ST_AsGeoJSON(geom) AS geojson_geom
-                    FROM Transport_Line_Dataset
-                    WHERE GRND_LEVEL = 'ABOVEGROUND'
-                          AND RAIL_TYPE IN ('MRT', 'LRT')
-                )
-                SELECT OBJECTID, RAIL_TYPE, distance_meters, geojson_geom FROM (
-                    SELECT *, ROW_NUMBER() OVER (PARTITION BY RAIL_TYPE ORDER BY distance_meters) as rn
-                    FROM distances
-                    WHERE distance_meters <= ?
-                ) t WHERE rn = 1;
-                """;
-
         try {
             super.connectSQL();
+
+            String transportDatasetTable = resolveTransportDatasetTable();
+            if (transportDatasetTable == null) {
+                result.put("status", "ERROR");
+                result.put("message", "Transport line dataset table is missing. Initialize transport line data first.");
+                result.put("search_radius", radius);
+                super.closeConnection();
+                return result;
+            }
+
+            String sql = """
+                    WITH distances AS (
+                        SELECT OBJECTID, RAIL_TYPE,
+                               ST_Distance(
+                                   geom::geography,
+                                   ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography
+                               ) AS distance_meters,
+                               ST_AsGeoJSON(geom) AS geojson_geom
+                        FROM %s
+                        WHERE GRND_LEVEL = 'ABOVEGROUND'
+                              AND RAIL_TYPE IN ('MRT', 'LRT')
+                    )
+                    SELECT OBJECTID, RAIL_TYPE, distance_meters, geojson_geom FROM (
+                        SELECT *, ROW_NUMBER() OVER (PARTITION BY RAIL_TYPE ORDER BY distance_meters) as rn
+                        FROM distances
+                        WHERE distance_meters <= ?
+                    ) t WHERE rn = 1;
+                    """.formatted(transportDatasetTable);
+
             PreparedStatement pstmt = conn.prepareStatement(sql);
 
             pstmt.setDouble(1, hdb_longitude);
@@ -158,13 +177,32 @@ public class TransportLineSQLHandler extends SQLDbConnect {
             super.closeConnection();
 
         } catch (Exception e) {
-            e.printStackTrace();
             result.put("status", "ERROR");
             result.put("message", e.getMessage());
         }
 
         result.put("search_radius", radius);
         return result;
+    }
+
+    private String resolveTransportDatasetTable() {
+        String[] candidates = {"public.transport_line_dataset", "public.transport_line"};
+        try (Statement stmt = conn.createStatement()) {
+            for (String candidate : candidates) {
+                String sql = "SELECT to_regclass('" + candidate + "')";
+                try (ResultSet rs = stmt.executeQuery(sql)) {
+                    if (rs.next()) {
+                        String resolved = rs.getString(1);
+                        if (resolved != null && !resolved.isBlank()) {
+                            return resolved;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            return null;
+        }
+        return null;
     }
 
     private boolean isInvalidCoordinate(Coordinate coords) {

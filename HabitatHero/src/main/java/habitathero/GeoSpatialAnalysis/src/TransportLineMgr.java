@@ -40,8 +40,11 @@ public class TransportLineMgr {
         System.out.println("Noise result missing for postal code " + postalCode);
         JSONObject computedResult = calNoiseLevel(postalCode);
         if (isInvalidAnalysisResult(computedResult)) {
-            return computedResult;
+            System.out.println("Transport data unavailable. Falling back to neutral noise result for postal code " + postalCode);
+            computedResult = buildNeutralNoiseResult(postalCode, null, "DEFAULT_RESULT_NO_TRANSPORT_DATA");
         }
+        System.out.println("ATTEMPTING TO SAVE CACHE FOR POSTAL: " + postalCode);
+        tlCalResultSQLHandler.saveTransportLineCalResult(computedResult);
         return computedResult;
     }
 
@@ -62,8 +65,11 @@ public class TransportLineMgr {
         System.out.println("Noise result missing for postal code " + postalCode + " with radius " + radius);
         JSONObject computedResult = calNoiseLevel(postalCode, radius);
         if (isInvalidAnalysisResult(computedResult)) {
-            return computedResult;
+            System.out.println("Transport data unavailable. Falling back to neutral noise result for postal code " + postalCode);
+            computedResult = buildNeutralNoiseResult(postalCode, radius, "DEFAULT_RESULT_NO_TRANSPORT_DATA");
         }
+        System.out.println("ATTEMPTING TO SAVE CACHE FOR POSTAL: " + postalCode);
+        tlCalResultSQLHandler.saveTransportLineCalResult(computedResult);
         return computedResult;
     }
 
@@ -78,6 +84,7 @@ public class TransportLineMgr {
             return noiseResult;
         }
 
+        System.out.println("ATTEMPTING TO SAVE CACHE FOR POSTAL: " + postalCode);
         tlCalResultSQLHandler.saveTransportLineCalResult(noiseResult);
         return noiseResult;
     }
@@ -93,6 +100,7 @@ public class TransportLineMgr {
             return noiseResult;
         }
 
+        System.out.println("ATTEMPTING TO SAVE CACHE FOR POSTAL: " + postalCode);
         tlCalResultSQLHandler.saveTransportLineCalResult(noiseResult);
         return noiseResult;
     }
@@ -121,6 +129,23 @@ public class TransportLineMgr {
 
         String status = result.optString("status", "");
         return !"OK".equalsIgnoreCase(status);
+    }
+
+    private JSONObject buildNeutralNoiseResult(String postalCode, Double radius, String message) {
+        JSONObject neutral = new JSONObject();
+        neutral.put("postalCode", postalCode == null ? "" : postalCode);
+        neutral.put("objectId", JSONObject.NULL);
+        neutral.put("rail_type", JSONObject.NULL);
+        neutral.put("distance_meters", JSONObject.NULL);
+        neutral.put("hdb_latitude", JSONObject.NULL);
+        neutral.put("hdb_longitude", JSONObject.NULL);
+        if (radius != null) {
+            neutral.put("search_radius", radius);
+        }
+        neutral.put("noise_level_db", 0.0);
+        neutral.put("status", "OK");
+        neutral.put("message", message == null ? "DEFAULT_RESULT_NO_TRANSPORT_DATA" : message);
+        return neutral;
     }
 
 }

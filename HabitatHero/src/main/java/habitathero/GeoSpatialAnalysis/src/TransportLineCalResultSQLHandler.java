@@ -3,6 +3,7 @@ package habitathero.GeoSpatialAnalysis.src;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.sql.Types;
 
 import org.json.JSONObject;
 
@@ -94,19 +95,20 @@ public class TransportLineCalResultSQLHandler extends SQLDbConnect {
             PreparedStatement stmt = conn.prepareStatement(sql);
             String postalCode = noiseResult != null ? noiseResult.optString("postalCode", null) : null;
             if (postalCode == null || postalCode.isEmpty()) {
+                System.err.println("CACHE SAVE FAILED: postalCode missing from noiseResult");
                 stmt.close();
                 super.closeConnection();
                 return;
             }
 
             stmt.setString(1, postalCode);
-            stmt.setObject(2, noiseResult != null && noiseResult.has("objectId") ? noiseResult.optInt("objectId") : null);
+            setNullableInt(stmt, 2, noiseResult, "objectId");
             stmt.setString(3, noiseResult != null ? noiseResult.optString("rail_type", null) : null);
-            stmt.setObject(4, noiseResult != null && noiseResult.has("distance_meters") ? noiseResult.optDouble("distance_meters") : null);
-            stmt.setObject(5, noiseResult != null && noiseResult.has("hdb_latitude") ? noiseResult.optDouble("hdb_latitude") : null);
-            stmt.setObject(6, noiseResult != null && noiseResult.has("hdb_longitude") ? noiseResult.optDouble("hdb_longitude") : null);
-            stmt.setObject(7, noiseResult != null && noiseResult.has("search_radius") ? noiseResult.optDouble("search_radius") : null);
-            stmt.setObject(8, noiseResult != null && noiseResult.has("noise_level_db") ? noiseResult.optDouble("noise_level_db") : null);
+            setNullableDouble(stmt, 4, noiseResult, "distance_meters");
+            setNullableDouble(stmt, 5, noiseResult, "hdb_latitude");
+            setNullableDouble(stmt, 6, noiseResult, "hdb_longitude");
+            setNullableDouble(stmt, 7, noiseResult, "search_radius");
+            setNullableDouble(stmt, 8, noiseResult, "noise_level_db");
             stmt.setString(9, noiseResult != null ? noiseResult.optString("status", "OK") : null);
             stmt.setString(10, noiseResult != null ? noiseResult.optString("message", null) : null);
             stmt.setString(11, noiseResult != null ? noiseResult.toString() : null);
@@ -114,9 +116,30 @@ public class TransportLineCalResultSQLHandler extends SQLDbConnect {
             stmt.executeUpdate();
             stmt.close();
             super.closeConnection();
+            System.out.println("Noise cache upserted for postal code " + postalCode);
         } catch (Exception e) {
+            System.err.println("CACHE SAVE FAILED: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    private void setNullableInt(PreparedStatement stmt, int index, JSONObject source, String key) throws Exception {
+        if (source != null && source.has(key) && !source.isNull(key)) {
+            stmt.setInt(index, source.optInt(key));
+            return;
+        }
+        stmt.setNull(index, Types.INTEGER);
+    }
+
+    private void setNullableDouble(PreparedStatement stmt, int index, JSONObject source, String key) throws Exception {
+        if (source != null && source.has(key) && !source.isNull(key)) {
+            double value = source.optDouble(key, Double.NaN);
+            if (Double.isFinite(value)) {
+                stmt.setDouble(index, value);
+                return;
+            }
+        }
+        stmt.setNull(index, Types.DOUBLE);
     }
 
     public JSONObject retrieveTransportLineCalResult(String postalCode) {

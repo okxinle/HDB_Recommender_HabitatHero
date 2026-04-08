@@ -19,9 +19,9 @@ public class HDBBuildingSQLCreator extends SQLDbConnect {
     }
 
     public boolean createSQLTable() {
-        String checkSql = "SELECT to_regclass('public.hdb_building_dataset')";
+        String checkSql = "SELECT to_regclass('public.hdb_blocks')";
         String createTableSQL = """
-                CREATE TABLE IF NOT EXISTS HDB_Building_Dataset (
+            CREATE TABLE IF NOT EXISTS hdb_blocks (
                     OBJECTID INTEGER PRIMARY KEY,
                     BLK_NO VARCHAR(20),
                     ST_COD VARCHAR(20),
@@ -44,12 +44,12 @@ public class HDBBuildingSQLCreator extends SQLDbConnect {
                 if (rs.next()) {
                     String tableName = rs.getString(1); // get first column
                     if (tableName != null) {
-                        System.out.println("hdb_building_dataset table exists: " + tableName);
+                        System.out.println("hdb_blocks table exists: " + tableName);
                         stmt.close();
                         super.closeConnection();
                         return true;
                     } else {
-                        System.out.println("hdb_building_dataset table does not exist");
+                        System.out.println("hdb_blocks table does not exist");
                     }
                 }
             }
@@ -59,7 +59,7 @@ public class HDBBuildingSQLCreator extends SQLDbConnect {
             stmt.close();
             super.closeConnection();
 
-            System.out.println("hdb_building_dataset table created successfully.");
+            System.out.println("hdb_blocks table created successfully.");
             return true;
 
         } catch (Exception e) {

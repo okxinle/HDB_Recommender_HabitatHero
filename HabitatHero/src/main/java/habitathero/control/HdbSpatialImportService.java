@@ -62,18 +62,18 @@ public class HdbSpatialImportService {
     }
 
     private ImportResult importWithPostgis(HDBBuildingDbMgr mgr, boolean downloaded, Path datasetFile) {
-        log.info("Initializing hdb_building table (if missing)...");
+        log.info("Initializing hdb_blocks table (if missing)...");
         mgr.createSQLTable();
-        ensureTableExists("public.hdb_building", "hdb_building table was not created.");
+        ensureTableExists("public.hdb_blocks", "hdb_blocks table was not created.");
 
-        log.info("Importing HDB GeoJSON into hdb_building...");
+        log.info("Importing HDB GeoJSON into hdb_blocks...");
         mgr.importGeoJsonToSQLDb();
 
-        Long rowCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM public.hdb_building", Long.class);
+        Long rowCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM public.hdb_blocks", Long.class);
         long importedRows = rowCount == null ? 0L : rowCount;
 
-        log.info("hdb_building import complete. rows={}", importedRows);
-        return new ImportResult(downloaded, importedRows, datasetFile.toString(), "hdb_building");
+        log.info("hdb_blocks import complete. rows={}", importedRows);
+        return new ImportResult(downloaded, importedRows, datasetFile.toString(), "hdb_blocks");
     }
 
     private ImportResult importIntoLookupTable(boolean downloaded, Path datasetFile) {
