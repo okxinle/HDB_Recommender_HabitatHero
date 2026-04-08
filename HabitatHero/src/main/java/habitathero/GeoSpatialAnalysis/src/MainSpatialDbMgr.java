@@ -42,15 +42,20 @@ public class MainSpatialDbMgr {
         System.out.println("[INIT] Starting database table initialization...");
 
         try {
-            createHDBBuildingTable();
-            createLandUseTable();
-            createTransportLineTable();
-            createHDBBuildingSunFacingResultTable();
-            createLandUseFutureDevRiskResultTable();
-            createTransportLineCalResultTable();
-            createMetadataTable();
+            boolean allSuccessful = true;
+            allSuccessful &= createHDBBuildingTable();
+            allSuccessful &= createLandUseTable();
+            allSuccessful &= createTransportLineTable();
+            allSuccessful &= createHDBBuildingSunFacingResultTable();
+            allSuccessful &= createLandUseFutureDevRiskResultTable();
+            allSuccessful &= createTransportLineCalResultTable();
+            allSuccessful &= createMetadataTable();
 
-            System.out.println("[SUCCESS] All database tables initialized successfully.");
+            if (allSuccessful) {
+                System.out.println("[SUCCESS] All database tables initialized successfully.");
+            } else {
+                System.out.println("[WARN] Database table initialization completed with failures. Check prior logs.");
+            }
         } catch (Exception e) {
             System.out.println("[ERROR] Failed to initialize database tables: " + e.getMessage());
             e.printStackTrace();
@@ -60,57 +65,57 @@ public class MainSpatialDbMgr {
     /**
      * Creates the SQL table for HDB building spatial data.
      */
-    public void createHDBBuildingTable() {
+    public boolean createHDBBuildingTable() {
         System.out.println("[INIT] Creating HDB_Building table...");
-        hdbBuildingDbMgr.createSQLTable();
+        return hdbBuildingDbMgr.createSQLTable();
     }
 
     /**
      * Creates the SQL table for land use spatial data.
      */
-    public void createLandUseTable() {
+    public boolean createLandUseTable() {
         System.out.println("[INIT] Creating LandUse table...");
-        landUseDbMgr.createSQLTable();
+        return landUseDbMgr.createSQLTable();
     }
 
     /**
      * Creates the SQL table for transport line spatial data.
      */
-    public void createTransportLineTable() {
+    public boolean createTransportLineTable() {
         System.out.println("[INIT] Creating TransportLine table...");
-        transportLineDbMgr.createSQLTable();
+        return transportLineDbMgr.createSQLTable();
     }
 
     /**
      * Creates the SQL table for transport line calculation results.
      */
-    public void createTransportLineCalResultTable() {
+    public boolean createTransportLineCalResultTable() {
         System.out.println("[INIT] Creating TransportLine Cal Result table...");
-        transportLineCalResultSQLHandler.createSQLTable();
+        return transportLineCalResultSQLHandler.createSQLTable();
     }
 
     /**
      * Creates the SQL table for HDB building sun-facing results.
      */
-    public void createHDBBuildingSunFacingResultTable() {
+    public boolean createHDBBuildingSunFacingResultTable() {
         System.out.println("[INIT] Creating HDB Building Sun Facing Result table...");
-        hdbBuildingSunFacingResultSQLHandler.createSQLTable();
+        return hdbBuildingSunFacingResultSQLHandler.createSQLTable();
     }
 
     /**
      * Creates the SQL table for future development risk results.
      */
-    public void createLandUseFutureDevRiskResultTable() {
+    public boolean createLandUseFutureDevRiskResultTable() {
         System.out.println("[INIT] Creating LandUse Future Dev Risk Result table...");
-        landUseFutureDevRiskResultSQLHandler.createSQLTable();
+        return landUseFutureDevRiskResultSQLHandler.createSQLTable();
     }
 
     /**
      * Creates the SQL table for DataGov metadata.
      */
-    public void createMetadataTable() {
+    public boolean createMetadataTable() {
         System.out.println("[INIT] Creating Metadata table...");
-        dataGovMetadataMgr.createSQLTable();
+        return dataGovMetadataMgr.createSQLTable();
     }
 
     // ============ DATA IMPORT OPERATIONS ============
@@ -122,11 +127,16 @@ public class MainSpatialDbMgr {
         System.out.println("[IMPORT] Starting data import operations...");
 
         try {
-            importHDBBuildingGeoJson();
-            importLandUseGeoJson();
-            importTransportLineGeoJson();
+            boolean allSuccessful = true;
+            allSuccessful &= importHDBBuildingGeoJson();
+            allSuccessful &= importLandUseGeoJson();
+            allSuccessful &= importTransportLineGeoJson();
 
-            System.out.println("[SUCCESS] All GeoJSON datasets imported successfully.");
+            if (allSuccessful) {
+                System.out.println("[SUCCESS] All GeoJSON datasets imported successfully.");
+            } else {
+                System.out.println("[WARN] GeoJSON import completed with failures. Check prior logs.");
+            }
         } catch (Exception e) {
             System.out.println("[ERROR] Failed to import GeoJSON datasets: " + e.getMessage());
             e.printStackTrace();
@@ -136,25 +146,25 @@ public class MainSpatialDbMgr {
     /**
      * Imports HDB building GeoJSON data into SQL storage.
      */
-    public void importHDBBuildingGeoJson() {
+    public boolean importHDBBuildingGeoJson() {
         System.out.println("[IMPORT] Importing HDB Building GeoJSON...");
-        hdbBuildingDbMgr.importGeoJsonToSQLDb();
+        return hdbBuildingDbMgr.importGeoJsonToSQLDb();
     }
 
     /**
      * Imports land use GeoJSON data into SQL storage.
      */
-    public void importLandUseGeoJson() {
+    public boolean importLandUseGeoJson() {
         System.out.println("[IMPORT] Importing LandUse GeoJSON...");
-        landUseDbMgr.importGeoJsonToSQLDb();
+        return landUseDbMgr.importGeoJsonToSQLDb();
     }
 
     /**
      * Imports transport line GeoJSON data into SQL storage.
      */
-    public void importTransportLineGeoJson() {
+    public boolean importTransportLineGeoJson() {
         System.out.println("[IMPORT] Importing TransportLine GeoJSON...");
-        transportLineDbMgr.importGeoJsonToSQLDb();
+        return transportLineDbMgr.importGeoJsonToSQLDb();
     }
 
     // ============ DATA DOWNLOAD OPERATIONS ============
@@ -167,11 +177,16 @@ public class MainSpatialDbMgr {
         System.out.println("[DOWNLOAD] Starting data download operations...");
 
         try {
-            downloadHDBBuildingGeoJson();
-            downloadLandUseGeoJson();
-            downloadTransportLineGeoJson();
+            boolean allSuccessful = true;
+            allSuccessful &= downloadHDBBuildingGeoJson();
+            allSuccessful &= downloadLandUseGeoJson();
+            allSuccessful &= downloadTransportLineGeoJson();
 
-            System.out.println("[SUCCESS] All GeoJSON datasets downloaded successfully.");
+            if (allSuccessful) {
+                System.out.println("[SUCCESS] All GeoJSON datasets downloaded successfully.");
+            } else {
+                System.out.println("[WARN] GeoJSON download completed with failures or skips. Check prior logs.");
+            }
         } catch (Exception e) {
             System.out.println("[ERROR] Failed to download GeoJSON datasets: " + e.getMessage());
             e.printStackTrace();
@@ -181,49 +196,49 @@ public class MainSpatialDbMgr {
     /**
      * Downloads the HDB building GeoJSON dataset.
      */
-    public void downloadHDBBuildingGeoJson() {
+    public boolean downloadHDBBuildingGeoJson() {
         System.out.println("[DOWNLOAD] Downloading HDB Building GeoJSON...");
-        hdbBuildingDbMgr.downloadGeoJson();
+        return Boolean.TRUE.equals(hdbBuildingDbMgr.downloadGeoJson());
     }
 
     /**
      * Downloads the land use GeoJSON dataset.
      */
-    public void downloadLandUseGeoJson() {
+    public boolean downloadLandUseGeoJson() {
         System.out.println("[DOWNLOAD] Downloading LandUse GeoJSON...");
-        landUseDbMgr.downloadGeoJson();
+        return Boolean.TRUE.equals(landUseDbMgr.downloadGeoJson());
     }
 
     /**
      * Downloads the transport line GeoJSON dataset.
      */
-    public void downloadTransportLineGeoJson() {
+    public boolean downloadTransportLineGeoJson() {
         System.out.println("[DOWNLOAD] Downloading TransportLine GeoJSON...");
-        transportLineDbMgr.downloadGeoJson();
+        return Boolean.TRUE.equals(transportLineDbMgr.downloadGeoJson());
     }
 
     /**
      * Force downloads the HDB building GeoJSON dataset.
      */
-    public void forceDownloadHDBBuildingGeoJson() {
+    public boolean forceDownloadHDBBuildingGeoJson() {
         System.out.println("[FORCE-DOWNLOAD] Downloading HDB Building GeoJSON...");
-        hdbBuildingDbMgr.forceDownloadGeoJson();
+        return hdbBuildingDbMgr.forceDownloadGeoJson();
     }
 
     /**
      * Force downloads the land use GeoJSON dataset.
      */
-    public void forceDownloadLandUseGeoJson() {
+    public boolean forceDownloadLandUseGeoJson() {
         System.out.println("[FORCE-DOWNLOAD] Downloading LandUse GeoJSON...");
-        landUseDbMgr.forceDownloadGeoJson();
+        return landUseDbMgr.forceDownloadGeoJson();
     }
 
     /**
      * Force downloads the transport line GeoJSON dataset.
      */
-    public void forceDownloadTransportLineGeoJson() {
+    public boolean forceDownloadTransportLineGeoJson() {
         System.out.println("[FORCE-DOWNLOAD] Downloading TransportLine GeoJSON...");
-        transportLineDbMgr.forceDownloadGeoJson();
+        return transportLineDbMgr.forceDownloadGeoJson();
     }
 
     /**
@@ -233,11 +248,16 @@ public class MainSpatialDbMgr {
         System.out.println("[FORCE-DOWNLOAD] Starting forced download operations...");
 
         try {
-            forceDownloadHDBBuildingGeoJson();
-            forceDownloadLandUseGeoJson();
-            forceDownloadTransportLineGeoJson();
+            boolean allSuccessful = true;
+            allSuccessful &= forceDownloadHDBBuildingGeoJson();
+            allSuccessful &= forceDownloadLandUseGeoJson();
+            allSuccessful &= forceDownloadTransportLineGeoJson();
 
-            System.out.println("[SUCCESS] All GeoJSON datasets force downloaded successfully.");
+            if (allSuccessful) {
+                System.out.println("[SUCCESS] All GeoJSON datasets force downloaded successfully.");
+            } else {
+                System.out.println("[WARN] Forced GeoJSON download completed with failures. Check prior logs.");
+            }
         } catch (Exception e) {
             System.out.println("[ERROR] Failed to force download GeoJSON datasets: " + e.getMessage());
             e.printStackTrace();
@@ -256,7 +276,7 @@ public class MainSpatialDbMgr {
         downloadAllGeoJsonDatasets();
         importAllGeoJsonDatasets();
 
-        System.out.println("===== DATABASE SETUP COMPLETE =====\n");
+        System.out.println("===== DATABASE SETUP COMPLETE (see stage logs for status) =====\n");
     }
 
     /**
@@ -288,6 +308,10 @@ public class MainSpatialDbMgr {
             System.out.println("[ERROR] Failed to force refresh GeoJSON datasets: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    public static void main(String[] args) {
+        MainSpatialDbMgr.getInstance().setupDatabase();
     }
 
 }

@@ -3,16 +3,18 @@ package habitathero.GeoSpatialAnalysis.src;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import netscape.javascript.JSObject;
+
 public class MainSpatialMgr {
     /**
-     * Demo entry point for quick coordinate lookup by postal code.
+     * Demo entry point
      *
      * @param args optional CLI args (unused in current flow)
      */
     public static void main(String[] args) {
         MainSpatialMgr mgr = MainSpatialMgr.getInstance();
-        Coordinate coords = mgr.postalCodeToCoordinate("670180");
-        System.out.printf("Coordinate: %f, %f\n", coords.getLatitude(), coords.getLongitude());
+        JSONObject result = mgr.getComprehensiveLocationAnalysis("670180");
+        System.out.println(result.toString());
     }
     
     private static MainSpatialMgr instance;

@@ -21,7 +21,7 @@ public class DatasetMetadataSQLHandler extends SQLDbConnect {
         return instance;
     }
 
-    public void createSQLTable() {
+    public boolean createSQLTable() {
         String checkSql = "SELECT to_regclass('public.Dataset_Metadata')";
         String createTableSQL = """
                     CREATE TABLE IF NOT EXISTS Dataset_Metadata (
@@ -39,7 +39,7 @@ public class DatasetMetadataSQLHandler extends SQLDbConnect {
             try (ResultSet rs = stmt.executeQuery(checkSql)) {
                 if (rs.next() && rs.getString(1) != null) {
                     System.out.println("Dataset_Metadata table exists: " + rs.getString(1));
-                    return;
+                    return true;
                 }
             }
 
@@ -47,8 +47,10 @@ public class DatasetMetadataSQLHandler extends SQLDbConnect {
             stmt.close();
             super.closeConnection();
             System.out.println("Dataset_Metadata table created successfully.");
+            return true;
         } catch (Exception e) {
             e.printStackTrace();
+            return false;
         }
     }
 

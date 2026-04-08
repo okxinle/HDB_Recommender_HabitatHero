@@ -15,7 +15,8 @@ public class SQLDbConnect {
     protected static Connection conn;
 
     public SQLDbConnect() {
-        conn = null;
+        // Keep constructor side-effect free. Resetting a shared static connection here
+        // can null-out an active connection used by another singleton.
     }
 
     public void connectSQL() {
@@ -31,7 +32,10 @@ public class SQLDbConnect {
 
             conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Failed to connect to PostgreSQL at " +
+                getConfig("DB_HOST", "localhost") + ":" + getConfig("DB_PORT", "5432") +
+                "/" + getConfig("DB_NAME", "habitathero_db") +
+                " as user '" + getConfig("DB_USERNAME", "postgres") + "': " + e.getMessage(), e);
         }
     }
 

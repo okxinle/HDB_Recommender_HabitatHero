@@ -207,12 +207,12 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
 
     private JSONObject getHDBBuildingGeom(String postalCode) {
         System.out.println("Fetching building geometry from database");
-        String sql = "SELECT ST_AsGeoJSON(geom) AS geojson FROM hdb_blocks WHERE postal_cod = ? LIMIT 1";
+        String sql = "SELECT ST_AsGeoJSON(geom) AS geojson FROM hdb_building_dataset WHERE postal_cod = ? LIMIT 1";
         try {
             connectSQL();
 
             if (!hasGeomColumn()) {
-                System.out.println("hdb_blocks.geom is unavailable; cannot run polygon sun-facing computation.");
+                System.out.println("hdb_building_dataset.geom is unavailable; cannot run polygon sun-facing computation.");
                 closeConnection();
                 return null;
             }
@@ -250,7 +250,7 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
                 SELECT 1
                 FROM information_schema.columns
                 WHERE table_schema = 'public'
-                  AND table_name = 'hdb_blocks'
+                                    AND table_name = 'hdb_building_dataset'
                   AND column_name = 'geom'
                 LIMIT 1
                 """;

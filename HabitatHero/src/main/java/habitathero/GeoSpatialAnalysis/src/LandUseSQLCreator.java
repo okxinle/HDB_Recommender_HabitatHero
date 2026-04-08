@@ -19,9 +19,8 @@ public class LandUseSQLCreator extends SQLDbConnect {
     }
 
     public boolean createSQLTable() {
-
         String checkSql = "SELECT to_regclass('public.land_use_dataset')";
-    
+        String createExtension = "CREATE EXTENSION IF NOT EXISTS postgis;";
         String createTableSQL = """
             CREATE TABLE IF NOT EXISTS Land_Use_Dataset (
                 objectid INTEGER PRIMARY KEY,
@@ -40,6 +39,9 @@ public class LandUseSQLCreator extends SQLDbConnect {
     
         try {
             super.connectSQL();
+            if (conn == null) {
+                throw new IllegalStateException("PostgreSQL connection is not initialized.");
+            }
             Statement stmt = conn.createStatement();
     
             // Check if table exists
@@ -58,8 +60,8 @@ public class LandUseSQLCreator extends SQLDbConnect {
             }
     
             // Create table
+            stmt.executeUpdate(createExtension);
             stmt.executeUpdate(createTableSQL);
-    
             stmt.close();
             super.closeConnection();
     

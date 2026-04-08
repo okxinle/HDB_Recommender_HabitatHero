@@ -101,14 +101,6 @@ return (
               onChange={handleInputChange} // Capturing input
             />
 
-            <div className="login-row">
-              <label className="remember">
-                <input type="checkbox" />
-                <span>Keep me logged in</span>
-              </label>
-
-            </div>
-
             <button className="signin-btn" type="submit">
               SIGN IN
             </button>

@@ -50,6 +50,8 @@ public class LandUseCheckDevelopment extends SQLDbConnect {
                     SELECT
                         OBJECTID,
                         GPR,
+                        LU_DESC,
+                        LU_TEXT,
                         ST_Distance(
                             ST_Centroid(geom)::geography,
                             ref.ref_point
@@ -94,12 +96,16 @@ public class LandUseCheckDevelopment extends SQLDbConnect {
             while (rs.next()) {
                 int objectId = rs.getInt("OBJECTID");
                 String gpr = rs.getString("GPR");
+                String luDesc = rs.getString("LU_DESC");
+                String luText = rs.getString("LU_TEXT");
                 double cal_distance = rs.getDouble("distance_meters");
                 String geojson_geom = rs.getString("geojson_geom");
 
                 JSONObject development = new JSONObject();
                 development.put("objectId", objectId);
                 development.put("gpr", gpr);
+                development.put("lu_desc", luDesc == null ? "" : luDesc);
+                development.put("lu_text", luText == null ? "" : luText);
                 development.put("distance_meters", cal_distance);
                 development.put("geom", geojson_geom);
                 developments.put(development);

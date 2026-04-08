@@ -25,7 +25,7 @@ public class TransportLineCalResultSQLHandler extends SQLDbConnect {
         return instance;
     }
 
-    public void createSQLTable() {
+    public boolean createSQLTable() {
         String checkSql = "SELECT to_regclass('public.transport_line_cal_result')";
         String createTableSQL = """
                 CREATE TABLE IF NOT EXISTS transport_line_cal_result (
@@ -54,7 +54,7 @@ public class TransportLineCalResultSQLHandler extends SQLDbConnect {
                     System.out.println("transport_line_cal_result table exists: " + rs.getString(1));
                     stmt.close();
                     super.closeConnection();
-                    return;
+                    return true;
                 }
             }
 
@@ -62,8 +62,10 @@ public class TransportLineCalResultSQLHandler extends SQLDbConnect {
             stmt.close();
             super.closeConnection();
             System.out.println("transport_line_cal_result table created successfully.");
+            return true;
         } catch (Exception e) {
             e.printStackTrace();
+            return false;
         }
     }
 

@@ -1,5 +1,6 @@
 package habitathero.boundary;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import habitathero.GeoSpatialAnalysis.src.LandUseMgr;
+import habitathero.GeoSpatialAnalysis.src.MainSpatialMgr;
 import habitathero.control.GeocodingService;
 import habitathero.control.RecommendationEngine;
 import habitathero.control.UserProfileDbManager;
@@ -39,6 +41,7 @@ public class RecommendationController {
     private final UserProfileDbManager userProfileDbManager;
     private final GeocodingService geocodingService;
     private final LandUseMgr landUseMgr;
+    private final MainSpatialMgr mainSpatialMgr;
 
     public RecommendationController(RecommendationEngine engine,
                                     UserProfileDbManager userProfileDbManager,
@@ -47,6 +50,7 @@ public class RecommendationController {
         this.userProfileDbManager = userProfileDbManager;
         this.geocodingService = geocodingService;
         this.landUseMgr = LandUseMgr.getInstance();
+        this.mainSpatialMgr = MainSpatialMgr.getInstance();
     }
 
     /**
@@ -158,6 +162,63 @@ public class RecommendationController {
                             "message", "Unable to retrieve future development risk"
                     ));
         }
+    }
+
+    @GetMapping("/sun-facing")
+    public ResponseEntity<?> getSunFacing(
+            @RequestParam("postalCode") String postalCode,
+            @RequestParam(value = "eastAzimuth", required = false) Double eastAzimuth,
+            @RequestParam(value = "westAzimuth", required = false) Double westAzimuth) {
+        try {
+            if (!hasText(postalCode)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("status", "ERROR", "message", "postalCode is required"));
+            }
+
+            String normalizedPostalCode = postalCode.trim();
+            
+            JSONObject result = querySunFacing(normalizedPostalCode, eastAzimuth, westAzimuth);
+
+            if (isInvalidPostalCodeResult(result)) {
+                String alternativePostalCode = toGeoSpatialPostalCode(normalizedPostalCode);
+                if (!alternativePostalCode.equals(normalizedPostalCode)) {
+                    result = querySunFacing(alternativePostalCode, eastAzimuth, westAzimuth);
+                }
+            }
+
+            if (result == null || result.isEmpty() || "ERROR".equalsIgnoreCase(result.optString("status"))) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of(
+                            "status", "ERROR", 
+                            "message", result != null ? result.optString("message") : "Analysis not found"
+                        ));
+            }
+
+            return ResponseEntity.status(resolveHttpStatus(result)).body(result.toMap());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("status", "ERROR", "message", "Unable to retrieve sun-facing analysis"));
+        }
+    }
+
+    @GetMapping("/noise-analysis")
+    public ResponseEntity<?> getNoiseAnalysis(@RequestParam String postalCode) {
+    // Call the new noise-only method
+    JSONObject result = MainSpatialMgr.getInstance().getNoiseLevel(postalCode);
+    
+    if ("OK".equalsIgnoreCase(result.optString("status"))) {
+        return ResponseEntity.ok(result.toMap());
+    } else {
+        // Returns 404 if the postal code isn't near any aboveground tracks
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result.toMap());
+    }
+}
+
+    private JSONObject querySunFacing(String postalCode, Double eastAzimuth, Double westAzimuth) {
+        if (eastAzimuth != null && westAzimuth != null) {
+            return mainSpatialMgr.getSunFacing(postalCode, eastAzimuth, westAzimuth);
+        }
+        return mainSpatialMgr.getSunFacing(postalCode);
     }
 
     private HttpStatus resolveHttpStatus(JSONObject result) {
