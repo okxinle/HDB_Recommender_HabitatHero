@@ -299,6 +299,26 @@
   color: #10351b;
 }
 
+.status-badge--low {
+  background: #6dbb7d;
+  color: #10351b;
+}
+
+.status-badge--medium {
+  background: #e2c481;
+  color: #47370f;
+}
+
+.status-badge--high {
+  background: #ef8a8a;
+  color: #7f1d1d;
+}
+
+.status-badge--neutral {
+  background: #e2e8f0;
+  color: #334155;
+}
+
 .price-badge--positive {
   background: #dcfce7;
   color: #14532d;
@@ -344,6 +364,10 @@
 
 .progress-bar__fill--good {
   background: linear-gradient(90deg, #6dbb7d 0%, #3fa45c 100%);
+}
+
+.progress-bar__fill--bad {
+  background: linear-gradient(90deg, #ef8a8a 0%, #d64545 100%);
 }
 
 .price-comparison {

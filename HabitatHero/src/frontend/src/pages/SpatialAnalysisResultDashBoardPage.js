@@ -143,6 +143,69 @@ const inferDevelopmentIntent = ({ gpr, luDesc, luText }) => {
   return 'Planned development zone (URA)';
 };
 
+const getFutureDevelopmentWeight = (development) => {
+  const haystack = [development?.gpr, development?.lu_desc, development?.lu_text]
+    .filter((value) => typeof value === 'string' && value.trim().length > 0)
+    .join(' ')
+    .toUpperCase();
+
+  if (!haystack) {
+    return 0.6;
+  }
+
+  if (haystack.includes('MRT') || haystack.includes('RAIL') || haystack.includes('TRANSPORT')) {
+    return 1.0;
+  }
+
+  if (haystack.includes('RESERVE SITE')) {
+    return 0.9;
+  }
+
+  if (haystack.includes('RESIDENTIAL') || haystack.includes('PUBLIC HOUSING') || haystack.includes('HOUSING')) {
+    return 0.75;
+  }
+
+  if (haystack.includes('COMMERCIAL') || haystack.includes('MIXED USE')) {
+    return 0.65;
+  }
+
+  if (haystack.includes('PARK') || haystack.includes('OPEN SPACE') || haystack.includes('RECREATION')) {
+    return 0.45;
+  }
+
+  return 0.6;
+};
+
+const calculateFutureDevelopmentExposureScore = (distanceMeters, development) => {
+  const distance = getSafeNumber(distanceMeters);
+  if (distance === null) {
+    return null;
+  }
+
+  const typeWeight = getFutureDevelopmentWeight(development);
+  const normalizedDistance = Math.min(distance, 1500);
+  const distanceScore = 100 - (normalizedDistance / 1500) * 100;
+  const exposureScore = distanceScore * typeWeight;
+
+  return Math.max(5, Math.min(95, Math.round(exposureScore)));
+};
+
+const getFutureExposureTier = (exposureScore) => {
+  if (exposureScore === null) {
+    return null;
+  }
+
+  if (exposureScore >= 70) {
+    return 'high';
+  }
+
+  if (exposureScore >= 40) {
+    return 'medium';
+  }
+
+  return 'low';
+};
+
 const getFutureRiskTier = (development) => {
   const riskScore = pickFirstNumber([
     development?.risk_score,
@@ -1085,21 +1148,28 @@ function SpatialAnalysisResultDashBoardPage() {
     ? getMinDistanceToRings(blockLat, blockLng, futureRiskPolygons)
     : null;
 
-  const viewProtectionScore = reserveDistance === null
-    ? null
-    : Math.max(20, Math.min(95, Math.round(100 - reserveDistance / 30)));
+  const viewExposureScore = calculateFutureDevelopmentExposureScore(
+    pickFirstNumber([nearestFutureDevelopment?.distance_meters, reserveDistance]),
+    nearestFutureDevelopment
+  );
 
-  const futureProgressClass = viewProtectionScore !== null && viewProtectionScore >= 80
-    ? 'progress-bar__fill progress-bar__fill--good'
-    : 'progress-bar__fill progress-bar__fill--moderate';
+  const viewExposureTier = getFutureExposureTier(viewExposureScore);
+
+  const futureProgressClass = viewExposureScore !== null && viewExposureScore >= 70
+    ? 'progress-bar__fill progress-bar__fill--bad'
+    : viewExposureScore !== null && viewExposureScore >= 40
+      ? 'progress-bar__fill progress-bar__fill--moderate'
+      : 'progress-bar__fill progress-bar__fill--good';
 
   const hasFutureRiskPolygons = futureRiskPolygons.length > 0;
 
   const viewRiskCopy = !hasFutureRiskPolygons
     ? 'No mapped future development polygons were found for this block radius.'
-    : viewProtectionScore !== null && viewProtectionScore >= 80
-      ? 'Strong buffer against nearby future development pressure.'
-      : 'Moderate exposure to future development changes nearby.';
+    : viewExposureScore !== null && viewExposureScore >= 70
+      ? 'High exposure to nearby future development pressure.'
+      : viewExposureScore !== null && viewExposureScore >= 40
+        ? 'Moderate exposure to nearby future development pressure.'
+        : 'Lower exposure to nearby future development pressure.';
 
   const nearestDistanceText = Number.isFinite(Number(nearestFutureDevelopment?.distance_meters))
     ? `${Math.round(Number(nearestFutureDevelopment.distance_meters))} m`
@@ -1388,12 +1458,14 @@ function SpatialAnalysisResultDashBoardPage() {
 
         <article className="intelligence-card intelligence-card--future">
           <div className="intelligence-card__header">
-            <h2 className="intelligence-card__title">🏗️ FUTURE DEVELOPMENT</h2>
+            <h2 className="intelligence-card__title">🏗️ FUTURE DEVELOPMENT RISK</h2>
+            <span className={`status-badge status-badge--${viewExposureTier ?? 'neutral'}`}>
+              {viewExposureTier === null ? 'N/A' : viewExposureTier.toUpperCase()}
+            </span>
           </div>
           <div className="score-block">
-            <div className="score-block__value">{viewProtectionScore === null ? 'N/A' : `${viewProtectionScore}%`}</div>
             <div className="progress-bar" aria-hidden="true">
-              <div className={futureProgressClass} style={{ width: `${viewProtectionScore ?? 0}%` }} />
+              <div className={futureProgressClass} style={{ width: `${viewExposureScore ?? 0}%` }} />
             </div>
           </div>
           {viewRiskCopyDetailed && <p className="intelligence-card__text">{viewRiskCopyDetailed}</p>}
