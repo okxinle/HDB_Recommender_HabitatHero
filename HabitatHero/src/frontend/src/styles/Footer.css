@@ -13,17 +13,21 @@
 }
 
 .disclaimer {
-  font-size: 13px;
+  font-size: 0.8rem;
   line-height: 1.6;
   margin-bottom: 20px;
-  color: #888; /* Faded color for legal text */
+  color: #7a7f87;
+  text-align: center;
 }
 
 .footer-links {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 30px;
-  font-size: 14px;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: #6b7280;
 }
 
 .footer-links a {
