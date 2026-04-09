@@ -14,7 +14,7 @@ import habitathero.entity.Coordinates;
 public class MultiCommuterService {
 
     private static final double EARTH_RADIUS_KM = 6371.0088;
-    private static final int API_CANDIDATE_LIMIT = 50;
+    private static final int API_CANDIDATE_LIMIT = 3;
 
     private final IRoutingService routingService;
 
