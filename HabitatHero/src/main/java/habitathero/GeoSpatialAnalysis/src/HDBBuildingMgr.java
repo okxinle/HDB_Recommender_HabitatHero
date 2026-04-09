@@ -104,8 +104,18 @@ public class HDBBuildingMgr {
     }
 
     private boolean isUsableStoredResult(JSONObject result) {
-        return result != null && !result.isEmpty()
-                && "OK".equalsIgnoreCase(result.optString("status", ""));
+        if (result == null || result.isEmpty()) {
+            return false;
+        }
+
+        if (!"OK".equalsIgnoreCase(result.optString("status", ""))) {
+            return false;
+        }
+
+        // Treat default/fallback payloads as cache misses so a real recompute can happen.
+        double perimeter = result.optDouble("perimeter", 0.0);
+        int steps = result.optInt("sunlightSteps", 0);
+        return Double.isFinite(perimeter) && perimeter > 0.0 && steps > 0;
     }
 
     private boolean isInvalidAnalysisResult(JSONObject result) {
@@ -139,7 +149,7 @@ public class HDBBuildingMgr {
     private JSONObject buildNeutralSunFacingResult(String postalCode, double eastAzimuth, double westAzimuth, String message) {
         JSONObject neutral = new JSONObject();
         neutral.put("postalCode", postalCode == null ? "" : postalCode);
-        neutral.put("status", "OK");
+        neutral.put("status", "ERROR");
         neutral.put("message", message == null ? "DEFAULT_RESULT_NO_GEOMETRY" : message);
         neutral.put("perimeter", 0.0);
         neutral.put("eastAzimuth", normalizeAzimuth(eastAzimuth));

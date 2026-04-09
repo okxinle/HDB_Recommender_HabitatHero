@@ -3,7 +3,10 @@ package habitathero.boundary;
 import java.util.List;
 import java.util.Map;
 
+import org.json.JSONObject;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,6 +18,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import habitathero.GeoSpatialAnalysis.src.HDBBuildingDbMgr;
 import habitathero.GeoSpatialAnalysis.src.HDBBuildingSunFacingResultSQLHandler;
 import habitathero.GeoSpatialAnalysis.src.LandUseDbMgr;
+import habitathero.GeoSpatialAnalysis.src.LandUseMgr;
+import habitathero.GeoSpatialAnalysis.src.MainSpatialMgr;
 import habitathero.GeoSpatialAnalysis.src.TransportLineCalResultSQLHandler;
 import habitathero.GeoSpatialAnalysis.src.TransportLineDbMgr;
 import habitathero.control.BackfillCoordinatesService;
@@ -66,6 +71,9 @@ public class SystemAdminController {
 
     @Autowired
     private GlobalWeightConfigRepository globalWeightConfigRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     // Headless API to manually trigger the sync (useful for testing)
     @PostMapping("/trigger-sync")
@@ -253,6 +261,180 @@ public class SystemAdminController {
                 "status", "ERROR",
                 "message", e.getMessage()
             ));
+        }
+    }
+
+    @PostMapping("/cache/purge-placeholders")
+    public ResponseEntity<?> purgePlaceholderCaches() {
+        try {
+            Integer sunBefore = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM sun_facing_analysis_result",
+                Integer.class);
+            Integer noiseBefore = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM transport_line_cal_result",
+                Integer.class);
+
+            int deletedSun = jdbcTemplate.update("""
+                DELETE FROM sun_facing_analysis_result
+                WHERE message = 'DEFAULT_RESULT_NO_GEOMETRY'
+                   OR COALESCE(perimeter, 0) = 0
+                   OR COALESCE(sunlight_steps, 0) = 0
+                """);
+
+            int deletedNoise = jdbcTemplate.update("""
+                DELETE FROM transport_line_cal_result
+                WHERE noise_message = 'DEFAULT_RESULT_NO_TRANSPORT_DATA'
+                   OR object_id IS NULL
+                   OR distance_meters IS NULL
+                   OR noise_level_db IS NULL
+                """);
+
+            Integer sunAfter = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM sun_facing_analysis_result",
+                Integer.class);
+            Integer noiseAfter = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM transport_line_cal_result",
+                Integer.class);
+
+            return ResponseEntity.ok(Map.of(
+                "status", "SUCCESS",
+                "message", "Placeholder cache rows purged.",
+                "sunFacingRowsBefore", sunBefore == null ? 0 : sunBefore,
+                "sunFacingRowsDeleted", deletedSun,
+                "sunFacingRowsAfter", sunAfter == null ? 0 : sunAfter,
+                "noiseRowsBefore", noiseBefore == null ? 0 : noiseBefore,
+                "noiseRowsDeleted", deletedNoise,
+                "noiseRowsAfter", noiseAfter == null ? 0 : noiseAfter
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "status", "ERROR",
+                "message", "Failed to purge placeholder caches: " + e.getMessage()
+            ));
+        }
+    }
+
+    @PostMapping("/cache/precompute-spatial")
+    public ResponseEntity<?> precomputeSpatialCaches(@RequestBody(required = false) Map<String, Object> options) {
+        try {
+            boolean includeFutureRisk = parseBooleanOption(options, "includeFutureRisk", false);
+            double futureRiskDistance = parseDoubleOption(options, "futureRiskDistance", 500.0);
+            int limit = parseIntOption(options, "limit", 0);
+
+            List<String> allPostals = jdbcTemplate.queryForList("""
+                SELECT DISTINCT TRIM(postal_cod)
+                FROM hdb_building_lookup
+                WHERE postal_cod IS NOT NULL
+                  AND TRIM(postal_cod) <> ''
+                ORDER BY TRIM(postal_cod)
+                """, String.class);
+
+            if (allPostals == null || allPostals.isEmpty()) {
+                return ResponseEntity.ok(Map.of(
+                    "status", "SUCCESS",
+                    "message", "No postals found in hdb_building_lookup.",
+                    "processed", 0
+                ));
+            }
+
+            int capped = limit > 0 ? Math.min(limit, allPostals.size()) : allPostals.size();
+            MainSpatialMgr spatialMgr = MainSpatialMgr.getInstance();
+            LandUseMgr landUseMgr = LandUseMgr.getInstance();
+
+            int sunOk = 0;
+            int sunErr = 0;
+            int noiseOk = 0;
+            int noiseErr = 0;
+            int futureOk = 0;
+            int futureErr = 0;
+
+            for (int i = 0; i < capped; i++) {
+                String postal = allPostals.get(i);
+
+                JSONObject sun = spatialMgr.getSunFacing(postal);
+                if ("OK".equalsIgnoreCase(sun.optString("status", ""))) {
+                    sunOk++;
+                } else {
+                    sunErr++;
+                }
+
+                JSONObject noise = spatialMgr.getNoiseLevel(postal);
+                if ("OK".equalsIgnoreCase(noise.optString("status", ""))) {
+                    noiseOk++;
+                } else {
+                    noiseErr++;
+                }
+
+                if (includeFutureRisk) {
+                    JSONObject future = landUseMgr.getFutureDevRisk(postal, futureRiskDistance);
+                    if ("OK".equalsIgnoreCase(future.optString("status", ""))) {
+                        futureOk++;
+                    } else {
+                        futureErr++;
+                    }
+                }
+            }
+
+            return ResponseEntity.ok(Map.ofEntries(
+                Map.entry("status", "SUCCESS"),
+                Map.entry("message", "Spatial cache precompute completed."),
+                Map.entry("totalAvailablePostals", allPostals.size()),
+                Map.entry("processed", capped),
+                Map.entry("includeFutureRisk", includeFutureRisk),
+                Map.entry("futureRiskDistance", futureRiskDistance),
+                Map.entry("sunOk", sunOk),
+                Map.entry("sunError", sunErr),
+                Map.entry("noiseOk", noiseOk),
+                Map.entry("noiseError", noiseErr),
+                Map.entry("futureRiskOk", futureOk),
+                Map.entry("futureRiskError", futureErr)
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "status", "ERROR",
+                "message", "Failed to precompute spatial caches: " + e.getMessage()
+            ));
+        }
+    }
+
+    private boolean parseBooleanOption(Map<String, Object> options, String key, boolean defaultValue) {
+        if (options == null || !options.containsKey(key) || options.get(key) == null) {
+            return defaultValue;
+        }
+        Object value = options.get(key);
+        if (value instanceof Boolean boolValue) {
+            return boolValue;
+        }
+        return Boolean.parseBoolean(String.valueOf(value));
+    }
+
+    private double parseDoubleOption(Map<String, Object> options, String key, double defaultValue) {
+        if (options == null || !options.containsKey(key) || options.get(key) == null) {
+            return defaultValue;
+        }
+        Object value = options.get(key);
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        try {
+            return Double.parseDouble(String.valueOf(value));
+        } catch (Exception e) {
+            return defaultValue;
+        }
+    }
+
+    private int parseIntOption(Map<String, Object> options, String key, int defaultValue) {
+        if (options == null || !options.containsKey(key) || options.get(key) == null) {
+            return defaultValue;
+        }
+        Object value = options.get(key);
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (Exception e) {
+            return defaultValue;
         }
     }
 

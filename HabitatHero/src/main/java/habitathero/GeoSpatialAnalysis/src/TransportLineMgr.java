@@ -118,8 +118,23 @@ public class TransportLineMgr {
     }
 
     private boolean isUsableStoredResult(JSONObject result) {
-        return result != null && !result.isEmpty()
-                && "OK".equalsIgnoreCase(result.optString("status", ""));
+        if (result == null || result.isEmpty()) {
+            return false;
+        }
+
+        if (!"OK".equalsIgnoreCase(result.optString("status", ""))) {
+            return false;
+        }
+
+        // Treat default/fallback payloads as cache misses so a real recompute can happen.
+        if (result.isNull("objectId") || result.isNull("distance_meters") || result.isNull("noise_level_db")) {
+            return false;
+        }
+
+        double distance = result.optDouble("distance_meters", Double.NaN);
+        double noiseDb = result.optDouble("noise_level_db", Double.NaN);
+        return Double.isFinite(distance) && distance >= 0.0
+                && Double.isFinite(noiseDb);
     }
 
     private boolean isInvalidAnalysisResult(JSONObject result) {
@@ -143,7 +158,7 @@ public class TransportLineMgr {
             neutral.put("search_radius", radius);
         }
         neutral.put("noise_level_db", 0.0);
-        neutral.put("status", "OK");
+        neutral.put("status", "ERROR");
         neutral.put("message", message == null ? "DEFAULT_RESULT_NO_TRANSPORT_DATA" : message);
         return neutral;
     }
