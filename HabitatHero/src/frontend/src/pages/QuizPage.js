@@ -180,6 +180,17 @@ function QuizPage() {
     formData.structuralConstraints.minLeaseYears >= 0;
 
   const isStep2Valid = formData.softConstraints.every((factor) => {
+    if (factor.preferenceName === "convenience") {
+      const mode = factor.mode || "ignore";
+      const selectedAmenities = Array.isArray(factor.selectedAmenities) ? factor.selectedAmenities : [];
+      const parentsAddressSelected = selectedAmenities.includes("parentsAddress");
+      const parentsPostalCode = (factor.parentsAddress || "").trim();
+
+      if ((mode === "strict" || mode === "weighted") && parentsAddressSelected) {
+        return isValidPostalCode(parentsPostalCode);
+      }
+    }
+
     if (factor.mode === "ignore" || factor.mode === "strict") return true;
     if (factor.mode === "weighted") return factor.weight >= 0;
     return false;
