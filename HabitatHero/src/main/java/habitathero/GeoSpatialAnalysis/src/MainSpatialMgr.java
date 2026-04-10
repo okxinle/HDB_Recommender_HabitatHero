@@ -144,6 +144,19 @@ public class MainSpatialMgr {
     }
 
     /**
+     * Returns sun-facing analysis using coarser steps for batch precompute runs.
+     *
+     * @param postalCode target postal code
+     * @param fullSweepStepDegrees step size for full 360-degree min/max scan
+     * @param dayArcStepDegrees step size for east-west sunlight arc integration
+     * @return JSONObject fields:
+     *         same schema as getSunFacing(postal_code)
+     */
+    public JSONObject getSunFacingFast(String postalCode, double fullSweepStepDegrees, double dayArcStepDegrees) {
+        return hdbBuildingMgr.getSunFacingFast(postalCode, fullSweepStepDegrees, dayArcStepDegrees);
+    }
+
+    /**
      * Returns future development risk analysis within a custom distance.
      *
      * @param postalCode target postal code

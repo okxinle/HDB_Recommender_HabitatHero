@@ -128,10 +128,10 @@ public class RecommendationEngine {
                     acousticScore,
                     convenienceScore);
 
-            // Keep match score neutral when all factors are ignored (instead of forcing 0%).
+                    // Keep match score neutral when all factors are ignored (instead of forcing 0%).
             double normalizedLivability = weightedScore.totalWeight > 0.0
                     ? weightedScore.weightedScore / weightedScore.totalWeight
-                    : 1.0;
+                        : 1.0;
             normalizedLivability = clamp01(normalizedLivability);
 
             double combinedScore = hasValidCommuterPair

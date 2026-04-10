@@ -1,5 +1,6 @@
 package habitathero.boundary;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -317,11 +318,18 @@ public class SystemAdminController {
     @PostMapping("/cache/precompute-spatial")
     public ResponseEntity<?> precomputeSpatialCaches(@RequestBody(required = false) Map<String, Object> options) {
         try {
+            long startedAtMs = System.currentTimeMillis();
             boolean includeFutureRisk = parseBooleanOption(options, "includeFutureRisk", false);
             double futureRiskDistance = parseDoubleOption(options, "futureRiskDistance", 500.0);
             int limit = parseIntOption(options, "limit", 0);
+            int offset = parseIntOption(options, "offset", 0);
+            boolean stopOnError = parseBooleanOption(options, "stopOnError", false);
+            boolean onlyMissing = parseBooleanOption(options, "onlyMissing", true);
+            boolean fastSunFacing = parseBooleanOption(options, "fastSunFacing", true);
+            double sunFullSweepStepDegrees = parseDoubleOption(options, "sunFullSweepStepDegrees", 5.0);
+            double sunDayArcStepDegrees = parseDoubleOption(options, "sunDayArcStepDegrees", 15.0);
 
-            List<String> allPostals = jdbcTemplate.queryForList("""
+            List<String> sourcePostals = jdbcTemplate.queryForList("""
                 SELECT DISTINCT TRIM(postal_cod)
                 FROM hdb_building_lookup
                 WHERE postal_cod IS NOT NULL
@@ -329,15 +337,87 @@ public class SystemAdminController {
                 ORDER BY TRIM(postal_cod)
                 """, String.class);
 
+            List<String> allPostals;
+            if (onlyMissing) {
+                if (includeFutureRisk) {
+                    allPostals = jdbcTemplate.queryForList("""
+                        SELECT DISTINCT TRIM(l.postal_cod) AS postal
+                        FROM hdb_building_lookup l
+                        LEFT JOIN sun_facing_analysis_result s
+                            ON s.postal_code = TRIM(l.postal_cod)
+                        LEFT JOIN transport_line_cal_result t
+                            ON t.postal_code = TRIM(l.postal_cod)
+                        LEFT JOIN land_use_future_dev_risk_result f
+                            ON f.postal_code = TRIM(l.postal_cod)
+                        WHERE l.postal_cod IS NOT NULL
+                          AND TRIM(l.postal_cod) <> ''
+                          AND (
+                                s.postal_code IS NULL
+                                OR NOT (
+                                    s.status = 'OK'
+                                    AND COALESCE(s.perimeter, 0) > 0
+                                    AND COALESCE(s.sunlight_steps, 0) > 0
+                                )
+                                OR t.postal_code IS NULL
+                                OR NOT (
+                                    t.noise_status = 'OK'
+                                    AND t.object_id IS NOT NULL
+                                    AND t.distance_meters IS NOT NULL
+                                    AND t.noise_level_db IS NOT NULL
+                                )
+                                OR f.postal_code IS NULL
+                                OR NOT (f.status = 'OK')
+                          )
+                        ORDER BY postal
+                        """, String.class);
+                } else {
+                    allPostals = jdbcTemplate.queryForList("""
+                        SELECT DISTINCT TRIM(l.postal_cod) AS postal
+                        FROM hdb_building_lookup l
+                        LEFT JOIN sun_facing_analysis_result s
+                            ON s.postal_code = TRIM(l.postal_cod)
+                        LEFT JOIN transport_line_cal_result t
+                            ON t.postal_code = TRIM(l.postal_cod)
+                        WHERE l.postal_cod IS NOT NULL
+                          AND TRIM(l.postal_cod) <> ''
+                          AND (
+                                s.postal_code IS NULL
+                                OR NOT (
+                                    s.status = 'OK'
+                                    AND COALESCE(s.perimeter, 0) > 0
+                                    AND COALESCE(s.sunlight_steps, 0) > 0
+                                )
+                                OR t.postal_code IS NULL
+                                OR NOT (
+                                    t.noise_status = 'OK'
+                                    AND t.object_id IS NOT NULL
+                                    AND t.distance_meters IS NOT NULL
+                                    AND t.noise_level_db IS NOT NULL
+                                )
+                          )
+                        ORDER BY postal
+                        """, String.class);
+                }
+            } else {
+                allPostals = sourcePostals;
+            }
+
             if (allPostals == null || allPostals.isEmpty()) {
                 return ResponseEntity.ok(Map.of(
                     "status", "SUCCESS",
-                    "message", "No postals found in hdb_building_lookup.",
+                    "message", onlyMissing
+                            ? "No missing spatial cache entries found."
+                            : "No postals found in hdb_building_lookup.",
                     "processed", 0
                 ));
             }
 
-            int capped = limit > 0 ? Math.min(limit, allPostals.size()) : allPostals.size();
+            int normalizedOffset = Math.max(0, Math.min(offset, allPostals.size()));
+            int endExclusive = limit > 0
+                ? Math.min(normalizedOffset + limit, allPostals.size())
+                : allPostals.size();
+            int capped = Math.max(0, endExclusive - normalizedOffset);
+
             MainSpatialMgr spatialMgr = MainSpatialMgr.getInstance();
             LandUseMgr landUseMgr = LandUseMgr.getInstance();
 
@@ -347,47 +427,117 @@ public class SystemAdminController {
             int noiseErr = 0;
             int futureOk = 0;
             int futureErr = 0;
+            int unexpectedErrors = 0;
+            List<Map<String, Object>> sampleErrors = new ArrayList<>();
 
-            for (int i = 0; i < capped; i++) {
+            for (int i = normalizedOffset; i < endExclusive; i++) {
                 String postal = allPostals.get(i);
 
-                JSONObject sun = spatialMgr.getSunFacing(postal);
-                if ("OK".equalsIgnoreCase(sun.optString("status", ""))) {
-                    sunOk++;
-                } else {
+                try {
+                    JSONObject sun = fastSunFacing
+                            ? spatialMgr.getSunFacingFast(postal, sunFullSweepStepDegrees, sunDayArcStepDegrees)
+                            : spatialMgr.getSunFacing(postal);
+                    if ("OK".equalsIgnoreCase(sun.optString("status", ""))) {
+                        sunOk++;
+                    } else {
+                        sunErr++;
+                    }
+                } catch (Exception factorError) {
                     sunErr++;
+                    unexpectedErrors++;
+                    if (sampleErrors.size() < 10) {
+                        sampleErrors.add(Map.of(
+                            "postal", postal,
+                            "factor", "sun",
+                            "error", factorError.getMessage() == null ? "Unknown error" : factorError.getMessage()
+                        ));
+                    }
+                    if (stopOnError) {
+                        break;
+                    }
                 }
 
-                JSONObject noise = spatialMgr.getNoiseLevel(postal);
-                if ("OK".equalsIgnoreCase(noise.optString("status", ""))) {
-                    noiseOk++;
-                } else {
+                try {
+                    JSONObject noise = spatialMgr.getNoiseLevel(postal);
+                    if ("OK".equalsIgnoreCase(noise.optString("status", ""))) {
+                        noiseOk++;
+                    } else {
+                        noiseErr++;
+                    }
+                } catch (Exception factorError) {
                     noiseErr++;
+                    unexpectedErrors++;
+                    if (sampleErrors.size() < 10) {
+                        sampleErrors.add(Map.of(
+                            "postal", postal,
+                            "factor", "noise",
+                            "error", factorError.getMessage() == null ? "Unknown error" : factorError.getMessage()
+                        ));
+                    }
+                    if (stopOnError) {
+                        break;
+                    }
                 }
 
                 if (includeFutureRisk) {
-                    JSONObject future = landUseMgr.getFutureDevRisk(postal, futureRiskDistance);
-                    if ("OK".equalsIgnoreCase(future.optString("status", ""))) {
-                        futureOk++;
-                    } else {
+                    try {
+                        JSONObject future = landUseMgr.getFutureDevRisk(postal, futureRiskDistance);
+                        if ("OK".equalsIgnoreCase(future.optString("status", ""))) {
+                            futureOk++;
+                        } else {
+                            futureErr++;
+                        }
+                    } catch (Exception factorError) {
                         futureErr++;
+                        unexpectedErrors++;
+                        if (sampleErrors.size() < 10) {
+                            sampleErrors.add(Map.of(
+                                "postal", postal,
+                                "factor", "futureRisk",
+                                "error", factorError.getMessage() == null ? "Unknown error" : factorError.getMessage()
+                            ));
+                        }
+                        if (stopOnError) {
+                            break;
+                        }
                     }
                 }
+
+                if ((i - normalizedOffset + 1) % 200 == 0) {
+                    System.out.println("Precompute progress: processed " + (i - normalizedOffset + 1) + " / " + capped);
+                }
             }
+
+            int processed = sunOk + sunErr;
+            boolean hasMore = endExclusive < allPostals.size();
+            long durationMs = System.currentTimeMillis() - startedAtMs;
 
             return ResponseEntity.ok(Map.ofEntries(
                 Map.entry("status", "SUCCESS"),
                 Map.entry("message", "Spatial cache precompute completed."),
-                Map.entry("totalAvailablePostals", allPostals.size()),
-                Map.entry("processed", capped),
+                Map.entry("onlyMissing", onlyMissing),
+                Map.entry("totalSourcePostals", sourcePostals == null ? 0 : sourcePostals.size()),
+                Map.entry("totalTargetPostals", allPostals.size()),
+                Map.entry("offset", normalizedOffset),
+                Map.entry("limit", limit),
+                Map.entry("processed", processed),
+                Map.entry("hasMore", hasMore),
+                Map.entry("nextOffset", hasMore ? endExclusive : -1),
                 Map.entry("includeFutureRisk", includeFutureRisk),
                 Map.entry("futureRiskDistance", futureRiskDistance),
+                Map.entry("stopOnError", stopOnError),
+                Map.entry("fastSunFacing", fastSunFacing),
+                Map.entry("sunFullSweepStepDegrees", sunFullSweepStepDegrees),
+                Map.entry("sunDayArcStepDegrees", sunDayArcStepDegrees),
                 Map.entry("sunOk", sunOk),
                 Map.entry("sunError", sunErr),
                 Map.entry("noiseOk", noiseOk),
                 Map.entry("noiseError", noiseErr),
                 Map.entry("futureRiskOk", futureOk),
-                Map.entry("futureRiskError", futureErr)
+                Map.entry("futureRiskError", futureErr),
+                Map.entry("unexpectedErrors", unexpectedErrors),
+                Map.entry("sampleErrors", sampleErrors),
+                Map.entry("durationMs", durationMs)
             ));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(

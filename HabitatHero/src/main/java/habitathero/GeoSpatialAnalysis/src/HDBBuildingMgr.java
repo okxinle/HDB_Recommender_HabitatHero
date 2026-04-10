@@ -87,6 +87,28 @@ public class HDBBuildingMgr {
         return computedResult;
     }
 
+    public JSONObject getSunFacingFast(String postalCode, double fullSweepStepDegrees, double dayArcStepDegrees) {
+        System.out.println("Starting fast sun-facing flow for postal code " + postalCode
+                + " with full sweep step " + fullSweepStepDegrees
+                + " and day arc step " + dayArcStepDegrees);
+        JSONObject storedResult = hdbSunFacingResultSQLHandler.retrieveSunFacingAnalysis(postalCode);
+        if (isUsableStoredResult(storedResult)) {
+            System.out.println("Using stored sun-facing result");
+            return storedResult;
+        }
+
+        JSONObject computedResult = calSunFacing(postalCode, DEFAULT_EAST_AZIMUTH, DEFAULT_WEST_AZIMUTH,
+                fullSweepStepDegrees, dayArcStepDegrees);
+        if (isInvalidAnalysisResult(computedResult)) {
+            System.out.println("Geometry unavailable. Falling back to neutral sun-facing result for postal code " + postalCode);
+            computedResult = buildNeutralSunFacingResult(postalCode, DEFAULT_EAST_AZIMUTH, DEFAULT_WEST_AZIMUTH,
+                    "DEFAULT_RESULT_NO_GEOMETRY");
+        }
+        System.out.println("ATTEMPTING TO SAVE CACHE FOR POSTAL: " + postalCode);
+        hdbSunFacingResultSQLHandler.saveSunFacingAnalysis(computedResult);
+        return computedResult;
+    }
+
     public Coordinate postalCodeToCoordinate(String postalCode) {
         return hdbPostalToCoordinate.postalToCoordinate(postalCode);
     }
@@ -101,6 +123,12 @@ public class HDBBuildingMgr {
 
     private JSONObject calSunFacing(String postalCode, double eastAzimuth, double westAzimuth) {
         return hdbSunFacingAnalysis.calSunFacing(postalCode, eastAzimuth, westAzimuth);
+    }
+
+    private JSONObject calSunFacing(String postalCode, double eastAzimuth, double westAzimuth,
+            double fullSweepStepDegrees, double dayArcStepDegrees) {
+        return hdbSunFacingAnalysis.calSunFacing(postalCode, eastAzimuth, westAzimuth,
+                fullSweepStepDegrees, dayArcStepDegrees);
     }
 
     private boolean isUsableStoredResult(JSONObject result) {

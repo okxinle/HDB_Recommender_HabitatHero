@@ -10,6 +10,9 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
     private static HDBBuildingSunFacingAnalysis instance;
     private static final double DEFAULT_EAST_AZIMUTH = 90.0;
     private static final double DEFAULT_WEST_AZIMUTH = 270.0;
+    private static final double DEFAULT_FULL_SWEEP_STEP_DEGREES = 1.0;
+    private static final double DEFAULT_DAY_ARC_STEP_DEGREES = 10.0;
+    private static final double MIN_STEP_DEGREES = 0.5;
 
     private HDBBuildingSunFacingAnalysis() {
         super();
@@ -39,9 +42,18 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
     }
 
     public JSONObject calSunFacing(String postalCode, double eastAzimuth, double westAzimuth) {
+        return calSunFacing(postalCode, eastAzimuth, westAzimuth,
+                DEFAULT_FULL_SWEEP_STEP_DEGREES, DEFAULT_DAY_ARC_STEP_DEGREES);
+    }
+
+    public JSONObject calSunFacing(String postalCode, double eastAzimuth, double westAzimuth,
+            double fullSweepStepDegrees, double dayArcStepDegrees) {
         System.out.println("Running geometry-based sun-facing computation for postal code " + postalCode + " with east azimuth " + eastAzimuth + " and west azimuth " + westAzimuth);
         JSONObject geomJson = getHDBBuildingGeom(postalCode);
         JSONObject output = new JSONObject();
+
+        double normalizedFullSweepStep = normalizeStep(fullSweepStepDegrees, DEFAULT_FULL_SWEEP_STEP_DEGREES);
+        double normalizedDayArcStep = normalizeStep(dayArcStepDegrees, DEFAULT_DAY_ARC_STEP_DEGREES);
 
         if (isInvalidPostalCode(geomJson)) {
             return invalidPostalCodeResult(postalCode);
@@ -87,12 +99,12 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
         }
 
         // Reuse the same ring/perimeter to avoid repeated geometry fetches.
-        JSONObject fullSweep = calSunFacingRange(ring, perimeter, 0.0, 360.0, 1.0);
+        JSONObject fullSweep = calSunFacingRange(ring, perimeter, 0.0, 360.0, normalizedFullSweepStep);
         double minScoreAbsolute = fullSweep.optDouble("minScore", 0.0);
         double maxScoreAbsolute = fullSweep.optDouble("maxScore", 0.0);
 
         // Sunlight index for day arc between east and west (limited range)
-        JSONObject rangeIndex = calSunFacingRange(ring, perimeter, eastAzimuth, westAzimuth, 10.0);
+        JSONObject rangeIndex = calSunFacingRange(ring, perimeter, eastAzimuth, westAzimuth, normalizedDayArcStep);
         double sunlightIndex = rangeIndex.optDouble("sunlightIndex", 0.0);
         double sunAverage = rangeIndex.optDouble("averageScore", 0.0);
 
@@ -211,6 +223,11 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
         try {
             connectSQL();
 
+            if (conn == null) {
+                System.out.println("Unable to obtain DB connection for sun-facing analysis.");
+                return null;
+            }
+
             if (!hasGeomColumn()) {
                 System.out.println("hdb_building_dataset.geom is unavailable; cannot run polygon sun-facing computation.");
                 closeConnection();
@@ -246,6 +263,10 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
     }
 
     private boolean hasGeomColumn() {
+        if (conn == null) {
+            return false;
+        }
+
         String sql = """
                 SELECT 1
                 FROM information_schema.columns
@@ -424,6 +445,13 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
             v += 360.0;
         }
         return v;
+    }
+
+    private double normalizeStep(double stepDegrees, double fallback) {
+        if (!Double.isFinite(stepDegrees) || stepDegrees < MIN_STEP_DEGREES) {
+            return fallback;
+        }
+        return stepDegrees;
     }
 
     private double computePercentFromBest(double value, double best, double worst) {

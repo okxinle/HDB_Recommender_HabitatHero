@@ -83,9 +83,6 @@ public class TransportLineMgr {
         if (isInvalidAnalysisResult(noiseResult)) {
             return noiseResult;
         }
-
-        System.out.println("ATTEMPTING TO SAVE CACHE FOR POSTAL: " + postalCode);
-        tlCalResultSQLHandler.saveTransportLineCalResult(noiseResult);
         return noiseResult;
     }
 
@@ -99,9 +96,6 @@ public class TransportLineMgr {
         if (isInvalidAnalysisResult(noiseResult)) {
             return noiseResult;
         }
-
-        System.out.println("ATTEMPTING TO SAVE CACHE FOR POSTAL: " + postalCode);
-        tlCalResultSQLHandler.saveTransportLineCalResult(noiseResult);
         return noiseResult;
     }
 
