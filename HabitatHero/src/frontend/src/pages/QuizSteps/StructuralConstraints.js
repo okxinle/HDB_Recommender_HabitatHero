@@ -26,11 +26,30 @@ function StructuralConstraints({ data, update, showErrors }) {
   // Handles clicking a Region button (e.g., "North")
   const handleRegionToggle = (region) => {
     const currentRegions = data.structuralConstraints.preferredRegions || [];
-    const newRegions = currentRegions.includes(region)
-      ? currentRegions.filter((r) => r !== region)
-      : [...currentRegions, region];
-    
-    updateStructural("preferredRegions", newRegions);
+    const currentTowns = data.structuralConstraints.preferredTowns || [];
+
+    const isSelected = currentRegions.includes(region);
+
+    let newRegions;
+    let newTowns = currentTowns;
+
+    if (isSelected) {
+      newRegions = currentRegions.filter((r) => r !== region);
+
+      const regionTowns = REGION_TOWN_MAP[region] || [];
+      newTowns = currentTowns.filter((town) => !regionTowns.includes(town));
+    } else {
+      newRegions = [...currentRegions, region];
+    }
+
+    update((prev) => ({
+      ...prev,
+      structuralConstraints: {
+        ...prev.structuralConstraints,
+        preferredRegions: newRegions,
+        preferredTowns: newTowns,
+      },
+    }));
   };
 
   // Handles clicking a specific Town button (e.g., "Yishun")
