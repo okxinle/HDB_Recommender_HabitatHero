@@ -268,6 +268,15 @@ function HDBResultDashBoardPage() {
     }
   }, [rankedBlocks]);
 
+  useEffect(() => {
+    if (
+      (stateRankedBlocks && stateRankedBlocks.length > 0) ||
+      stateSubmittedPreferences
+    ) {
+      setCurrentPage(1);
+    }
+  }, [stateRankedBlocks, stateSubmittedPreferences]);
+
   const hasFreshNavigationResults =
     Array.isArray(stateRankedBlocks) && stateRankedBlocks.length > 0;
   const usingSessionFallback =
