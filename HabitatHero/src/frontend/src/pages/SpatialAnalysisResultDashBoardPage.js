@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Circle, MapContainer, Marker, Popup, Polygon, TileLayer } from 'react-leaflet';
+import { Circle, MapContainer, Marker, Popup, Polygon, TileLayer, useMap } from 'react-leaflet';
 import { DollarSign, Clock, MapPin, BarChart3, Ruler } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -788,26 +788,6 @@ const normalizeResultItem = (item) => {
   return item;
 };
 
-const getSunlightExposureRating = (pct) => {
-  if (pct >= 80) return { label: 'Excellent', color: '#166534' };
-  if (pct >= 60) return { label: 'Good', color: '#15803d' };
-  if (pct >= 40) return { label: 'Moderate', color: '#b45309' };
-  return { label: 'Low', color: '#b42318' };
-};
-
-const getSunlightDescription = (result) => {
-  if (!result || result.status !== 'OK') return 'Sunlight data pending...';
-  
-  const isWestHot = result.westScoreRelativeExposurePct > 70;
-  const isBright = result.sunlightIndexRelativeExposurePct > 60;
-  
-  let advice = isBright ? "Very bright interiors. " : "Moderate natural light. ";
-  if (isWestHot) advice += "Expect afternoon heat (West Sun).";
-  else advice += "Shielded from harsh afternoon sun.";
-  
-  return advice;
-};
-
 function SpatialAnalysisResultDashBoardPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -1141,9 +1121,6 @@ function SpatialAnalysisResultDashBoardPage() {
   );
   const noiseSignature = hasNearbyMrtSignal ? 'Periodic: Train Rumble' : 'Constant - White Noise';
 
-  const sunBadgeTone = hdbBlock?.westSunStatus ? 'moderate' : 'good';
-  const noiseBadgeTone = hasNearbyMrtSignal ? 'moderate' : 'good';
-
   const reserveDistance = hasValidBlockPosition
     ? getMinDistanceToRings(blockLat, blockLng, futureRiskPolygons)
     : null;
@@ -1220,6 +1197,13 @@ function SpatialAnalysisResultDashBoardPage() {
 
   const noiseLevel = noiseData?.noise_level_db || 0;
 
+  const noiseBadgeTone =
+  noiseLevel > 75
+    ? 'high'
+    : noiseLevel > 60
+      ? 'moderate'
+      : 'good';
+
   useEffect(() => {
       const fetchNoise = async () => {
           try {
@@ -1234,7 +1218,55 @@ function SpatialAnalysisResultDashBoardPage() {
       };
       if (postalCode) fetchNoise();
   }, [postalCode]);
-  
+
+
+  const noiseDistanceMeters = pickFirstNumber([
+    noiseData?.distance_meters,
+    noiseData?.distanceMeters,
+  ]);
+
+  const getSunRotation = (direction) => {
+    const map = {
+      EAST: 0,
+      SOUTHEAST: 45,
+      SOUTH: 90,
+      SOUTHWEST: 135,
+      WEST: 180,
+      NORTHWEST: 225,
+      NORTH: 270,
+      NORTHEAST: 315,
+    };
+
+    return map[direction?.toUpperCase()] ?? 0;
+  };
+
+  function ResetMapButton({ center, zoom }) {
+    const map = useMap();
+
+    const handleReset = () => {
+      map.setView(center, zoom, { animate: true });
+    };
+
+    return (
+      <div className="map-control-button" onClick={handleReset}>
+        <svg width="16" height="16" viewBox="0 0 24 24">
+          <path
+            d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"
+            stroke="black"
+            strokeWidth="3"
+            fill="none"
+            strokeLinecap="round"
+          />
+        </svg>
+      </div>
+    );
+  }
+
+  const sunMarkerPosition =
+  blockLat !== null && blockLng !== null
+    ? [blockLat - 0.00018, blockLng + 0.00008]
+    : blockPosition;
+    
 
   return (
     <div className="spatial-report-page">
@@ -1305,58 +1337,106 @@ function SpatialAnalysisResultDashBoardPage() {
           <MapContainer center={blockPosition} zoom={16} className="report-map">
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
+            <ResetMapButton center={blockPosition} zoom={16} />
+
             <Marker position={blockPosition}>
               <Popup>
                 Block {blockNumber} {formatStreet(streetName)}
               </Popup>
             </Marker>
 
-            <Circle
-              center={blockPosition}
-              radius={150}
-              pathOptions={{
-                color: '#dc3545',
-                dashArray: '6,6',
-                fillColor: '#dc3545',
-                fillOpacity: 0.12,
-              }}
-            />
+            {sunAnalysis?.status === 'OK' && sunAnalysis?.dominant && (
+              <Marker
+                position={blockPosition}
+                icon={L.divIcon({
+                  className: "sun-arrow",
+                  html: `<div style="
+                    transform: rotate(${getSunRotation(sunAnalysis.dominant)}deg);
+                    font-size: 24px;
+                    color: #f59e0b;
+                    font-weight: bold;
+                  ">➤</div>`,
+                })}
+              >
+                <Popup>
+                  <div className="future-risk-popup">
+                    <strong>Sun Exposure</strong>
+                    <div>Orientation: {sunAnalysis.dominant}</div>
+                    <div>
+                      Heat Exposure: {
+                        sunAnalysis.westScoreRelativeExposurePct != null
+                          ? `${Number(sunAnalysis.westScoreRelativeExposurePct).toFixed(1)}%`
+                          : 'n/a'
+                      }
+                    </div>
+                  </div>
+                </Popup>
+              </Marker>
+            )}
+
+              {noiseData?.status === 'OK' && noiseDistanceMeters !== null && (
+                <Circle
+                  center={blockPosition}
+                  radius={noiseDistanceMeters}
+                  pathOptions={{
+                    color:'#6dbb7d',
+                    dashArray: '6,6',
+                    fillColor:'#6dbb7d',
+                    fillOpacity: 0.15,
+                    weight: 2,
+                  }}
+                >
+                  <Popup>
+                    <div>
+                      <strong>Noise Buffer</strong>
+                      <div>Rail Type: {noiseData.rail_type}</div>
+                      <div>Distance to {noiseData.rail_type}: {Math.round(noiseDistanceMeters)} m</div>
+                      <div>Noise Level: {noiseLevel.toFixed(1)} dBA</div>
+                    </div>
+                  </Popup>
+                </Circle>
+              )}
 
             {futureRiskOverlays.map((overlay) => (
               <Polygon
                 key={overlay.key}
                 positions={overlay.positions}
                 pathOptions={overlay.style}
-                eventHandlers={{
-                  mouseover: (event) => {
-                    const layer = event.target;
-                    layer.setStyle({
-                      ...overlay.style,
-                      fillOpacity: 0.5,
-                      weight: 3,
-                    });
-                    layer.bringToFront?.();
-                  },
-                  mouseout: (event) => {
-                    event.target.setStyle(overlay.style);
-                  },
-                }}
               >
                 <Popup>
-                  <div className="future-risk-popup">
-                    <strong>{overlay.summary.title}</strong>
-                    <div>{overlay.summary.intent}</div>
-                    <div>{overlay.summary.distanceText}</div>
-                  </div>
+                  <strong>{overlay.summary.title}</strong><br />
+                  {overlay.summary.intent}<br />
+                  {overlay.summary.distanceText}
                 </Popup>
               </Polygon>
             ))}
           </MapContainer>
 
           <div className="report-map-legend">
-            <div className="report-map-legend__item">☀ West Sun Risk</div>
-            <div className="report-map-legend__item">🔊 Noise Buffer</div>
-            <div className="report-map-legend__item">▧ URA Risk Zones (High / Medium / Low)</div>
+            <div className="report-map-legend__item">
+              <span
+                className="legend-icon--sun-arrow"
+                style={{
+                  display: 'inline-block',
+                  transform: `rotate(${getSunRotation(sunAnalysis?.dominant)}deg)`,
+                  fontSize: '16px',
+                  color: '#f59e0b',
+                  margin: '0 3px'
+                }}
+              >    ➤
+              </span>
+              <span>Sun Orientation</span>
+            </div>
+
+            <div className="report-map-legend__item">
+              <span className="legend-icon legend-icon--noise"></span>
+              <span>Noise Buffer</span>
+            </div>
+
+            <div className="report-map-legend__item">
+              <span className="legend-icon legend-icon--ura"></span>
+              <span>URA Risk Zones</span>
+            </div>
           </div>
         </div>
       </section>
