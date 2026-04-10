@@ -588,7 +588,6 @@ function HDBResultDashBoardPage() {
                 <span> ({summaryData.commuterDestinations.join(' & ')})</span>
               )}
             </div>
-            <div className="choice-summary-item"><strong>Convenience Mode:</strong> {summaryData.convenienceMode}</div>
             <div className="choice-summary-item">
               <strong>Selected Amenities:</strong> {summaryData.amenities.length > 0 ? summaryData.amenities.join(', ') : 'None'}
             </div>
