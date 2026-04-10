@@ -618,6 +618,41 @@
   font-weight: 600;
 }
 
+.results-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.results-pagination-btn {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #1f2937;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.results-pagination-btn:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+.results-pagination-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.results-pagination-info {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
 @media (max-width: 800px) {
   .choice-summary-grid {
     grid-template-columns: 1fr;
