@@ -26,7 +26,7 @@ public class BackfillCoordinatesService {
             postal_cod,
             ST_Y(ST_Centroid(ST_Collect(geom))) AS latitude,
             ST_X(ST_Centroid(ST_Collect(geom))) AS longitude
-        FROM hdb_building
+        FROM hdb_building_dataset
         WHERE blk_no = ?
           AND (
                 UPPER(TRIM(st_cod)) = UPPER(TRIM(?))
@@ -167,8 +167,8 @@ public class BackfillCoordinatesService {
     }
 
     private SpatialSource resolveSpatialSource() {
-        if (tableHasRows("public.hdb_building")) {
-            return new SpatialSource("hdb_building", true);
+        if (tableHasRows("public.hdb_building_dataset")) {
+            return new SpatialSource("hdb_building_dataset", true);
         }
 
         if (tableHasRows("public.hdb_building_lookup")) {
