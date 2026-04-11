@@ -2,3 +2,5 @@ HabitatHero/data/
 *.db
 *.db-journal
 dataset/MasterPlan2019LandUselayer.geojson
+HabitatHero/dataset/MasterPlan2019RailLinelayer.geojson
+HabitatHero/dataset/MasterPlan2019LandUselayer.geojson
