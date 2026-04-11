@@ -3,9 +3,14 @@ package habitathero.GeoSpatialAnalysis.src;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import netscape.javascript.JSObject;
 
 public class MainSpatialMgr {
+    
+    private static MainSpatialMgr instance;
+    private HDBBuildingMgr hdbBuildingMgr;
+    private TransportLineMgr transportLineMgr;
+    private LandUseMgr landUseMgr;
+
     /**
      * Demo entry point
      *
@@ -16,11 +21,6 @@ public class MainSpatialMgr {
         JSONObject result = mgr.getComprehensiveLocationAnalysis("670180");
         System.out.println(result.toString());
     }
-    
-    private static MainSpatialMgr instance;
-    private HDBBuildingMgr hdbBuildingMgr;
-    private TransportLineMgr transportLineMgr;
-    private LandUseMgr landUseMgr;
 
     /**
      * Initializes manager dependencies used by the spatial facade.
