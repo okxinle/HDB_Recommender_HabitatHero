@@ -1,6 +1,5 @@
 package habitathero.control;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -39,17 +38,20 @@ public class RecommendationEngine {
     private final HDBBuildingMgr hdbBuildingMgr;
     private final TransportLineMgr transportLineMgr;
     private final ConvenienceScoringService convenienceScoringService;
+    private final RankingStrategy rankingStrategy;
 
     public RecommendationEngine(ResaleTransactionRepository resaleTransactionRepository,
                                 MultiCommuterService multiCommuterService,
                                 HDBBuildingMgr hdbBuildingMgr,
                                 TransportLineMgr transportLineMgr,
-                                ConvenienceScoringService convenienceScoringService) {
+                                ConvenienceScoringService convenienceScoringService,
+                                RankingStrategy rankingStrategy) {
         this.resaleTransactionRepository = resaleTransactionRepository;
         this.multiCommuterService = multiCommuterService;
         this.hdbBuildingMgr = hdbBuildingMgr;
         this.transportLineMgr = transportLineMgr;
         this.convenienceScoringService = convenienceScoringService;
+        this.rankingStrategy = rankingStrategy;
     }
 
     // ── Public entry point ────────────────────────────────────────────────
@@ -175,8 +177,7 @@ public class RecommendationEngine {
             throw new ZeroMatchesException();
         }
 
-        rankedBlocks.sort(Comparator.comparingDouble(HDBBlock::getGlobalMatchIndex).reversed());
-        return rankedBlocks;
+        return rankingStrategy.rank(rankedBlocks, request);
     }
 
     private Map<String, ResaleTransactionRepository.TownPsfView> loadTownPriceBenchmarks(List<BlockCandidateView> candidateList) {

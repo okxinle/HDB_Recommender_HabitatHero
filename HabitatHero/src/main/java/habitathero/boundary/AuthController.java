@@ -20,7 +20,7 @@ import habitathero.repository.UserRepository;
 
 @RestController
 @RequestMapping("/api/auth")
-public class AccountController {
+public class AuthController {
 
     // --- Dependencies ---
     private final AuthService authService;
@@ -33,7 +33,7 @@ public class AccountController {
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public AccountController(AuthService authService) {
+    public AuthController(AuthService authService) {
         this.authService = authService;
     }
 

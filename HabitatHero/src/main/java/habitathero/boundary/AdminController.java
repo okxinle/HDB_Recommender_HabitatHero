@@ -39,7 +39,7 @@ import habitathero.repository.PoiRepository;
 
 @RestController
 @RequestMapping("/api/admin")
-public class SystemAdminController {
+public class AdminController {
 
     @Autowired
     private IHDBRepository hdbRepository;
