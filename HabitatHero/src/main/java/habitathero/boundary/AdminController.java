@@ -31,9 +31,9 @@ import habitathero.entity.HDBBlock;
 import habitathero.entity.PointOfInterest;
 import habitathero.entity.UserAccount;
 import habitathero.entity.GlobalWeightConfig;
-import habitathero.repository.GlobalWeightConfigRepository;
+import habitathero.repository.GlobalConfigService;
 import habitathero.repository.UserRepository;
-import habitathero.repository.AuditLogRepository;
+import habitathero.repository.AuditLogService;
 import habitathero.repository.IHDBRepository;
 import habitathero.repository.PoiRepository;
 
@@ -65,13 +65,13 @@ public class AdminController {
     private HdbSpatialImportService hdbSpatialImportService;
 
     @Autowired
-    private AuditLogRepository auditLogRepository;
+    private AuditLogService auditLogRepository;
 
     @Autowired
     private PoiRepository poiRepository;
 
     @Autowired
-    private GlobalWeightConfigRepository globalWeightConfigRepository;
+    private GlobalConfigService globalConfigService;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -628,7 +628,7 @@ public class AdminController {
 
         for (Map.Entry<String, Double> entry : weights.entrySet()) {
             GlobalWeightConfig config = new GlobalWeightConfig(entry.getKey(), entry.getValue());
-            globalWeightConfigRepository.save(config);
+            globalConfigService.save(config);
         }
 
         return ResponseEntity.ok(Map.of(
@@ -667,3 +667,4 @@ public class AdminController {
     }
 
 }
+

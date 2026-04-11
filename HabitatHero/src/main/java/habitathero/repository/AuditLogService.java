@@ -6,6 +6,6 @@ import org.springframework.stereotype.Repository;
 import habitathero.entity.AuditLog;
 
 @Repository
-public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
+public interface AuditLogService extends JpaRepository<AuditLog, Long> {
     
 }
