@@ -49,6 +49,7 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
     public JSONObject calSunFacing(String postalCode, double eastAzimuth, double westAzimuth,
             double fullSweepStepDegrees, double dayArcStepDegrees) {
         System.out.println("Running geometry-based sun-facing computation for postal code " + postalCode + " with east azimuth " + eastAzimuth + " and west azimuth " + westAzimuth);
+        // Geometry source of truth for this block. All downstream calculations use this polygon.
         JSONObject geomJson = getHDBBuildingGeom(postalCode);
         JSONObject output = new JSONObject();
 
@@ -66,7 +67,7 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
             return output;
         }
 
-        // Outer ring only (Polygon geography). If MultiPolygon, first polygon outer ring.
+        // Outer ring only (Polygon geography). If MultiPolygon, use first polygon outer ring.
         JSONArray ring = getOuterRing(coordinates);
         if (ring == null || ring.length() < 4) {
             output.put("status", "ERROR");
@@ -98,12 +99,12 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
             output.put("dominant", "BALANCED");
         }
 
-        // Reuse the same ring/perimeter to avoid repeated geometry fetches.
+        // Reuse same ring/perimeter to avoid extra DB access and repeated geometry parsing.
         JSONObject fullSweep = calSunFacingRange(ring, perimeter, 0.0, 360.0, normalizedFullSweepStep);
         double minScoreAbsolute = fullSweep.optDouble("minScore", 0.0);
         double maxScoreAbsolute = fullSweep.optDouble("maxScore", 0.0);
 
-        // Sunlight index for day arc between east and west (limited range)
+        // Daylight arc integration between east and west azimuths.
         JSONObject rangeIndex = calSunFacingRange(ring, perimeter, eastAzimuth, westAzimuth, normalizedDayArcStep);
         double sunlightIndex = rangeIndex.optDouble("sunlightIndex", 0.0);
         double sunAverage = rangeIndex.optDouble("averageScore", 0.0);
@@ -114,9 +115,8 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
         output.put("absoluteMinScore", minScoreAbsolute);
         output.put("absoluteMaxScore", maxScoreAbsolute);
 
-        // All percentages based on ABSOLUTE worst/best across full 360°
-        // Note: High score = WORST sun exposure, Low score = BEST sun exposure
-        // So minScore is best, maxScore is worst
+        // Relative percentages are normalized against absolute best/worst from full 360° sweep.
+        // High score means higher direct sun exposure.
         output.put("eastScoreRelativeExposurePct", computePercentFromBest(eastScore, minScoreAbsolute, maxScoreAbsolute));
         output.put("westScoreRelativeExposurePct", computePercentFromBest(westScore, minScoreAbsolute, maxScoreAbsolute));
 
@@ -329,6 +329,7 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
 
     private double computeSunFacingScore(JSONArray ring, double azimuth) {
         double signedArea = computeSignedArea(ring);
+        // Ring orientation determines outward normal direction.
         boolean ccw = signedArea > 0;
 
         double sunX = Math.sin(Math.toRadians(normalizeAzimuth(azimuth)));
@@ -359,14 +360,14 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
 
             double ux = nx / nlen;
             double uy = ny / nlen;
-            double dot = Math.max(0.0, ux * sunX + uy * sunY);
+            // Back-face culling: only faces oriented toward the sun contribute.
+            double dot = Math.max(0.0, ux * sunX + uy * sunY); // Dot product
+            double exposureFactor = dot;
+
+            // Visibility attenuation from local self-blocking along sun rays.
+            double shadingFactor = computeShadingFactor(ring, ux, uy, sunX, sunY, i);
             
-            // Apply shading from nearby walls
-            double edgeMidX = (x1 + x2) / 2.0;
-            double edgeMidY = (y1 + y2) / 2.0;
-            double shadingFactor = computeShadingFactor(ring, edgeMidX, edgeMidY, sunX, sunY, i);
-            
-            score += segmentLen * dot * shadingFactor;
+            score += segmentLen * exposureFactor * shadingFactor;
         }
 
         return score;
@@ -374,40 +375,63 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
 
     // Compute shading factor (0-1) for an edge based on blocking from other edges
     // 1.0 = no shading (fully exposed), 0.0 = fully shaded
-    private double computeShadingFactor(JSONArray ring, double edgeX, double edgeY, 
+    private double computeShadingFactor(JSONArray ring, double outwardNormalX, double outwardNormalY,
                                         double sunX, double sunY, int currentEdgeIndex) {
-        // Cast a ray backwards from the edge in the sun direction to check for blocking
-        double rayStartX = edgeX - sunX * 1000;  // Ray starts far away in sun direction
-        double rayStartY = edgeY - sunY * 1000;
-        double rayEndX = edgeX;
-        double rayEndY = edgeY;
-        
-        int blockingEdges = 0;
-        
-        // Check if any other edge blocks the sun ray to this edge
-        for (int j = 0; j < ring.length() - 1; j++) {
-            if (j == currentEdgeIndex || j == (currentEdgeIndex + 1) % (ring.length() - 1)) {
-                continue;  // Skip the current edge and adjacent edges
+        JSONArray p1 = ring.getJSONArray(currentEdgeIndex);
+        JSONArray p2 = ring.getJSONArray(currentEdgeIndex + 1);
+        double x1 = p1.getDouble(0);
+        double y1 = p1.getDouble(1);
+        double x2 = p2.getDouble(0);
+        double y2 = p2.getDouble(1);
+
+        // Sample along full edge so we estimate partial shading, not just midpoint shading.
+        int numSamples = 10;
+        int exposedSamples = 0;
+
+        for (int sample = 0; sample <= numSamples; sample++) {
+            double t = (double) sample / numSamples;
+            double sampleX = x1 + (x2 - x1) * t;
+            double sampleY = y1 + (y2 - y1) * t;
+
+            // Small outward offset reduces boundary-touching false intersections.
+            double offset = 1e-6;
+            sampleX += outwardNormalX * offset;
+            sampleY += outwardNormalY * offset;
+
+            double rayStartX = sampleX;
+            double rayStartY = sampleY;
+            // Long finite ray toward sun direction for intersection checks.
+            double rayEndX = sampleX + sunX * 1000;
+            double rayEndY = sampleY + sunY * 1000;
+
+            boolean isBlocked = false;
+
+            for (int j = 0; j < ring.length() - 1; j++) {
+                // Skip same and adjacent edges to avoid trivial/self intersections.
+                if (j == currentEdgeIndex || j == (currentEdgeIndex + 1) % (ring.length() - 1)) {
+                    continue;
+                }
+
+                JSONArray blockP1 = ring.getJSONArray(j);
+                JSONArray blockP2 = ring.getJSONArray(j + 1);
+                double bx1 = blockP1.getDouble(0);
+                double by1 = blockP1.getDouble(1);
+                double bx2 = blockP2.getDouble(0);
+                double by2 = blockP2.getDouble(1);
+
+                if (doLinesIntersect(rayStartX, rayStartY, rayEndX, rayEndY, bx1, by1, bx2, by2)) {
+                    isBlocked = true;
+                    break;
+                }
             }
-            
-            JSONArray blockP1 = ring.getJSONArray(j);
-            JSONArray blockP2 = ring.getJSONArray(j + 1);
-            double bx1 = blockP1.getDouble(0);
-            double by1 = blockP1.getDouble(1);
-            double bx2 = blockP2.getDouble(0);
-            double by2 = blockP2.getDouble(1);
-            
-            // Check if ray intersects with this edge
-            if (doLinesIntersect(rayStartX, rayStartY, rayEndX, rayEndY, bx1, by1, bx2, by2)) {
-                blockingEdges++;
+
+            if (!isBlocked) {
+                exposedSamples++;
             }
         }
-        
-        // Apply shading: each blocking edge reduces exposure
-        // With multiple blocking edges, assume they don't have perfect stacking effect
-        double shadingFactor = 1.0 / (1.0 + blockingEdges * 0.5);
-        
-        return shadingFactor;
+
+        // Fraction of edge samples with clear line-of-sight to sun direction.
+        return (double) exposedSamples / (numSamples + 1);
     }
 
     // Check if two line segments intersect (ray casting for shading detection)
