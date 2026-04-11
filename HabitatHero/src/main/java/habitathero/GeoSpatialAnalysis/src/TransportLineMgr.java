@@ -8,11 +8,6 @@ public class TransportLineMgr {
     private TransportLineCalNoiseLevel tlCalNoiseLevel;
     private TransportLineCalResultSQLHandler tlCalResultSQLHandler;
 
-    public static void main(String[] args) {
-        TransportLineMgr tlMgr = TransportLineMgr.getInstance();
-        tlMgr.getNoiseLevel("670180000");
-    }
-
     // singleton initalization of TransportLineMgr
     private TransportLineMgr() {
         tlCalMinDist = TransportLineCalMinDist.getInstance();

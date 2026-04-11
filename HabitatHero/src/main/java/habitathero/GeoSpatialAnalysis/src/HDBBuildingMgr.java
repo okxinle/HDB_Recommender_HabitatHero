@@ -8,10 +8,6 @@ public class HDBBuildingMgr {
     private HDBBuildingSunFacingAnalysis hdbSunFacingAnalysis;
     private HDBBuildingSunFacingResultSQLHandler hdbSunFacingResultSQLHandler;
 
-    public static void main(String[] args) {
-        HDBBuildingMgr.getInstance().getSunFacing("670180000");
-    }
-
     // singleton initalization
     private HDBBuildingMgr() {
         hdbPostalToCoordinate = HDBPostalToCoordinate.getInstance();

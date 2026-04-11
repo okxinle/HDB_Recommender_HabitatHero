@@ -17,15 +17,6 @@ public class DataGovAPIHandler {
     private DataGovAPIHandler() {
     }
 
-    public static void main() {
-        try {
-            // DataGovAPI.getInstance().pollDownload("d_16b157c52ed637edd6ba1232e026258d");
-            System.out.println(System.getProperty("user.dir"));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     public static DataGovAPIHandler getInstance() {
         if (instance == null) {
             instance = new DataGovAPIHandler();

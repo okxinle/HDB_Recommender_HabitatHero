@@ -7,10 +7,6 @@ public class LandUseMgr {
     private LandUseCheckDevelopment landUseChkDev;
     private LandUseFutureDevRiskResultSQLHandler landUseResultSQLHandler;
 
-    public static void main(String[] args) {
-        LandUseMgr.getInstance().getFutureDevRisk("670180000", 600);
-    }
-
     private LandUseMgr() {
         landUseChkDev = LandUseCheckDevelopment.getInstance();
         landUseResultSQLHandler = LandUseFutureDevRiskResultSQLHandler.getInstance();

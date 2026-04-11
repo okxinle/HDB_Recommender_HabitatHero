@@ -7,10 +7,6 @@ import org.json.JSONObject;
 public class HDBBuildingSunFacingResultSQLHandler extends SQLDbConnect{
     private static HDBBuildingSunFacingResultSQLHandler instance;
 
-    public static void main(String[] args) {
-        HDBBuildingSunFacingResultSQLHandler.getInstance().createSQLTable();
-    }
-
     private HDBBuildingSunFacingResultSQLHandler() {
         super();
     }

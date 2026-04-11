@@ -461,52 +461,5 @@ public class HDBBuildingSunFacingAnalysis extends SQLDbConnect {
     }
 
 
-    public static void main(String[] args) {
-        String postalCode = args.length > 0 ? args[0] : "670180";
-        HDBBuildingSunFacingAnalysis analyzer = HDBBuildingSunFacingAnalysis.getInstance();
-
-        System.out.println("Sun-facing analysis for postal code: " + postalCode);
-        System.out.println();
-        System.out.println();
-        JSONObject resultDefault = analyzer.calSunFacing(postalCode);
-        System.out.println("Default (E=90,W=270): " + resultDefault.toString());
-        System.out.println();
-
-        double customAz = 60;
-        JSONObject resultCustom = analyzer.calSunFacing(postalCode, customAz);
-        System.out.println("Custom single sun azimuth (" + customAz + "): " + resultCustom.toString());
-        System.out.println();
-
-        double customAz2 = 160;
-        JSONObject resultCustom2 = analyzer.calSunFacing(postalCode, customAz2);
-        System.out.println("Custom single sun azimuth (" + customAz2 + "): " + resultCustom2.toString());
-        System.out.println();
-
-        // Direct point scores without range averaging (diagnostic)
-        System.out.println("=== POINT-ONLY SCORES (No Range Averaging) ===");
-        JSONObject point60 = analyzer.calSunFacingPointOnly(postalCode, 60);
-        System.out.println("Azimuth 60° only: " + point60.toString());
-        System.out.println();
-
-        JSONObject point160 = analyzer.calSunFacingPointOnly(postalCode, 160);
-        System.out.println("Azimuth 160° only: " + point160.toString());
-        System.out.println();
-
-        JSONObject point300 = analyzer.calSunFacingPointOnly(postalCode, 300);
-        System.out.println("Azimuth 300° only: " + point300.toString());
-        System.out.println();
-
-
-        JSONObject resultRange = analyzer.calSunFacingRange(postalCode, 60.0, 300.0, 15.0);
-        System.out.println("Range 60-300 deg index: " + resultRange.toString());
-        System.out.println();
-
-        // Full 360-degree analysis with 1-degree steps
-        System.out.println("=== FULL 360° ANALYSIS (1-Degree Steps) ===");
-        JSONObject fullRange = analyzer.calSunFacingRange(postalCode, 0.0, 360.0, 1.0);
-        System.out.println("Full 360° sweep (0-360°, 1° steps): " + fullRange.toString());
-        System.out.println();
-    }
-
 }
 

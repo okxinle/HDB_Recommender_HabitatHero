@@ -9,10 +9,6 @@ import org.json.JSONObject;
 public class TransportLineCalResultSQLHandler extends SQLDbConnect {
     private static TransportLineCalResultSQLHandler instance;
 
-    public static void main(String[] args) {
-        TransportLineCalResultSQLHandler.getInstance().createSQLTable();
-    }
-
     private TransportLineCalResultSQLHandler() {
         super();
     }

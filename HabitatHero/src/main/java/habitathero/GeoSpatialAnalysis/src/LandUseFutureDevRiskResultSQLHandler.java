@@ -10,10 +10,6 @@ import org.json.JSONObject;
 public class LandUseFutureDevRiskResultSQLHandler extends SQLDbConnect {
     private static LandUseFutureDevRiskResultSQLHandler instance;
 
-    public static void main(String[] args) {
-        LandUseFutureDevRiskResultSQLHandler.getInstance().createSQLTable();
-    }
-
     private LandUseFutureDevRiskResultSQLHandler() {
         super();
     }

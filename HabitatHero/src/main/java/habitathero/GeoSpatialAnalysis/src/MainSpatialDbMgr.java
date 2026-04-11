@@ -310,8 +310,4 @@ public class MainSpatialDbMgr {
         }
     }
 
-    public static void main(String[] args) {
-        MainSpatialDbMgr.getInstance().setupDatabase();
-    }
-
 }
