@@ -32,10 +32,12 @@ public class SQLDbConnect {
 
             conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
         } catch (Exception e) {
-            throw new IllegalStateException("Failed to connect to PostgreSQL at " +
+            conn = null;
+            System.err.println("Failed to connect to PostgreSQL at " +
                 getConfig("DB_HOST", "localhost") + ":" + getConfig("DB_PORT", "5432") +
                 "/" + getConfig("DB_NAME", "habitathero_db") +
-                " as user '" + getConfig("DB_USERNAME", "postgres") + "': " + e.getMessage(), e);
+                " as user '" + getConfig("DB_USERNAME", "postgres") + "': " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

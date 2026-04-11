@@ -1,5 +1,6 @@
 package habitathero.boundary;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -199,6 +200,19 @@ public class RecommendationController {
                     .body(Map.of("status", "ERROR", "message", "Unable to retrieve sun-facing analysis"));
         }
     }
+
+    @GetMapping("/noise-analysis")
+    public ResponseEntity<?> getNoiseAnalysis(@RequestParam String postalCode) {
+    // Call the new noise-only method
+    JSONObject result = MainSpatialMgr.getInstance().getNoiseLevel(postalCode);
+    
+    if ("OK".equalsIgnoreCase(result.optString("status"))) {
+        return ResponseEntity.ok(result.toMap());
+    } else {
+        // Returns 404 if the postal code isn't near any aboveground tracks
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result.toMap());
+    }
+}
 
     private JSONObject querySunFacing(String postalCode, Double eastAzimuth, Double westAzimuth) {
         if (eastAzimuth != null && westAzimuth != null) {

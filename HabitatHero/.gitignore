@@ -8,4 +8,6 @@ src/main/resources/application.properties
 *.pem
 src/main/resources/*api*key*.txt
 src/main/resources/*production-key*.txt
+/dataset/MasterPlan2019LandUselayer.geojson
+
 

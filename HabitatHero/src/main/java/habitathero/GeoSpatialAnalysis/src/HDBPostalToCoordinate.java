@@ -30,21 +30,21 @@ public class HDBPostalToCoordinate extends SQLDbConnect {
             List<String> postalCandidates = buildPostalCandidates(postalCode);
 
             for (String candidate : postalCandidates) {
-                if (tryResolveFromPostgisTable(candidate, coords)) {
-                    System.out.printf("Converting postal to Coordinates (hdb_building): %f , %f\n", coords.getLatitude(), coords.getLongitude());
-                    super.closeConnection();
-                    return coords;
-                }
-
                 if (tryResolveFromLookupTable(candidate, coords)) {
                     System.out.printf("Converting postal to Coordinates (hdb_building_lookup): %f , %f\n", coords.getLatitude(), coords.getLongitude());
                     super.closeConnection();
                     return coords;
                 }
 
+                if (tryResolveFromPostgisTable(candidate, coords)) {
+                    System.out.printf("Converting postal to Coordinates (hdb_building_dataset): %f , %f\n", coords.getLatitude(), coords.getLongitude());
+                    super.closeConnection();
+                    return coords;
+                }
+
                 // Backward compatibility with the legacy table name.
                 if (tryResolveFromLegacyTable(candidate, coords)) {
-                    System.out.printf("Converting postal to Coordinates (hdb_building_dataset): %f , %f\n", coords.getLatitude(), coords.getLongitude());
+                    System.out.printf("Converting postal to Coordinates (hdb_blocks): %f , %f\n", coords.getLatitude(), coords.getLongitude());
                     super.closeConnection();
                     return coords;
                 }
@@ -103,11 +103,11 @@ public class HDBPostalToCoordinate extends SQLDbConnect {
     private boolean tryResolveFromLegacyTable(String postalCode, Coordinate coords) throws Exception {
         String sql = """
                 SELECT
-                    ST_X(ST_Centroid(ST_Collect(geom))) AS longitude,
-                    ST_Y(ST_Centroid(ST_Collect(geom))) AS latitude
-                FROM hdb_building_dataset
-                WHERE postal_cod = ?
-                GROUP BY postal_cod
+                    (coordinates->>'lng')::double precision AS longitude,
+                    (coordinates->>'lat')::double precision AS latitude
+                FROM hdb_blocks
+                                WHERE postal_code = ?
+                  AND coordinates IS NOT NULL
                 LIMIT 1
                 """;
         return executeCoordinateQuery(sql, postalCode, coords);
@@ -132,6 +132,10 @@ public class HDBPostalToCoordinate extends SQLDbConnect {
                 coords.setLongitude(longitude);
                 return true;
             }
+        } catch (Exception e) {
+            // Keep trying other sources when one SQL strategy fails (e.g., missing geom column).
+            System.err.println("Coordinate query strategy failed: " + e.getMessage());
+            return false;
         }
     }
 }

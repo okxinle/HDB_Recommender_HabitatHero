@@ -188,6 +188,49 @@ Repeat this endpoint a few times until `unresolvedBlocks` stabilizes.
 
 This endpoint clears existing `postal_code/coordinates` and rebuilds from scratch. Do not use this unless a full reset is intended.
 
+### 6. Purge Placeholder Spatial Cache Rows (Recommended After Geospatial Fixes)
+If historical cache rows were generated from fallback/default payloads, clear them first:
+
+* **Method:** POST
+* **URL:** `http://localhost:8080/api/admin/cache/purge-placeholders`
+* **Auth:** `Authorization: Bearer <admin_jwt>`
+
+This endpoint removes invalid placeholder rows from:
+- `sun_facing_analysis_result`
+- `transport_line_cal_result`
+
+### 7. Precompute Spatial Cache For All Postals
+Warm the cache so first user requests do not pay compute cost.
+
+* **Method:** POST
+* **URL:** `http://localhost:8080/api/admin/cache/precompute-spatial`
+* **Auth:** `Authorization: Bearer <admin_jwt>`
+
+#### Example A: Sun + Noise for all postals
+```json
+{}
+```
+
+#### Example B: Dry run / partial warm-up (first 200 postals)
+```json
+{
+  "limit": 200
+}
+```
+
+#### Example C: Include Future-Development Risk cache too
+```json
+{
+  "includeFutureRisk": true,
+  "futureRiskDistance": 500
+}
+```
+
+Notes:
+- `includeFutureRisk` defaults to `false`.
+- `futureRiskDistance` defaults to `500` meters.
+- For current recommendation flow, sun/noise precompute is essential. Future-risk precompute is optional unless your frontend calls future-risk heavily.
+
 ## POI Data Ingestion (Functional Steps 1-6)
 
 Use this flow when you want live Singapore POI data for Convenience scoring.

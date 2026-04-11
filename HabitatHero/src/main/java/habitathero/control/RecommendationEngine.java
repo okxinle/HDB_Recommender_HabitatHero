@@ -1,6 +1,5 @@
 package habitathero.control;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -39,17 +38,20 @@ public class RecommendationEngine {
     private final HDBBuildingMgr hdbBuildingMgr;
     private final TransportLineMgr transportLineMgr;
     private final ConvenienceScoringService convenienceScoringService;
+    private final RankingStrategy rankingStrategy;
 
     public RecommendationEngine(ResaleTransactionRepository resaleTransactionRepository,
                                 MultiCommuterService multiCommuterService,
                                 HDBBuildingMgr hdbBuildingMgr,
                                 TransportLineMgr transportLineMgr,
-                                ConvenienceScoringService convenienceScoringService) {
+                                ConvenienceScoringService convenienceScoringService,
+                                RankingStrategy rankingStrategy) {
         this.resaleTransactionRepository = resaleTransactionRepository;
         this.multiCommuterService = multiCommuterService;
         this.hdbBuildingMgr = hdbBuildingMgr;
         this.transportLineMgr = transportLineMgr;
         this.convenienceScoringService = convenienceScoringService;
+        this.rankingStrategy = rankingStrategy;
     }
 
     // ── Public entry point ────────────────────────────────────────────────
@@ -74,8 +76,10 @@ public class RecommendationEngine {
         }
 
         Map<String, ResaleTransactionRepository.TownPsfView> townPriceBenchmarks = loadTownPriceBenchmarks(candidateList);
-
-        multiCommuterService.annotateCommuteScores(candidateList, request.getCommuterProfile());
+        boolean hasValidCommuterPair = hasValidCommuterPair(request.getCommuterProfile());
+        if (hasValidCommuterPair) {
+            multiCommuterService.annotateCommuteScores(candidateList, request.getCommuterProfile());
+        }
 
         List<WeightedPreference> softConstraints = request.getSoftConstraints() == null
                 ? List.of()
@@ -84,26 +88,27 @@ public class RecommendationEngine {
         FactorConfig solarConfig = resolveFactorConfig(softConstraints, FACTOR_SOLAR);
         FactorConfig acousticConfig = resolveFactorConfig(softConstraints, FACTOR_ACOUSTIC);
         FactorConfig convenienceConfig = resolveConvenienceConfig(request, softConstraints);
+        boolean needsSolarAnalysis = solarConfig.mode != FactorMode.IGNORE;
+        boolean needsAcousticAnalysis = acousticConfig.mode != FactorMode.IGNORE;
         int selectedConvenienceCount = request.getSelectedAmenities() == null
             ? 0
             : (int) request.getSelectedAmenities().stream()
                 .filter(item -> item != null && !item.trim().isEmpty())
                 .count();
 
-        boolean hasValidCommuterPair = hasValidCommuterPair(request.getCommuterProfile());
         List<HDBBlock> rankedBlocks = new ArrayList<>();
 
         for (BlockCandidateView candidate : candidateList) {
             HDBBlock block = candidate.getBlock();
 
-            JSONObject sunFacingResult = getSunFacingResult(block);
-            JSONObject noiseLevelResult = getNoiseLevelResult(block);
+            JSONObject sunFacingResult = needsSolarAnalysis ? getSunFacingResult(block) : null;
+            JSONObject noiseLevelResult = needsAcousticAnalysis ? getNoiseLevelResult(block) : null;
 
-            double solarScore = scoreSolarOrientation(block, sunFacingResult);
-            double acousticScore = scoreAcousticComfort(block, noiseLevelResult);
-                ConvenienceScoringService.ConvenienceEvaluation convenienceEvaluation =
-                    convenienceScoringService.evaluateBlock(block, request);
-                double convenienceScore = convenienceEvaluation.getScore();
+            double solarScore = needsSolarAnalysis ? scoreSolarOrientation(block, sunFacingResult) : 0.0;
+            double acousticScore = needsAcousticAnalysis ? scoreAcousticComfort(block, noiseLevelResult) : 0.0;
+            ConvenienceScoringService.ConvenienceEvaluation convenienceEvaluation =
+                convenienceScoringService.evaluateBlock(block, request);
+            double convenienceScore = convenienceEvaluation.getScore();
 
             if (!passesStrictConstraints(
                     block,
@@ -125,10 +130,10 @@ public class RecommendationEngine {
                     acousticScore,
                     convenienceScore);
 
-            // Keep match score neutral when all factors are ignored (instead of forcing 0%).
+                    // Keep match score neutral when all factors are ignored (instead of forcing 0%).
             double normalizedLivability = weightedScore.totalWeight > 0.0
                     ? weightedScore.weightedScore / weightedScore.totalWeight
-                    : 1.0;
+                        : 1.0;
             normalizedLivability = clamp01(normalizedLivability);
 
             double combinedScore = hasValidCommuterPair
@@ -172,8 +177,7 @@ public class RecommendationEngine {
             throw new ZeroMatchesException();
         }
 
-        rankedBlocks.sort(Comparator.comparingDouble(HDBBlock::getGlobalMatchIndex).reversed());
-        return rankedBlocks;
+        return rankingStrategy.rank(rankedBlocks, request);
     }
 
     private Map<String, ResaleTransactionRepository.TownPsfView> loadTownPriceBenchmarks(List<BlockCandidateView> candidateList) {

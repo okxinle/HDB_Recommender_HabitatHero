@@ -31,8 +31,8 @@ public class OneMapRoutingService implements IRoutingService {
 
     public OneMapRoutingService() {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout((int) Duration.ofSeconds(5).toMillis());
-        requestFactory.setReadTimeout((int) Duration.ofSeconds(5).toMillis());
+        requestFactory.setConnectTimeout((int) Duration.ofMillis(800).toMillis());
+        requestFactory.setReadTimeout((int) Duration.ofMillis(800).toMillis());
 
         this.restTemplate = new RestTemplate(requestFactory);
         this.objectMapper = new ObjectMapper();

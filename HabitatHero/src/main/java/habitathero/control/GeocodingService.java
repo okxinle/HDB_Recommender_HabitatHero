@@ -205,11 +205,11 @@ public class GeocodingService {
         return queryCoordinatesSafe(
                 """
                 SELECT
-                    ST_Y(ST_Centroid(ST_Collect(geom))) AS latitude,
-                    ST_X(ST_Centroid(ST_Collect(geom))) AS longitude
-                FROM hdb_building
-                WHERE postal_cod = ?
-                GROUP BY postal_cod
+                    (coordinates->>'lat')::double precision AS latitude,
+                    (coordinates->>'lng')::double precision AS longitude
+                FROM hdb_blocks
+                WHERE postal_code = ?
+                  AND coordinates IS NOT NULL
                 LIMIT 1
                 """,
                 postalCode);
@@ -431,6 +431,8 @@ public class GeocodingService {
         }
 
         String cleaned = raw.toUpperCase().replaceAll("[^A-Z0-9 ]", " ").trim();
+        cleaned = cleaned.replaceAll("\\bC\\s+WEALTH\\b", "COMMONWEALTH");
+        cleaned = cleaned.replaceAll("\\bCWEALTH\\b", "COMMONWEALTH");
         if (cleaned.isEmpty()) {
             return null;
         }
@@ -458,6 +460,21 @@ public class GeocodingService {
 
         map.put("ROAD", "RD");
         map.put("RD", "RD");
+
+        map.put("TANJONG", "TANJONG");
+        map.put("TG", "TANJONG");
+
+        map.put("GARDENS", "GARDENS");
+        map.put("GARDEN", "GARDENS");
+        map.put("GDNS", "GARDENS");
+
+        map.put("HEIGHTS", "HEIGHTS");
+        map.put("HTS", "HEIGHTS");
+
+        map.put("MARKET", "MARKET");
+        map.put("MKT", "MARKET");
+
+        map.put("COMMONWEALTH", "COMMONWEALTH");
 
         map.put("STREET", "ST");
         map.put("ST", "ST");

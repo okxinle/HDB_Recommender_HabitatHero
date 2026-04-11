@@ -1,6 +1,8 @@
 import LivabilityPreferenceBlock from "./LivabilityPreferenceBlock";
 
 function LivabilityFactors({ data, update, showErrors }) {
+  const isValidPostalCode = (value) => /^\d{6}$/.test((value || "").trim());
+
   // 1. Safe helper to find a factor in the new List structure
   const getFactor = (name) => {
     return data.softConstraints.find((f) => f.preferenceName === name) || {
@@ -59,7 +61,8 @@ function LivabilityFactors({ data, update, showErrors }) {
   };
 
   const handleParentsAddressChange = (value) => {
-    updateSoftConstraint("convenience", { parentsAddress: value });
+    const sanitizedValue = typeof value === "string" ? value.replace(/\D/g, "").slice(0, 6) : "";
+    updateSoftConstraint("convenience", { parentsAddress: sanitizedValue });
   };
 
   // 3. Extract variables for rendering
@@ -209,15 +212,24 @@ function LivabilityFactors({ data, update, showErrors }) {
                 <label className="parents-address-label">Enter your parents' address</label>
                 <input
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
                   className="parents-address-input"
                   value={convenience.parentsAddress || ""}
+                  placeholder="e.g. 560123"
                   onChange={(e) => handleParentsAddressChange(e.target.value)}
                 />
+                <p className="field-helper">Enter a 6-digit Singapore postal code</p>
               </div>
             )}
 
             {showErrors && parentsAddressSelected && (!convenience.parentsAddress || convenience.parentsAddress.trim() === "") && (
               <p className="field-error">Please enter your parents' address.</p>
+            )}
+
+            {showErrors && parentsAddressSelected && convenience.parentsAddress && !isValidPostalCode(convenience.parentsAddress) && (
+              <p className="field-error">Please enter a valid 6-digit Singapore postal code for Parents' Address.</p>
             )}
           </>
         )}

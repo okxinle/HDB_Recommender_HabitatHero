@@ -30,7 +30,7 @@ const getSafeNumber = (value) => (typeof value === 'number' && Number.isFinite(v
 
 const formatCurrency = (value) => {
   const amount = getSafeNumber(value);
-  return amount === null ? 'N/A' : `$${amount.toLocaleString()}`;
+  return amount === null ? 'N/A' : `$${Math.round(amount).toLocaleString()}`;
 };
 
 const normalizeResultItem = (item) => {
@@ -137,6 +137,17 @@ function HDBResultDashBoardPage() {
   const [sortBy, setSortBy] = useState(() => {
     return sessionStorage.getItem('resultsSortBy') || 'match-desc';
   });
+
+  const RESULTS_PER_PAGE = 50;
+
+  const [currentPage, setCurrentPage] = useState(() => {
+    const saved = Number(sessionStorage.getItem('resultsCurrentPage'));
+    return Number.isFinite(saved) && saved > 0 ? saved : 1;
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem('resultsCurrentPage', String(currentPage));
+  }, [currentPage]);
 
   useEffect(() => {
     sessionStorage.setItem('resultsSearchQuery', searchQuery);
@@ -257,6 +268,15 @@ function HDBResultDashBoardPage() {
     }
   }, [rankedBlocks]);
 
+  useEffect(() => {
+    if (
+      (stateRankedBlocks && stateRankedBlocks.length > 0) ||
+      stateSubmittedPreferences
+    ) {
+      setCurrentPage(1);
+    }
+  }, [stateRankedBlocks, stateSubmittedPreferences]);
+
   const hasFreshNavigationResults =
     Array.isArray(stateRankedBlocks) && stateRankedBlocks.length > 0;
   const usingSessionFallback =
@@ -343,6 +363,19 @@ function HDBResultDashBoardPage() {
       }
     });
   }, [rankedBlocks, searchQuery, sortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredAndSortedResults.length / RESULTS_PER_PAGE));
+
+  const paginatedResults = useMemo(() => {
+    const startIndex = (currentPage - 1) * RESULTS_PER_PAGE;
+    return filteredAndSortedResults.slice(startIndex, startIndex + RESULTS_PER_PAGE);
+  }, [filteredAndSortedResults, currentPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const summaryData = useMemo(() => {
     if (!submittedPreferences) {
@@ -555,7 +588,6 @@ function HDBResultDashBoardPage() {
                 <span> ({summaryData.commuterDestinations.join(' & ')})</span>
               )}
             </div>
-            <div className="choice-summary-item"><strong>Convenience Mode:</strong> {summaryData.convenienceMode}</div>
             <div className="choice-summary-item">
               <strong>Selected Amenities:</strong> {summaryData.amenities.length > 0 ? summaryData.amenities.join(', ') : 'None'}
             </div>
@@ -568,7 +600,10 @@ function HDBResultDashBoardPage() {
 
       <div className="results-header">
         <h1>Your Personalized HDB Matches</h1>
-        <p>We found {filteredAndSortedResults.length} blocks tailored to your lifestyle preferences.</p>
+        <p>
+          We found {filteredAndSortedResults.length} blocks tailored to your lifestyle preferences.
+          Showing page {currentPage} of {totalPages}.
+        </p>
 
         <div className="results-topbar flex flex-col md:flex-row justify-center items-center gap-4 w-full max-w-5xl mx-auto mb-10" role="region" aria-label="Search and sort results">
           <div className="results-topbar-search-wrap w-full md:w-[66%]">
@@ -608,7 +643,7 @@ function HDBResultDashBoardPage() {
           </div>
         ) : (
         <div className={`results-grid ${showResultsFadeIn ? 'results-grid--fade-in' : ''}`}>
-          {filteredAndSortedResults.map((item, index) => {
+          {paginatedResults.map((item, index) => {
             const block = normalizeResultItem(item);
             const blockId = block?.blockId ?? "N/A";
             const town = formatTown(block?.town);
@@ -770,6 +805,33 @@ function HDBResultDashBoardPage() {
           })}
         </div>
         )}
+        {filteredAndSortedResults.length > RESULTS_PER_PAGE && (
+        <div className="results-pagination">
+          <button
+            className="results-pagination-btn"
+            onClick={() => {setCurrentPage((page) => Math.max(1, page - 1));
+            window.scrollTo({ top: 0, behavior: 'auto' });
+            }}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </button>
+
+          <span className="results-pagination-info">
+            Page {currentPage} of {totalPages}
+          </span>
+
+          <button
+            className="results-pagination-btn"
+            onClick={() => {setCurrentPage((page) => Math.min(totalPages, page + 1));
+            window.scrollTo({ top: 0, behavior: 'auto' });
+            }}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </button>
+        </div>
+      )}
       </section>
     </div>
 

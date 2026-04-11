@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Circle, MapContainer, Marker, Popup, Polygon, TileLayer } from 'react-leaflet';
+import { Circle, MapContainer, Marker, Popup, Polygon, TileLayer, useMap } from 'react-leaflet';
 import { DollarSign, Clock, MapPin, BarChart3, Ruler } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -141,6 +141,69 @@ const inferDevelopmentIntent = ({ gpr, luDesc, luText }) => {
   }
 
   return 'Planned development zone (URA)';
+};
+
+const getFutureDevelopmentWeight = (development) => {
+  const haystack = [development?.gpr, development?.lu_desc, development?.lu_text]
+    .filter((value) => typeof value === 'string' && value.trim().length > 0)
+    .join(' ')
+    .toUpperCase();
+
+  if (!haystack) {
+    return 0.6;
+  }
+
+  if (haystack.includes('MRT') || haystack.includes('RAIL') || haystack.includes('TRANSPORT')) {
+    return 1.0;
+  }
+
+  if (haystack.includes('RESERVE SITE')) {
+    return 0.9;
+  }
+
+  if (haystack.includes('RESIDENTIAL') || haystack.includes('PUBLIC HOUSING') || haystack.includes('HOUSING')) {
+    return 0.75;
+  }
+
+  if (haystack.includes('COMMERCIAL') || haystack.includes('MIXED USE')) {
+    return 0.65;
+  }
+
+  if (haystack.includes('PARK') || haystack.includes('OPEN SPACE') || haystack.includes('RECREATION')) {
+    return 0.45;
+  }
+
+  return 0.6;
+};
+
+const calculateFutureDevelopmentExposureScore = (distanceMeters, development) => {
+  const distance = getSafeNumber(distanceMeters);
+  if (distance === null) {
+    return null;
+  }
+
+  const typeWeight = getFutureDevelopmentWeight(development);
+  const normalizedDistance = Math.min(distance, 1500);
+  const distanceScore = 100 - (normalizedDistance / 1500) * 100;
+  const exposureScore = distanceScore * typeWeight;
+
+  return Math.max(5, Math.min(95, Math.round(exposureScore)));
+};
+
+const getFutureExposureTier = (exposureScore) => {
+  if (exposureScore === null) {
+    return null;
+  }
+
+  if (exposureScore >= 70) {
+    return 'high';
+  }
+
+  if (exposureScore >= 40) {
+    return 'medium';
+  }
+
+  return 'low';
 };
 
 const getFutureRiskTier = (development) => {
@@ -725,26 +788,6 @@ const normalizeResultItem = (item) => {
   return item;
 };
 
-const getSunlightExposureRating = (pct) => {
-  if (pct >= 80) return { label: 'Excellent', color: '#166534' };
-  if (pct >= 60) return { label: 'Good', color: '#15803d' };
-  if (pct >= 40) return { label: 'Moderate', color: '#b45309' };
-  return { label: 'Low', color: '#b42318' };
-};
-
-const getSunlightDescription = (result) => {
-  if (!result || result.status !== 'OK') return 'Sunlight data pending...';
-  
-  const isWestHot = result.westScoreRelativeExposurePct > 70;
-  const isBright = result.sunlightIndexRelativeExposurePct > 60;
-  
-  let advice = isBright ? "Very bright interiors. " : "Moderate natural light. ";
-  if (isWestHot) advice += "Expect afternoon heat (West Sun).";
-  else advice += "Shielded from harsh afternoon sun.";
-  
-  return advice;
-};
-
 function SpatialAnalysisResultDashBoardPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -1076,31 +1119,34 @@ function SpatialAnalysisResultDashBoardPage() {
   const hasNearbyMrtSignal = Boolean(
     matchedAmenities?.mrtStation?.length || matchedAmenities?.mrt?.length || matchedAmenities?.train?.length
   );
-  const noiseSignature = hasNearbyMrtSignal ? 'Periodic: Train Rumble' : 'Constant: White Noise';
-
-  const peakWindow = hdbBlock?.westSunStatus ? '2:30 PM - 5:00 PM' : '1:30 PM - 3:30 PM';
-  const sunBadgeTone = hdbBlock?.westSunStatus ? 'moderate' : 'good';
-  const noiseBadgeTone = hasNearbyMrtSignal ? 'moderate' : 'good';
+  const noiseSignature = hasNearbyMrtSignal ? 'Periodic: Train Rumble' : 'Constant - White Noise';
 
   const reserveDistance = hasValidBlockPosition
     ? getMinDistanceToRings(blockLat, blockLng, futureRiskPolygons)
     : null;
 
-  const viewProtectionScore = reserveDistance === null
-    ? null
-    : Math.max(20, Math.min(95, Math.round(100 - reserveDistance / 30)));
+  const viewExposureScore = calculateFutureDevelopmentExposureScore(
+    pickFirstNumber([nearestFutureDevelopment?.distance_meters, reserveDistance]),
+    nearestFutureDevelopment
+  );
 
-  const futureProgressClass = viewProtectionScore !== null && viewProtectionScore >= 80
-    ? 'progress-bar__fill progress-bar__fill--good'
-    : 'progress-bar__fill progress-bar__fill--moderate';
+  const viewExposureTier = getFutureExposureTier(viewExposureScore);
+
+  const futureProgressClass = viewExposureScore !== null && viewExposureScore >= 70
+    ? 'progress-bar__fill progress-bar__fill--bad'
+    : viewExposureScore !== null && viewExposureScore >= 40
+      ? 'progress-bar__fill progress-bar__fill--moderate'
+      : 'progress-bar__fill progress-bar__fill--good';
 
   const hasFutureRiskPolygons = futureRiskPolygons.length > 0;
 
   const viewRiskCopy = !hasFutureRiskPolygons
     ? 'No mapped future development polygons were found for this block radius.'
-    : viewProtectionScore !== null && viewProtectionScore >= 80
-      ? 'Strong buffer against nearby future development pressure.'
-      : 'Moderate exposure to future development changes nearby.';
+    : viewExposureScore !== null && viewExposureScore >= 70
+      ? 'High exposure to nearby future development pressure.'
+      : viewExposureScore !== null && viewExposureScore >= 40
+        ? 'Moderate exposure to nearby future development pressure.'
+        : 'Lower exposure to nearby future development pressure.';
 
   const nearestDistanceText = Number.isFinite(Number(nearestFutureDevelopment?.distance_meters))
     ? `${Math.round(Number(nearestFutureDevelopment.distance_meters))} m`
@@ -1146,6 +1192,81 @@ function SpatialAnalysisResultDashBoardPage() {
     };
     fetchSunData();
   }, [postalCode]);
+
+  const [noiseData, setNoiseData] = useState(null);
+
+  const noiseLevel = noiseData?.noise_level_db || 0;
+
+  const noiseBadgeTone =
+  noiseLevel > 75
+    ? 'high'
+    : noiseLevel > 60
+      ? 'moderate'
+      : 'good';
+
+  useEffect(() => {
+      const fetchNoise = async () => {
+          try {
+              const response = await fetch(`http://localhost:8080/api/hdb/noise-analysis?postalCode=${postalCode}`);
+              const data = await response.json();
+              if (data.status === "OK") {
+                  setNoiseData(data);
+              }
+          } catch (err) {
+              console.error("Noise fetch failed", err);
+          }
+      };
+      if (postalCode) fetchNoise();
+  }, [postalCode]);
+
+
+  const noiseDistanceMeters = pickFirstNumber([
+    noiseData?.distance_meters,
+    noiseData?.distanceMeters,
+  ]);
+
+  const getSunRotation = (direction) => {
+    const map = {
+      EAST: 0,
+      SOUTHEAST: 45,
+      SOUTH: 90,
+      SOUTHWEST: 135,
+      WEST: 180,
+      NORTHWEST: 225,
+      NORTH: 270,
+      NORTHEAST: 315,
+    };
+
+    return map[direction?.toUpperCase()] ?? 0;
+  };
+
+  function ResetMapButton({ center, zoom }) {
+    const map = useMap();
+
+    const handleReset = () => {
+      map.setView(center, zoom, { animate: true });
+    };
+
+    return (
+      <div className="map-control-button" onClick={handleReset}>
+        <svg width="16" height="16" viewBox="0 0 24 24">
+          <path
+            d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"
+            stroke="black"
+            strokeWidth="3"
+            fill="none"
+            strokeLinecap="round"
+          />
+        </svg>
+      </div>
+    );
+  }
+
+  const sunMarkerPosition =
+  blockLat !== null && blockLng !== null
+    ? [blockLat - 0.00018, blockLng + 0.00008]
+    : blockPosition;
+    
 
   return (
     <div className="spatial-report-page">
@@ -1216,58 +1337,106 @@ function SpatialAnalysisResultDashBoardPage() {
           <MapContainer center={blockPosition} zoom={16} className="report-map">
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
+            <ResetMapButton center={blockPosition} zoom={16} />
+
             <Marker position={blockPosition}>
               <Popup>
                 Block {blockNumber} {formatStreet(streetName)}
               </Popup>
             </Marker>
 
-            <Circle
-              center={blockPosition}
-              radius={150}
-              pathOptions={{
-                color: '#dc3545',
-                dashArray: '6,6',
-                fillColor: '#dc3545',
-                fillOpacity: 0.12,
-              }}
-            />
+            {sunAnalysis?.status === 'OK' && sunAnalysis?.dominant && (
+              <Marker
+                position={blockPosition}
+                icon={L.divIcon({
+                  className: "sun-arrow",
+                  html: `<div style="
+                    transform: rotate(${getSunRotation(sunAnalysis.dominant)}deg);
+                    font-size: 24px;
+                    color: #f59e0b;
+                    font-weight: bold;
+                  ">➤</div>`,
+                })}
+              >
+                <Popup>
+                  <div className="future-risk-popup">
+                    <strong>Sun Exposure</strong>
+                    <div>Orientation: {sunAnalysis.dominant}</div>
+                    <div>
+                      Heat Exposure: {
+                        sunAnalysis.westScoreRelativeExposurePct != null
+                          ? `${Number(sunAnalysis.westScoreRelativeExposurePct).toFixed(1)}%`
+                          : 'n/a'
+                      }
+                    </div>
+                  </div>
+                </Popup>
+              </Marker>
+            )}
+
+              {noiseData?.status === 'OK' && noiseDistanceMeters !== null && (
+                <Circle
+                  center={blockPosition}
+                  radius={noiseDistanceMeters}
+                  pathOptions={{
+                    color:'#6dbb7d',
+                    dashArray: '6,6',
+                    fillColor:'#6dbb7d',
+                    fillOpacity: 0.15,
+                    weight: 2,
+                  }}
+                >
+                  <Popup>
+                    <div>
+                      <strong>Noise Buffer</strong>
+                      <div>Rail Type: {noiseData.rail_type}</div>
+                      <div>Distance to {noiseData.rail_type}: {Math.round(noiseDistanceMeters)} m</div>
+                      <div>Noise Level: {noiseLevel.toFixed(1)} dBA</div>
+                    </div>
+                  </Popup>
+                </Circle>
+              )}
 
             {futureRiskOverlays.map((overlay) => (
               <Polygon
                 key={overlay.key}
                 positions={overlay.positions}
                 pathOptions={overlay.style}
-                eventHandlers={{
-                  mouseover: (event) => {
-                    const layer = event.target;
-                    layer.setStyle({
-                      ...overlay.style,
-                      fillOpacity: 0.5,
-                      weight: 3,
-                    });
-                    layer.bringToFront?.();
-                  },
-                  mouseout: (event) => {
-                    event.target.setStyle(overlay.style);
-                  },
-                }}
               >
                 <Popup>
-                  <div className="future-risk-popup">
-                    <strong>{overlay.summary.title}</strong>
-                    <div>{overlay.summary.intent}</div>
-                    <div>{overlay.summary.distanceText}</div>
-                  </div>
+                  <strong>{overlay.summary.title}</strong><br />
+                  {overlay.summary.intent}<br />
+                  {overlay.summary.distanceText}
                 </Popup>
               </Polygon>
             ))}
           </MapContainer>
 
           <div className="report-map-legend">
-            <div className="report-map-legend__item">☀ West Sun Risk</div>
-            <div className="report-map-legend__item">🔊 Noise Buffer</div>
-            <div className="report-map-legend__item">▧ URA Risk Zones (High / Medium / Low)</div>
+            <div className="report-map-legend__item">
+              <span
+                className="legend-icon--sun-arrow"
+                style={{
+                  display: 'inline-block',
+                  transform: `rotate(${getSunRotation(sunAnalysis?.dominant)}deg)`,
+                  fontSize: '16px',
+                  color: '#f59e0b',
+                  margin: '0 3px'
+                }}
+              >    ➤
+              </span>
+              <span>Sun Orientation</span>
+            </div>
+
+            <div className="report-map-legend__item">
+              <span className="legend-icon legend-icon--noise"></span>
+              <span>Noise Buffer</span>
+            </div>
+
+            <div className="report-map-legend__item">
+              <span className="legend-icon legend-icon--ura"></span>
+              <span>URA Risk Zones</span>
+            </div>
           </div>
         </div>
       </section>
@@ -1311,20 +1480,72 @@ function SpatialAnalysisResultDashBoardPage() {
           <div className="intelligence-card__header">
             <h2 className="intelligence-card__title">🔊 NOISE RISK ASSESSMENT</h2>
             <span className={`status-badge status-badge--${noiseBadgeTone}`}>
-              {hasNearbyMrtSignal ? 'MODERATE' : 'GOOD'}
+              {noiseLevel > 75 ? 'HIGH' : noiseLevel > 60 ? 'MODERATE' : 'GOOD'}
             </span>
           </div>
-          <p className="intelligence-card__text">Noise Signature: <strong>{noiseSignature}</strong></p>
+          
+          <div className="intelligence-card__content">
+            <p className="intelligence-card__text">
+              Noise Signature: <strong>{noiseSignature}</strong>
+            </p>
+
+            <div className="spatial-details-grid" style={{ display: 'flex', gap: '8px', margin: '12px 0' }}>
+              <div className="detail-chip" style={{ background: '#f8f9fa', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', border: '1px solid #eee' }}>
+                🚆 <strong>Source:</strong> {noiseData?.rail_type || 'N/A'}
+              </div>
+              <div className="detail-chip" style={{ background: '#f8f9fa', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', border: '1px solid #eee' }}>
+                📏 <strong>Distance:</strong> {noiseData?.distance_meters ? `${Math.round(noiseData.distance_meters)}m` : 'Scanning...'}
+              </div>
+            </div>
+
+            <div className="noise-meter-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '4px' }}>
+              <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>Acoustic Intensity</span>
+              <span style={{ fontSize: '16px', fontWeight: 'bold', color: noiseBadgeTone === 'danger' ? '#ff4d4f' : '#333' }}>
+                {noiseLevel.toFixed(1)} <span style={{ fontSize: '10px', fontWeight: 'normal' }}>dBA</span>
+              </span>
+            </div>
+
+            <div className="noise-meter-container" style={{ position: 'relative', marginTop: '12px' }}>
+              <div style={{ background: '#eee', height: '8px', borderRadius: '4px', overflow: 'hidden' }}>
+                <div 
+                  style={{ 
+                    width: `${Math.min((noiseLevel / 100) * 100, 100)}%`, 
+                    height: '100%', 
+                    backgroundColor: noiseBadgeTone === 'danger' ? '#ff4d4f' : noiseBadgeTone === 'warning' ? '#faad14' : '#52c41a',
+                    transition: 'width 0.8s ease-out'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#999', marginTop: '4px' }}>
+                <span>30dB (Quiet)</span>
+                <span>60dB (NEA Limit)</span>
+                <span>90dB (Loud)</span>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '12px', color: '#555', marginTop: '10px', fontStyle: 'italic' }}>
+              {noiseLevel > 65 
+                ? "💡 High noise area: Double-glazed windows recommended." 
+                : "💡 Ambient noise is within comfortable residential limits."}
+            </p>
+            
+            <p className="intelligence-card__subtext" style={{ fontSize: '10px', color: '#999', marginTop: '8px' }}>
+              *Analysis based on the closest aboveground track segment to your block.
+            </p>
+          </div>
         </article>
 
         <article className="intelligence-card intelligence-card--future">
           <div className="intelligence-card__header">
-            <h2 className="intelligence-card__title">🏗️ FUTURE DEVELOPMENT</h2>
+            <h2 className="intelligence-card__title">🏗️ FUTURE DEVELOPMENT RISK</h2>
+            <span className={`status-badge status-badge--${viewExposureTier ?? 'neutral'}`}>
+              {viewExposureTier === null ? 'N/A' : viewExposureTier.toUpperCase()}
+            </span>
           </div>
           <div className="score-block">
-            <div className="score-block__value">{viewProtectionScore === null ? 'N/A' : `${viewProtectionScore}%`}</div>
             <div className="progress-bar" aria-hidden="true">
-              <div className={futureProgressClass} style={{ width: `${viewProtectionScore ?? 0}%` }} />
+              <div className={futureProgressClass} style={{ width: `${viewExposureScore ?? 0}%` }} />
             </div>
           </div>
           {viewRiskCopyDetailed && <p className="intelligence-card__text">{viewRiskCopyDetailed}</p>}
