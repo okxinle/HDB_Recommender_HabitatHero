@@ -9,5 +9,7 @@ src/main/resources/application.properties
 src/main/resources/*api*key*.txt
 src/main/resources/*production-key*.txt
 /dataset/MasterPlan2019LandUselayer.geojson
+/dataset/HDBExistingBuilding.geojson
+/dataset/MasterPlan2019RailLinelayer.geojson
 
 
