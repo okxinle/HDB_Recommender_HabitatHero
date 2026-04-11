@@ -18,7 +18,7 @@ import org.springframework.web.client.RestTemplate;
 import habitathero.entity.AuditLog;
 import habitathero.entity.HDBBlock;
 import habitathero.entity.ResaleTransaction;
-import habitathero.repository.AuditLogService;
+import habitathero.repository.AuditLogRepository;
 import habitathero.repository.IHDBRepository;
 import habitathero.repository.ResaleTransactionRepository;
 
@@ -35,7 +35,7 @@ public class DataPipelineService {
     private ResaleTransactionRepository transactionRepository;
 
     @Autowired
-    private AuditLogService auditLogRepository;
+    private AuditLogRepository auditLogRepository;
 
     private final String BASE_API_URL = "https://data.gov.sg/api/action/datastore_search?resource_id=f1765b54-a209-4718-8d38-a39237f502b3";
 
