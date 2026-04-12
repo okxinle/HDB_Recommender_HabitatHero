@@ -2,6 +2,7 @@ import React, { useMemo, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Circle, MapContainer, Marker, Popup, Polygon, TileLayer, useMap } from 'react-leaflet';
 import { DollarSign, Clock, MapPin, BarChart3, Ruler } from 'lucide-react';
+
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import '../styles/SpatialAnalysisResultDashBoardPage.css';
@@ -843,6 +844,51 @@ function SpatialAnalysisResultDashBoardPage() {
   const streetName = hdbBlock?.streetName ?? '';
   const postalCode = hdbBlock?.postalCode ?? 'N/A';
 
+const getAmenityEmoji = (key) => {
+  const icons = {
+    mrtStation: '🚆',
+    mrt: '🚆',
+    train: '🚆',
+    hawkerCentre: '🍜',
+    hawker: '🍜',
+    foodCentre: '🍜',
+    supermarket: '🛒',
+    market: '🛒',
+    grocery: '🛒',
+    school: '🏫',
+    park: '🌳',
+    hospital: '🏥',
+    playground: '🛝',
+    parentsAddress: '🏠',
+  };
+
+  return icons[key] || '📍';
+};
+
+const createAmenityIcon = (key) =>
+  L.divIcon({
+    className: '',
+    html: `
+      <div style="
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: white;
+        border: 2px solid #2f7d74;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      ">
+        ${getAmenityEmoji(key)}
+      </div>
+    `,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -14],
+  });
+
   const summaryStats = useMemo(() => {
     const estimatedPrice = pickFirstNumber([
       hdbBlock?.estimatedPrice,
@@ -1036,6 +1082,43 @@ function SpatialAnalysisResultDashBoardPage() {
       })
       .filter(Boolean);
   }, [matchedAmenitiesEntries, nearestAmenities]);
+
+  const amenityMarkers = useMemo(() => {
+    return Object.entries(nearestAmenities)
+      .flatMap(([key, value]) => {
+        const entries = Array.isArray(value) ? value : [value];
+
+        return entries
+          .map((entry, index) => {
+            const parsed = extractAmenityObject(entry);
+            if (!parsed || parsed.lat === null || parsed.lng === null) {
+              return null;
+            }
+
+            return {
+              key: `${key}-${index}-${parsed.name || 'amenity'}`,
+              amenityKey: key,
+              label: formatAmenityLabel(key),
+              name: formatPOIName({
+                ...parsed,
+                amenityKey: key,
+              }) || formatAmenityLabel(key),
+              position: [parsed.lat, parsed.lng],
+              distanceMeters:
+                parsed.distanceMeters !== null
+                  ? parsed.distanceMeters
+                  : (blockLat !== null && blockLng !== null
+                      ? haversineMeters(blockLat, blockLng, parsed.lat, parsed.lng)
+                      : null),
+            };
+          })
+          .filter(Boolean);
+      });
+  }, [nearestAmenities, blockLat, blockLng]);
+
+  const legendAmenityKeys = useMemo(() => {
+    return [...new Set(amenityMarkers.map(m => m.amenityKey))];
+  }, [amenityMarkers]);
 
   const intelligence = useMemo(() => {
     const estimatedPrice = pickFirstNumber([hdbBlock?.estimatedPrice, resultMeta?.estimatedPrice]);
@@ -1262,12 +1345,6 @@ function SpatialAnalysisResultDashBoardPage() {
     );
   }
 
-  const sunMarkerPosition =
-  blockLat !== null && blockLng !== null
-    ? [blockLat - 0.00018, blockLng + 0.00008]
-    : blockPosition;
-    
-
   return (
     <div className="spatial-report-page">
 
@@ -1344,6 +1421,26 @@ function SpatialAnalysisResultDashBoardPage() {
                 Block {blockNumber} {formatStreet(streetName)}
               </Popup>
             </Marker>
+
+            {amenityMarkers.map((marker) => (
+            <Marker
+              key={marker.key}
+              position={marker.position}
+              icon={createAmenityIcon(marker.amenityKey)}
+            >
+              <Popup>
+                <div className="future-risk-popup">
+                  <strong>{marker.name}</strong>
+                  <div>{marker.label}</div>
+                  <div>
+                    {marker.distanceMeters !== null
+                      ? `${Math.round(marker.distanceMeters)} m from block`
+                      : 'distance unavailable'}
+                  </div>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
 
             {sunAnalysis?.status === 'OK' && sunAnalysis?.dominant && (
               <Marker
@@ -1437,6 +1534,30 @@ function SpatialAnalysisResultDashBoardPage() {
               <span className="legend-icon legend-icon--ura"></span>
               <span>URA Risk Zones</span>
             </div>
+            {legendAmenityKeys.map((key) => (
+              <div key={key} className="report-map-legend__item">
+
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 'clamp(18px, 2vw, 22px)',
+                    height: 'clamp(18px, 2vw, 22px)',
+                    borderRadius: '50%',
+                    background: 'white',
+                    border: '2px solid #2f7d74',
+                    fontSize: 'clamp(10px, 1.2vw, 13px)',
+                    marginLeft: '-2px',
+                    flexShrink: 0,
+                  }}
+                >
+                  {getAmenityEmoji(key)}
+                </span>
+
+                <span>{formatAmenityLabel(key)}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>

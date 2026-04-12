@@ -169,24 +169,27 @@
 }
 
 .report-map-legend {
-  position: absolute;
-  right: 16px;
-  bottom: 16px;
-  z-index: 1000;
-  min-width: 180px;
+  min-width: 190px;
   padding: 14px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
 }
 
 .report-map-legend__item {
-  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.report-map-legend__item span:last-child {
+  font-size: 14px;
   font-weight: 600;
-  color: #1f2937;
-  line-height: 1.4;
+  line-height: 1.35;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.report-map-legend__item:last-child {
+  margin-bottom: 0;
 }
 
 .report-map-legend__item + .report-map-legend__item {
