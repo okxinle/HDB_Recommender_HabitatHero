@@ -93,14 +93,37 @@ public class ConvenienceScoringService {
 
     private AmenityMatchDetail getAmenityMatchDetail(Coordinates blockCoordinates, String amenity, String parentsPostalCode) {
         if (AMENITY_PARENTS_ADDRESS.equals(amenity)) {
-            boolean parentsMatched = isParentsAddressSatisfied(blockCoordinates, parentsPostalCode);
-            if (parentsMatched) {
-                return new AmenityMatchDetail(
-                        true,
-                        List.of(PARENTS_HOME_WITHIN_4KM),
-                        new AmenityLocation(PARENTS_HOME_WITHIN_4KM, null, null, null));
+
+            if (parentsPostalCode == null || parentsPostalCode.trim().isEmpty()) {
+                return new AmenityMatchDetail(false, List.of(), null);
             }
-            return new AmenityMatchDetail(false, List.of(), null);
+
+            Optional<Coordinates> parentsCoordinates =
+                geocodingService.getCoordinates(parentsPostalCode.trim());
+
+            if (parentsCoordinates.isEmpty()) {
+                return new AmenityMatchDetail(false, List.of(), null);
+            }
+
+            Coordinates coords = parentsCoordinates.get();
+
+            boolean withinRange =
+                haversineDistanceKm(blockCoordinates, coords) <= PARENTS_MAX_DISTANCE_KM;
+
+            if (!withinRange) {
+                return new AmenityMatchDetail(false, List.of(), null);
+            }
+
+            return new AmenityMatchDetail(
+                true,
+                List.of(PARENTS_HOME_WITHIN_4KM),
+                new AmenityLocation(
+                    PARENTS_HOME_WITHIN_4KM,
+                    coords.getLat(),
+                    coords.getLng(),
+                    haversineDistanceKm(blockCoordinates, coords) * 1000.0
+                )
+            );
         }
 
         String category = mapAmenityToCategory(amenity);
