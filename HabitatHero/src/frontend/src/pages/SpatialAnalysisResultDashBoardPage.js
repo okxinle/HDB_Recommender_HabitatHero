@@ -639,80 +639,6 @@ const buildPedestrianRows = (nearestAmenities, matchedAmenities, blockLat, block
   return [...rowsFromNearest, ...rowsFromMatches];
 };
 
-const getNearestDistanceByKeys = (nearestAmenities, blockLat, blockLng, keys) => {
-  const source = normalizeSourceObject(nearestAmenities);
-
-  let bestMeters = null;
-  for (const key of keys) {
-    const rawValue = source[key];
-    const entries = Array.isArray(rawValue) ? rawValue : [rawValue];
-
-    for (const entry of entries) {
-      const parsed = extractAmenityObject(entry);
-      if (!parsed) {
-        continue;
-      }
-
-      let distanceMeters = getSafeNumber(parsed.distanceMeters);
-      if (
-        distanceMeters === null &&
-        blockLat !== null &&
-        blockLng !== null &&
-        parsed.lat !== null &&
-        parsed.lng !== null
-      ) {
-        distanceMeters = haversineMeters(blockLat, blockLng, parsed.lat, parsed.lng);
-      }
-
-      if (distanceMeters === null || distanceMeters <= 0) {
-        continue;
-      }
-
-      if (bestMeters === null || distanceMeters < bestMeters) {
-        bestMeters = distanceMeters;
-      }
-    }
-  }
-
-  return bestMeters;
-};
-
-const getNearestAmenityNameByKeys = (nearestAmenities, matchedAmenities, keys) => {
-  const source = normalizeSourceObject(nearestAmenities);
-  for (const key of keys) {
-    const rawValue = source[key];
-    const entries = Array.isArray(rawValue) ? rawValue : [rawValue];
-    for (const entry of entries) {
-      const parsed = extractAmenityObject(entry);
-      if (!parsed) {
-        continue;
-      }
-
-      const formatted = formatPOIName({ ...parsed, amenityKey: key });
-      if (formatted) {
-        return formatted;
-      }
-    }
-  }
-
-  const matched = normalizeSourceObject(matchedAmenities);
-  for (const key of keys) {
-    const names = matched[key];
-    if (!Array.isArray(names)) {
-      continue;
-    }
-
-    for (const name of names) {
-      const formatted = formatPOIName({ amenityKey: key, name });
-      if (formatted) {
-        return formatted;
-      }
-    }
-  }
-
-  return null;
-};
-
 const sanitizePlaceNames = (key, placeNames, nearestValue) => {
   if (!Array.isArray(placeNames)) {
     placeNames = [];
@@ -865,29 +791,46 @@ const getAmenityEmoji = (key) => {
   return icons[key] || '📍';
 };
 
-const createAmenityIcon = (key) =>
-  L.divIcon({
+const getAmenityColors = (key) => {
+  const colors = {
+    mrtStation: { bg: '#dbeafe', icon: '#2563eb' },  
+    school: { bg: '#ede9fe', icon: '#7c3aed' },       
+    supermarket: { bg: '#fef3c7', icon: '#d97706' },  
+    hawkerCentre: { bg: '#ffedd5', icon: '#ea580c' },
+    park: { bg: '#dcfce7', icon: '#16a34a' },         
+    hospital: { bg: '#fee2e2', icon: '#dc2626' },   
+    playground: { bg: '#e0f2fe', icon: '#0891b2' },   
+    parentsAddress: { bg: '#ecfdf5', icon: '#065f46' } 
+  };
+
+  return colors[key] || { bg: '#f3f4f6', icon: '#374151' };
+};
+
+const createAmenityIcon = (key) => {
+  const { bg, icon } = getAmenityColors(key);
+
+  return L.divIcon({
     className: '',
     html: `
       <div style="
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        background: white;
-        border: 2px solid #2f7d74;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+        width:24px;
+        height:24px;
+        border-radius:50%;
+        background:${bg};
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        border:1.5px solid ${icon};
+        box-shadow:0 1px 4px rgba(0,0,0,0.2);
+        font-size:13px;
       ">
         ${getAmenityEmoji(key)}
       </div>
     `,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-    popupAnchor: [0, -14],
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
   });
+};
 
   const summaryStats = useMemo(() => {
     const estimatedPrice = pickFirstNumber([
@@ -1308,19 +1251,55 @@ const createAmenityIcon = (key) =>
     noiseData?.distanceMeters,
   ]);
 
-  const getSunRotation = (direction) => {
-    const map = {
-      EAST: 0,
-      SOUTHEAST: 45,
-      SOUTH: 90,
-      SOUTHWEST: 135,
-      WEST: 180,
-      NORTHWEST: 225,
-      NORTH: 270,
-      NORTHEAST: 315,
+  const createSunIcon = (direction) => {
+    const rotationMap = {
+      EAST: 90, SOUTHEAST: 135, SOUTH: 180, SOUTHWEST: 225,
+      WEST: 270, NORTHWEST: 315, NORTH: 0, NORTHEAST: 45,
     };
-
-    return map[direction?.toUpperCase()] ?? 0;
+    const rotation = rotationMap[(direction ?? '').toUpperCase()] ?? 0;
+  
+    return L.divIcon({
+      className: '',
+      html: `
+        <style>
+          @keyframes sun-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        </style>
+        <div style="width:28px;height:28px;position:relative;display:flex;align-items:center;justify-content:center;">
+          <!-- Rotating rays ring -->
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="28" height="28" viewBox="0 0 28 28"
+            style="position:absolute;top:0;left:0;animation:sun-spin 8s linear infinite;"
+          >
+            <!-- 8 rays -->
+            <line x1="14" y1="1"  x2="14" y2="5"  stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+            <line x1="14" y1="23" x2="14" y2="27" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+            <line x1="1"  y1="14" x2="5"  y2="14" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+            <line x1="23" y1="14" x2="27" y2="14" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+            <line x1="4.2"  y1="4.2"  x2="7"  y2="7"  stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="21"   y1="21"   x2="23.8" y2="23.8" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="23.8" y1="4.2"  x2="21" y2="7"  stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="4.2"  y1="23.8" x2="7"  y2="21" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <!-- Sun disc with direction arrow -->
+          <div style="
+            width:16px;height:16px;border-radius:50%;
+            background:#fbbf24;border:2px solid #d97706;
+            box-shadow:0 1px 4px rgba(0,0,0,0.3);
+            display:flex;align-items:center;justify-content:center;
+            position:relative;z-index:1;
+          ">
+            <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24"
+                style="transform:rotate(${rotation}deg);">
+              <path d="M12 2 L20 22 L12 17 L4 22 Z" fill="#78350f"/>
+            </svg>
+          </div>
+        </div>
+      `,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14],
+      popupAnchor: [0, -18],
+    });
   };
 
   function ResetMapButton({ center, zoom }) {
@@ -1443,33 +1422,24 @@ const createAmenityIcon = (key) =>
           ))}
 
             {sunAnalysis?.status === 'OK' && sunAnalysis?.dominant && (
-              <Marker
-                position={blockPosition}
-                icon={L.divIcon({
-                  className: "sun-arrow",
-                  html: `<div style="
-                    transform: rotate(${getSunRotation(sunAnalysis.dominant)}deg);
-                    font-size: 24px;
-                    color: #f59e0b;
-                    font-weight: bold;
-                  ">➤</div>`,
-                })}
-              >
-                <Popup>
-                  <div className="future-risk-popup">
-                    <strong>Sun Exposure</strong>
-                    <div>Orientation: {sunAnalysis.dominant}</div>
-                    <div>
-                      Heat Exposure: {
-                        sunAnalysis.westScoreRelativeExposurePct != null
-                          ? `${Number(sunAnalysis.westScoreRelativeExposurePct).toFixed(1)}%`
-                          : 'n/a'
-                      }
-                    </div>
+            <Marker
+              position={blockPosition}
+              icon={createSunIcon(sunAnalysis.dominant)}
+            >
+              <Popup>
+                <div className="future-risk-popup">
+                  <strong>Sun Exposure</strong>
+                  <div>Orientation: {sunAnalysis.dominant}</div>
+                  <div>
+                    Heat Exposure:{' '}
+                    {sunAnalysis.westScoreRelativeExposurePct != null
+                      ? `${Number(sunAnalysis.westScoreRelativeExposurePct).toFixed(1)}%`
+                      : 'n/a'}
                   </div>
-                </Popup>
-              </Marker>
-            )}
+                </div>
+              </Popup>
+            </Marker>
+          )}
 
               {noiseData?.status === 'OK' && noiseDistanceMeters !== null && (
                 <Circle
@@ -1511,16 +1481,18 @@ const createAmenityIcon = (key) =>
 
           <div className="report-map-legend">
             <div className="report-map-legend__item">
-              <span
-                className="legend-icon--sun-arrow"
-                style={{
-                  display: 'inline-block',
-                  transform: `rotate(${getSunRotation(sunAnalysis?.dominant)}deg)`,
-                  fontSize: '16px',
-                  color: '#f59e0b',
-                  margin: '0 3px'
-                }}
-              >    ➤
+              <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginLeft: '3px' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 28 28">
+                  <line x1="14" y1="1"  x2="14" y2="5"  stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="14" y1="23" x2="14" y2="27" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="1"  y1="14" x2="5"  y2="14" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="23" y1="14" x2="27" y2="14" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="4.2"  y1="4.2"  x2="7"    y2="7"    stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round"/>
+                  <line x1="21"   y1="21"   x2="23.8"  y2="23.8" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round"/>
+                  <line x1="23.8" y1="4.2"  x2="21"   y2="7"    stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round"/>
+                  <line x1="4.2"  y1="23.8" x2="7"    y2="21"   stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round"/>
+                  <circle cx="14" cy="14" r="7" fill="#fbbf24" stroke="#d97706" strokeWidth="2"/>
+                </svg>
               </span>
               <span>Sun Orientation</span>
             </div>
@@ -1542,14 +1514,15 @@ const createAmenityIcon = (key) =>
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: 'clamp(18px, 2vw, 22px)',
-                    height: 'clamp(18px, 2vw, 22px)',
+                    width: '22px',
+                    height: '22px',
                     borderRadius: '50%',
-                    background: 'white',
-                    border: '2px solid #2f7d74',
-                    fontSize: 'clamp(10px, 1.2vw, 13px)',
-                    marginLeft: '-2px',
-                    flexShrink: 0,
+                    background: getAmenityColors(key).bg,
+                    border: `1.5px solid ${getAmenityColors(key).icon}`,
+                    fontSize: '12px',
+                    lineHeight: '1',
+                    marginRight: '-3px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
                   }}
                 >
                   {getAmenityEmoji(key)}
