@@ -17,17 +17,23 @@ public class BlockCandidateView {
 
     private double commuteScore;
 
+
+    // THE FIX: Use "Number" so Hibernate can safely inject BigDecimals, Doubles, or Longs without crashing!
+    // COMBINED: Includes teammate's averageFloorAreaSqm requirement.
     public BlockCandidateView(HDBBlock block,
-                              Double averageResalePrice,
-                              Double averageFloorAreaSqm,
-                              Double averageRemainingLease,
-                              Long transactionCount) {
+                              Number averageResalePrice,
+                              Number averageFloorAreaSqm,
+                              Number averageRemainingLease,
+                              Number transactionCount) {
         this.block = block;
-        this.averageResalePrice = averageResalePrice == null ? 0.0 : averageResalePrice;
-        this.averageFloorAreaSqm = averageFloorAreaSqm == null ? 0.0 : averageFloorAreaSqm;
-        this.averageRemainingLease = averageRemainingLease == null ? 0.0 : averageRemainingLease;
-        this.transactionCount = transactionCount == null ? 0L : transactionCount;
+        
+        // Safely convert whatever number type PostgreSQL gave us into standard Java primitives
+        this.averageResalePrice = averageResalePrice == null ? 0.0 : averageResalePrice.doubleValue();
+        this.averageFloorAreaSqm = averageFloorAreaSqm == null ? 0.0 : averageFloorAreaSqm.doubleValue();
+        this.averageRemainingLease = averageRemainingLease == null ? 0.0 : averageRemainingLease.doubleValue();
+        this.transactionCount = transactionCount == null ? 0L : transactionCount.longValue();
     }
+
 
     public HDBBlock getBlock() {
         return block;

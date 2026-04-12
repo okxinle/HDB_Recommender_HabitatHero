@@ -13,7 +13,7 @@ import habitathero.entity.ResaleTransaction;
 @Repository
 public interface ResaleTransactionRepository extends JpaRepository<ResaleTransaction, Long> {
 
-	interface BlockFloorAreaView {
+interface BlockFloorAreaView {
 		Integer getBlockId();
 		Double getAvgFloorAreaSqm();
 	}
@@ -24,6 +24,8 @@ public interface ResaleTransactionRepository extends JpaRepository<ResaleTransac
 		Long getTransactionCount();
 	}
 
+    // COMBINED: Uses teammate's advanced SELECT and UPPER(TRIM) logic, 
+    // but removes the HAVING clause as per your local fix.
 	@Query("""
 		SELECT new habitathero.control.BlockCandidateView(
 			b,
@@ -38,12 +40,8 @@ public interface ResaleTransactionRepository extends JpaRepository<ResaleTransac
 		  AND (:townFilterDisabled = true OR UPPER(TRIM(b.town)) IN :preferredTowns)
 		  AND (:preferredFlatType IS NULL OR :preferredFlatType = '' OR UPPER(TRIM(t.flatType)) = UPPER(TRIM(:preferredFlatType)))
 		GROUP BY b
-		HAVING AVG(t.resalePrice) <= :maxBudget
-		   AND AVG(t.remainingLease) >= :minLeaseYears
 		""")
 	List<BlockCandidateView> findCandidateBlocks(
-			@Param("maxBudget") double maxBudget,
-			@Param("minLeaseYears") int minLeaseYears,
 			@Param("preferredFlatType") String preferredFlatType,
 			@Param("preferredTowns") List<String> preferredTowns,
 			@Param("townFilterDisabled") boolean townFilterDisabled);

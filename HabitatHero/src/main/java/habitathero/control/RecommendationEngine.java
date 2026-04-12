@@ -213,7 +213,8 @@ public class RecommendationEngine {
     private List<BlockCandidateView> fetchCandidates(StructuralConstraints constraints) {
         double maxBudget = constraints.getMaxBudget() > 0 ? constraints.getMaxBudget() : Double.MAX_VALUE;
         int minLeaseYears = Math.max(0, constraints.getMinLeaseYears());
-        String preferredFlatType = constraints.getPreferredFlatType();
+        
+        String preferredFlatType = constraints.getPreferredFlatType() != null ? constraints.getPreferredFlatType().trim() : "";
 
         boolean townFilterDisabled = constraints.getPreferredTowns() == null || constraints.getPreferredTowns().isEmpty();
         List<String> preferredTowns = townFilterDisabled
@@ -223,12 +224,17 @@ public class RecommendationEngine {
                 .map(town -> town.trim().toUpperCase())
                 .collect(Collectors.toList());
 
-        return resaleTransactionRepository.findCandidateBlocks(
-                maxBudget,
-                minLeaseYears,
+        // 1. Fetch raw candidates (ONLY 3 PARAMETERS NOW)
+        List<BlockCandidateView> rawCandidates = resaleTransactionRepository.findCandidateBlocks(
                 preferredFlatType,
                 preferredTowns,
                 townFilterDisabled);
+
+        // 2. Do the math filtering safely in Java!
+        return rawCandidates.stream()
+                .filter(c -> c.getAverageResalePrice() <= maxBudget)
+                .filter(c -> c.getAverageRemainingLease() >= minLeaseYears)
+                .collect(Collectors.toList());
     }
 
     private boolean hasValidCommuterPair(CommuterProfile commuterProfile) {
