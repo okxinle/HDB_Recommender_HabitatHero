@@ -187,25 +187,36 @@ function ResourcesPage() {
 
       <section className="resources-section technical-showcase">
         <div className="section-heading-wrap">
-          <h2>How HabitatHero Works</h2>
+          <h2>Our Methodology & Trust</h2>
           <p>
-            HabitatHero uses a smart matching engine to compare thousands of HDB blocks with your lifestyle needs.
+            We keep our recommendations clear, practical, and focused on what matters to everyday home-seekers.
           </p>
         </div>
 
-        <div className="showcase-panel">
-          <p>
-            When you submit your quiz, our recommendation engine evaluates your preferences and ranks homes
-            that best fit your goals.
-          </p>
-          <p>
-            The system prioritizes practical factors like commute time and budget so you can focus on homes that suit
-            your daily life.
-          </p>
-          <p>
-            Your account information and saved results are handled safely, so your personal data stays private while
-            you explore better housing choices.
-          </p>
+        <div className="showcase-panel showcase-grid">
+          <div className="showcase-point">
+            <h3>Personalized Results</h3>
+            <p>
+              We look at HDB blocks based on your quiz answers, so the homes you see reflect your goals, routines,
+              and the kind of lifestyle you want.
+            </p>
+          </div>
+
+          <div className="showcase-point">
+            <h3>Real-World Factors</h3>
+            <p>
+              We use trusted official data to help you understand practical details like afternoon sun, nearby train
+              lines, and whether travel time feels fair for two people.
+            </p>
+          </div>
+
+          <div className="showcase-point">
+            <h3>Privacy & Security</h3>
+            <p>
+              Your saved profile details are handled carefully and privately, so you can explore housing options with
+              peace of mind.
+            </p>
+          </div>
         </div>
       </section>
     </main>

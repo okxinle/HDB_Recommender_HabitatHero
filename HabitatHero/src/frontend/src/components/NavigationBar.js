@@ -11,6 +11,7 @@ function NavigationBar() {
 
   // 1. State to track if the profile menu is open
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // 2. Check login state
   const user = JSON.parse(localStorage.getItem("user"));
@@ -57,6 +58,7 @@ function NavigationBar() {
     sessionStorage.removeItem(TEMP_RESULTS_KEY);
     localStorage.removeItem("latestRankedBlocks"); // cleanup legacy key from older builds
     setIsMenuOpen(false); // Close menu on logout
+    setIsMobileMenuOpen(false);
     navigate("/login");
   };
 
@@ -67,10 +69,22 @@ return (
         HabitatHero
       </div>
 
-      <div className="nav-links">
-        <NavLink to="/" className={({ isActive }) => (isActive ? "active-link" : "")}>Home</NavLink>
-        <NavLink to="/results" className={({ isActive }) => (isActive ? "active-link" : "")}>Your Results</NavLink>
-        <NavLink to="/resources" className={({ isActive }) => (isActive ? "active-link" : "")}>Resources</NavLink>
+      <button
+        type="button"
+        className="nav-toggle"
+        onClick={() => setIsMobileMenuOpen((open) => !open)}
+        aria-expanded={isMobileMenuOpen}
+        aria-label="Toggle navigation menu"
+      >
+        <span />
+        <span />
+        <span />
+      </button>
+
+      <div className={`nav-links ${isMobileMenuOpen ? "nav-links--open" : ""}`}>
+        <NavLink to="/" className={({ isActive }) => (isActive ? "active-link" : "")} onClick={() => setIsMobileMenuOpen(false)}>Home</NavLink>
+        <NavLink to="/results" className={({ isActive }) => (isActive ? "active-link" : "")} onClick={() => setIsMobileMenuOpen(false)}>Your Results</NavLink>
+        <NavLink to="/resources" className={({ isActive }) => (isActive ? "active-link" : "")} onClick={() => setIsMobileMenuOpen(false)}>Resources</NavLink>
 
         {user ? (
           /* 3. Sleek Profile Dropdown Section */
@@ -89,13 +103,13 @@ return (
             {isMenuOpen && (
               <div className="profile-dropdown">
                 <div className="dropdown-header">MY ACCOUNT</div>
-                <Link to="/profile" onClick={() => setIsMenuOpen(false)}>Profile Settings</Link>
+                <Link to="/profile" onClick={() => { setIsMenuOpen(false); setIsMobileMenuOpen(false); }}>Profile Settings</Link>
                 <button onClick={handleLogout} className="logout-item">Logout</button>
               </div>
             )}
           </div>
         ) : (
-          <Link to="/login" className="login-btn">Login / Sign Up</Link>
+          <Link to="/login" className="login-btn" onClick={() => setIsMobileMenuOpen(false)}>Login / Sign Up</Link>
         )}
       </div>
     </nav>

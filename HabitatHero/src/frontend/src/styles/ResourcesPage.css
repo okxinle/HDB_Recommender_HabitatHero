@@ -170,15 +170,39 @@
 .showcase-panel {
   margin-top: 20px;
   border-left: 4px solid #00786e;
-  background: #f8fcfc;
-  border-radius: 10px;
-  padding: 16px 18px;
+  background: linear-gradient(180deg, #f8fcfc 0%, #ffffff 100%);
+  border-radius: 14px;
+  padding: 18px;
 }
 
 .showcase-panel p {
   margin: 0 0 12px;
   color: #3f5664;
   line-height: 1.55;
+}
+
+.showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+}
+
+.showcase-point {
+  background: #ffffff;
+  border: 1px solid #d9e8e6;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 8px 18px rgba(16, 38, 51, 0.05);
+}
+
+.showcase-point h3 {
+  margin: 0 0 10px;
+  color: #0f2f3b;
+  font-size: 18px;
+}
+
+.showcase-point p {
+  margin: 0;
 }
 
 .showcase-panel p:last-child {

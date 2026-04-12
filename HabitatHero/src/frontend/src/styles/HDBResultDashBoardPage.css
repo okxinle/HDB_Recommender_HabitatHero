@@ -687,6 +687,100 @@
   }
 }
 
+@media (max-width: 767px) {
+  .results-page {
+    padding: 28px 16px 48px;
+  }
+
+  .results-header {
+    margin-bottom: 28px;
+  }
+
+  .results-header h1 {
+    font-size: 30px;
+  }
+
+  .results-header p {
+    font-size: 15px;
+  }
+
+  .results-topbar {
+    margin: 12px auto 28px;
+    gap: 12px;
+  }
+
+  .results-topbar-search-wrap,
+  .results-topbar-select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .results-topbar-input,
+  .results-topbar-select {
+    height: 50px;
+    font-size: 16px;
+  }
+
+  .results-grid {
+    gap: 16px;
+  }
+
+  .choice-summary-card {
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+
+  .choice-summary-header,
+  .result-header-row,
+  .result-details-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .choice-summary-header h2,
+  .result-title--premium {
+    font-size: 22px;
+  }
+
+  .edit-preferences-btn,
+  .view-details-btn--compact,
+  .back-btn,
+  .results-pagination-btn,
+  .modify-btn {
+    width: 100%;
+    min-height: 46px;
+  }
+
+  .result-card {
+    padding: 18px;
+  }
+
+  .result-side {
+    align-items: flex-start;
+  }
+
+  .result-stat-pill,
+  .insight-tag {
+    width: 100%;
+    justify-content: flex-start;
+    box-sizing: border-box;
+  }
+
+  .result-footer-actions,
+  .results-pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .results-pagination-info {
+    text-align: center;
+  }
+
+  .results-loading-spinner {
+    width: 100%;
+  }
+}
+
 @media (min-width: 768px) {
   .results-topbar {
     flex-direction: row;

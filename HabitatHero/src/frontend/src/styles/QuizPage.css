@@ -876,6 +876,181 @@
   justify-self: end;
 }
 
+@media (max-width: 767px) {
+  .quiz-page-container {
+    padding: 20px 16px 40px;
+  }
+
+  .quiz-stepper {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0 0 16px;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .step-wrapper {
+    width: 100%;
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .step-wrapper.has-line::after {
+    display: none;
+  }
+
+  .step-item {
+    width: 100%;
+    min-height: 40px;
+    padding: 9px 10px;
+    font-size: 12px;
+    white-space: normal;
+    justify-content: flex-start;
+    gap: 6px;
+    box-sizing: border-box;
+    border-radius: 999px;
+  }
+
+  .step-number {
+    font-size: 12px;
+  }
+
+  .step-label {
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .quiz-card-content {
+    min-height: auto;
+    padding: 22px 16px 18px;
+    border-radius: 16px;
+  }
+
+  .quiz-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 12px;
+    margin-top: 24px;
+  }
+
+  .btn-back,
+  .btn-next {
+    width: 100%;
+    min-height: 48px;
+    font-size: 16px;
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+
+  .step-content h2,
+  .preference-block h2,
+  .multi-commuter-analysis-section h3 {
+    font-size: 18px;
+  }
+
+  .step-content p,
+  .question-text,
+  .warning-note,
+  .field-helper,
+  .fairness-info {
+    font-size: 15px;
+  }
+
+  .town-grid {
+    grid-auto-flow: row;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .budget-slider-container,
+  .weight-section,
+  .multi-commuter-analysis-section .input,
+  .fairness-slider,
+  .fairness-labels,
+  .fairness-info {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .budget-slider,
+  .lease-slider {
+    width: 100%;
+    height: 52px;
+  }
+
+  .lease-labels,
+  .budget-labels,
+  .weight-labels,
+  .fairness-labels {
+    width: 100%;
+    font-size: 14px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .flat-type-options,
+  .amenity-chip-group {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .flat-type-btn,
+  .amenity-chip {
+    padding: 12px 16px;
+    font-size: 15px;
+    min-height: 46px;
+  }
+
+  .option-row,
+  .toggle-row {
+    gap: 12px;
+  }
+
+  .option-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .radio-option {
+    font-size: 15px;
+    min-height: 44px;
+  }
+
+  .weight-section {
+    width: 100%;
+  }
+
+  .multi-commuter-analysis-section .input,
+  .parents-address-input {
+    height: 48px;
+    font-size: 15px;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-card,
+  .summary-card-header {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .summary-row,
+  .summary-row-factor,
+  .summary-row--pill-right,
+  .commuter-status-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .summary-value,
+  .summary-value-towns {
+    text-align: left;
+  }
+}
+
 @media (max-width: 900px) {
   .summary-grid {
     grid-template-columns: 1fr;
