@@ -804,7 +804,7 @@ const createAmenityIcon = (key) => {
         display:flex;
         align-items:center;
         justify-content:center;
-        border:1.5px solid #2f7d74;
+        border:2px solid #2f7d74;
         box-shadow:0 1px 4px rgba(0,0,0,0.2);
         font-size:13px;
       ">
