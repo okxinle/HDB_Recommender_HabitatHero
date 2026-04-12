@@ -791,23 +791,7 @@ const getAmenityEmoji = (key) => {
   return icons[key] || '📍';
 };
 
-const getAmenityColors = (key) => {
-  const colors = {
-    mrtStation: { bg: '#dbeafe', icon: '#2563eb' },  
-    school: { bg: '#ede9fe', icon: '#7c3aed' },       
-    supermarket: { bg: '#fef3c7', icon: '#d97706' },  
-    hawkerCentre: { bg: '#ffedd5', icon: '#ea580c' },
-    park: { bg: '#dcfce7', icon: '#16a34a' },         
-    hospital: { bg: '#fee2e2', icon: '#dc2626' },   
-    playground: { bg: '#e0f2fe', icon: '#0891b2' },   
-    parentsAddress: { bg: '#ecfdf5', icon: '#065f46' } 
-  };
-
-  return colors[key] || { bg: '#f3f4f6', icon: '#374151' };
-};
-
 const createAmenityIcon = (key) => {
-  const { bg, icon } = getAmenityColors(key);
 
   return L.divIcon({
     className: '',
@@ -816,11 +800,11 @@ const createAmenityIcon = (key) => {
         width:24px;
         height:24px;
         border-radius:50%;
-        background:${bg};
+        background: #fff;
         display:flex;
         align-items:center;
         justify-content:center;
-        border:1.5px solid ${icon};
+        border:1.5px solid #2f7d74;
         box-shadow:0 1px 4px rgba(0,0,0,0.2);
         font-size:13px;
       ">
@@ -1517,8 +1501,8 @@ const createAmenityIcon = (key) => {
                     width: '22px',
                     height: '22px',
                     borderRadius: '50%',
-                    background: getAmenityColors(key).bg,
-                    border: `1.5px solid ${getAmenityColors(key).icon}`,
+                    background: '#fff',
+                    border: `1.5px solid #2f7d74`,
                     fontSize: '12px',
                     lineHeight: '1',
                     marginRight: '-3px',
