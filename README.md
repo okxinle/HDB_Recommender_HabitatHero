@@ -145,6 +145,38 @@ This final step matches our pricing records to the spatial map so they can be pl
 * **Auth:** Go to the Authorization tab -> Select "Bearer Token" -> Paste your JWT Admin token.
 * **Expected:** `200 OK`. The response payload will show `candidatesScanned`, `updatedBlocks`, and `unresolvedBlocks`. Check your terminal to watch the service batch-process the coordinates!
 
+### Test 5: Initialize Land Use Dataset (Future Development Risk)
+### PostGIS Installation & Requirement
+For Windows Users:
+1) Open Stack Builder (found in the PostgreSQL folder in your Start Menu).
+2) Select your PostgreSQL server and click Next.
+3) Expand Spatial Extensions and check the box for PostGIS 3.X Bundle.
+4) Follow the installation prompts (select No if asked to create a separate spatial database).
+
+For macOS Users:
+1) Homebrew: Run brew install postgis in your terminal and restart PostgreSQL.
+2) Postgres.app: PostGIS is included by default; no extra installation is required.
+
+### Enable Spatial Capabilities
+Once installed, you must activate the extension for your specific database:
+1) Open pgAdmin 4 and connect to habitathero_db.
+2) Open the Query Tool and run:
+   ```sql
+   CREATE EXTENSION IF NOT EXISTS postgis;
+   SELECT PostGIS_Version();
+   ```
+### Dataset Initialization (API Call)
+* **Method:** POST
+* **URL:** http://localhost:8080/api/admin/init-land-use
+* **Auth:** Go to the Authorization tab -> Select "Bearer Token" -> Paste your JWT Admin token.
+* **Expected Response:**
+{
+  "message": "land_use_dataset initialized and imported successfully.",
+  "tableReady": true,
+  "downloadedGeoJson": true,
+  "importedToDb": true
+}
+
 ## After Pull: HDB Coordinate Refresh (Team Runbook)
 
 Use this after pulling latest backend changes related to HDB coordinate mapping.
