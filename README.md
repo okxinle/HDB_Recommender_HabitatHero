@@ -45,7 +45,8 @@ Before starting, ensure you have the following installed on your machine:
 1. **Java 17** (or higher)
 2. **Maven**
 3. **PostgreSQL** (and pgAdmin for easy management)
-4. **Postman** (for API testing)
+4. **PostGIS extension** for PostgreSQL
+5. **Postman** (for API testing)
 
 ---
 
@@ -59,34 +60,40 @@ Our application uses PostgreSQL and Hibernate. Hibernate will automatically crea
 4. Name the database **EXACTLY**: `habitathero_db`
 5. Save.
 
-## Step 2: Configure Application Properties
+## Step 2: Create .env Configuration
 
-By default, the application is expecting specific database credentials. If your local PostgreSQL uses a different password, you must update the config file.
+This backend reads DB and API settings from a local `.env` file (not hardcoded credentials in code).
 
-1. Navigate to `src/main/resources/application.properties`.
-2. Locate the database connection lines:
+1. In the `HabitatHero` folder (same level as `pom.xml`), create a file named `.env`.
+2. Add the following values:
 
-```properties
-spring.datasource.username=postgres
-spring.datasource.password=password123
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=habitathero_db
+DB_USERNAME=postgres
+DB_PASSWORD=<your_postgres_password>
+
+# Required for HDB sync endpoint (/api/admin/trigger-sync)
+DATAGOV_API_KEY=<your_datagov_api_key>
+
+# Optional but recommended to reduce OneMap throttling
+ONEMAP_API_TOKEN=<your_onemap_api_token>
 ```
 
-Change `password123` to whatever password you set when you installed PostgreSQL. (Note: Do not commit your personal password changes to GitHub!)
+Notes:
+- `DB_PASSWORD` must not be empty.
+- Do not commit your personal `.env` values to GitHub.
 
-## Step 3: Data.gov.sg API Key
+## Step 3: API Keys
 
-Our HDB synchronization pipeline (`DataPipelineService.java`) pulls real-time resale data from Data.gov.sg. To prevent the system from crashing with a `429 Too Many Requests` error, you must use your own API key.
-
-1. Go to Data.gov.sg and create a free account.
-2. Generate an API Key from your account dashboard.
-3. Open `src/main/java/habitathero/control/DataPipelineService.java`.
-4. Locate line 47:
-
-```java
-headers.set("x-api-key", "YOUR_DATAGOVSG_API_KEY_HERE"); 
-```
-
-Replace `"YOUR_DATAGOVSG_API_KEY_HERE"` with your actual key.
+1. **Data.gov.sg API key**
+  - Required for HDB resale sync (`/api/admin/trigger-sync`).
+  - Create a Data.gov.sg account and generate an API key.
+  - Set it as `DATAGOV_API_KEY` in `.env`.
+2. **OneMap API token (optional but recommended)**
+  - Improves geocoding reliability and reduces throttling.
+  - Set it as `ONEMAP_API_TOKEN` in `.env`.
 
 ## Step 4: Build and Run the Server
 
@@ -95,7 +102,8 @@ Whenever you pull new code, it is highly recommended to clean the old build file
 Open your terminal in the root folder (where the `pom.xml` is located) and run:
 
 ```bash
-mvn clean spring-boot:run
+mvn clean compile
+.\run-backend.ps1
 ```
 
 If successful, you will see `Tomcat started on port(s): 8080 (http)` and `Started Main in X seconds` in the terminal.
@@ -146,36 +154,41 @@ This final step matches our pricing records to the spatial map so they can be pl
 * **Expected:** `200 OK`. The response payload will show `candidatesScanned`, `updatedBlocks`, and `unresolvedBlocks`. Check your terminal to watch the service batch-process the coordinates!
 
 ### Test 5: Initialize Land Use Dataset (Future Development Risk)
-### PostGIS Installation & Requirement
+This step prepares `land_use_dataset` used by future development risk checks.
+
+#### PostGIS Installation and Requirement
+
 For Windows Users:
-1) Open Stack Builder (found in the PostgreSQL folder in your Start Menu).
-2) Select your PostgreSQL server and click Next.
-3) Expand Spatial Extensions and check the box for PostGIS 3.X Bundle.
-4) Follow the installation prompts (select No if asked to create a separate spatial database).
+1. Open Stack Builder (found in the PostgreSQL folder in your Start Menu).
+2. Select your PostgreSQL server and click Next.
+3. Expand Spatial Extensions and check the box for PostGIS 3.X Bundle.
+4. Follow the installation prompts (select No if asked to create a separate spatial database).
 
 For macOS Users:
-1) Homebrew: Run brew install postgis in your terminal and restart PostgreSQL.
-2) Postgres.app: PostGIS is included by default; no extra installation is required.
+1. Homebrew: Run `brew install postgis` in terminal and restart PostgreSQL.
+2. Postgres.app: PostGIS is included by default; no extra installation is required.
 
-### Enable Spatial Capabilities
-Once installed, you must activate the extension for your specific database:
-1) Open pgAdmin 4 and connect to habitathero_db.
-2) Open the Query Tool and run:
-   ```sql
-   CREATE EXTENSION IF NOT EXISTS postgis;
-   SELECT PostGIS_Version();
-   ```
-### Dataset Initialization (API Call)
+#### Enable Spatial Capabilities
+
+Once installed, activate the extension in `habitathero_db`:
+1. Open pgAdmin 4 and connect to `habitathero_db`.
+2. Open Query Tool and run:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS postgis;
+SELECT PostGIS_Version();
+```
+
+#### Dataset Initialization (API Call)
+
 * **Method:** POST
-* **URL:** http://localhost:8080/api/admin/init-land-use
+* **URL:** `http://localhost:8080/api/admin/init-land-use`
 * **Auth:** Go to the Authorization tab -> Select "Bearer Token" -> Paste your JWT Admin token.
 * **Expected Response:**
-{
-  "message": "land_use_dataset initialized and imported successfully.",
-  "tableReady": true,
-  "downloadedGeoJson": true,
-  "importedToDb": true
-}
+  * `message`: `land_use_dataset initialized and imported successfully.`
+  * `tableReady`: `true`
+  * `downloadedGeoJson`: `true`
+  * `importedToDb`: `true`
 
 ## After Pull: HDB Coordinate Refresh (Team Runbook)
 
