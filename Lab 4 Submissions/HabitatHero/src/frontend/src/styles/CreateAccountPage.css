@@ -1,0 +1,140 @@
+.create-page {
+  width: 100%;
+  min-height: calc(100vh - 80px); 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #ffffff;
+}
+
+.create-container {
+  width: 90%;
+  max-width: 1200px;
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 80px;
+  align-items: center;
+  padding: 60px 0;
+}
+
+.create-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.create-title {
+  font-size: 42px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #212121;
+}
+
+.create-subtitle {
+  font-size: 18px;
+  color: #212121;
+  margin-bottom: 40px;
+}
+
+.create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  max-width: 500px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field label {
+  font-size: 18px;
+  font-weight: 600;
+  color: #212121;
+}
+
+.field input {
+  font-family: inherit;
+  height: 50px;
+  padding: 0 16px;
+  border: 1.5px solid #00786e;
+  border-radius: 4px;
+  font-size: 16px;
+  outline: none;
+  transition: 0.2s ease;
+}
+
+.field input:focus {
+  box-shadow: 0 0 0 3px rgba(0, 120, 110, 0.15);
+}
+
+.register-btn {
+  width: 120px;
+  height: 48px;
+  border: none;
+  border-radius: 8px;
+  background: #00786e;
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.register-btn:hover {
+  background: #00655c;
+}
+
+.auth-switch-text {
+  margin-top: 20px;
+  font-family: inherit;
+  font-size: 14px;
+  color: #212121;
+}
+
+.auth-switch-top {
+  margin-top: -20px;
+  margin-bottom: 24px;
+}
+
+.auth-switch-link {
+  color: #00786e;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-switch-link:hover {
+  text-decoration: underline;
+}
+
+.create-right {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.create-image {
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+@media (max-width: 900px) {
+  .create-container {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .create-title {
+    font-size: 34px;
+  }
+
+  .create-form {
+    max-width: 100%;
+  }
+
+  .create-right {
+    order: -1;
+  }
+}

@@ -423,7 +423,7 @@ public class RecommendationEngine {
         return "Low".equalsIgnoreCase(block.getNoiseRiskLevel());
     }
 
-    private double scoreFromNoiseDb(double noiseDb) {
+    public double scoreFromNoiseDb(double noiseDb) {
         if (noiseDb <= QUIET_NOISE_DB) {
             return 1.0;
         }
@@ -457,7 +457,7 @@ public class RecommendationEngine {
         return null;
     }
 
-    private double clamp01(double value) {
+    public double clamp01(double value) {
         if (value < 0.0) {
             return 0.0;
         }
@@ -465,6 +465,17 @@ public class RecommendationEngine {
             return 1.0;
         }
         return value;
+    }
+
+    // Calculates a normalized score based on the remaining lease of the HDB flat
+    public double calculateLeaseScore(int leaseYears) {
+        if (leaseYears <= 40) {
+            return 0.0; // Too low, fails requirement
+        } else if (leaseYears >= 95) {
+            return 1.0; // Practically new, perfect score
+        } else {
+            return (leaseYears - 40) / 55.0; // Sliding scale for anything in between
+        }
     }
 
     private static final class WeightedScore {
@@ -497,7 +508,7 @@ public class RecommendationEngine {
      * Validates structural constraints against official HDB data.
      * Lab 3: Encapsulation & Input Validation
      */
-    private void validateStructuralConstraints(StructuralConstraints constraints) {
+    public void validateStructuralConstraints(StructuralConstraints constraints) {
         // Validate flat type if provided
         if (constraints.getPreferredFlatType() != null && !constraints.getPreferredFlatType().isEmpty()) {
             if (!HDBDataConstants.isValidFlatType(constraints.getPreferredFlatType())) {

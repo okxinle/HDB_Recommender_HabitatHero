@@ -1,0 +1,127 @@
+.profile-page {
+  width: 100%;
+  max-width: 500px; 
+  margin: 0 auto;
+  padding: 40px 24px 60px;
+}
+
+.profile-header {
+  margin-bottom: 28px;
+  text-align: center;
+}
+
+.profile-title {
+  margin: 0;
+  font-size: 38px;
+  font-weight: bold;
+  color: #0f2f3b;
+}
+
+.profile-subtitle {
+  margin: 8px 0 0;
+  font-size: 16px;
+  color: #4f6270;
+}
+
+.profile-card {
+  background: #ffffff;
+  border: 1.5px solid #bfe6e1;
+  border-radius: 20px;
+  padding: 28px 32px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.profile-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.profile-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: #eef7f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00786e;
+  flex-shrink: 0;
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile-label {
+  font-size: 18px;
+  color: #4f6270;
+}
+
+.profile-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #212121;
+}
+
+.password-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.change-password-btn {
+  font-family: inherit;
+  background: transparent;
+  border: 1px solid #00786e;
+  color: #00786e;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.change-password-btn:hover {
+  background: #00786e;
+  color: white;
+}
+
+.profile-page .field input {
+  font-size: 14px;
+  height: 35px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #00786e;
+}
+
+.profile-page .label {
+  font-size: 16px;
+  font-weight: normal;
+  color: #4f6270;
+}
+
+.update-password-btn {
+  font-family: inherit;
+  background: transparent;
+  border: 1px solid #00786e;
+  color: #00786e;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 25px;
+}
+
+.update-password-btn:hover {
+  background: #00786e;
+  color: white;
+}

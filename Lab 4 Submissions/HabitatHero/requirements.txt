@@ -1,0 +1,4 @@
+# This project currently has no Python runtime dependencies.
+# Keep this file for future Python components.
+# When Python dependencies are added, regenerate with:
+#   pip freeze > requirements.txt
