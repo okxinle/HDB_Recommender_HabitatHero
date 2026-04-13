@@ -27,8 +27,9 @@ public class GlobalMatchRankingStrategy implements RankingStrategy {
         List<HDBBlock> ranked = new ArrayList<>(candidateBlocks);
         ranked.sort(
                 Comparator.comparingDouble(HDBBlock::getGlobalMatchIndex).reversed()
-                        .thenComparingDouble(HDBBlock::getEstimatedPrice)
-                        .thenComparing(Comparator.comparingInt(HDBBlock::getRemainingLeaseYears).reversed()));
+                .thenComparingDouble(HDBBlock::getEstimatedPrice)
+                .thenComparing(Comparator.comparingInt
+                (HDBBlock::getRemainingLeaseYears).reversed()));
         return ranked;
     }
 }

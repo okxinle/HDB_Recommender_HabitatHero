@@ -211,7 +211,15 @@ public class RecommendationEngine {
     }
 
     private List<BlockCandidateView> fetchCandidates(StructuralConstraints constraints) {
+        double minBudget = Math.max(0.0, constraints.getMinBudget());
         double maxBudget = constraints.getMaxBudget() > 0 ? constraints.getMaxBudget() : Double.MAX_VALUE;
+        if (minBudget > maxBudget) {
+            double temp = minBudget;
+            minBudget = maxBudget;
+            maxBudget = temp;
+        }
+        final double minBudgetBound = minBudget;
+        final double maxBudgetBound = maxBudget;
         int minLeaseYears = Math.max(0, constraints.getMinLeaseYears());
         
         String preferredFlatType = constraints.getPreferredFlatType() != null ? constraints.getPreferredFlatType().trim() : "";
@@ -224,15 +232,16 @@ public class RecommendationEngine {
                 .map(town -> town.trim().toUpperCase())
                 .collect(Collectors.toList());
 
-        // 1. Fetch raw candidates (ONLY 3 PARAMETERS NOW)
+        // 1. Fetch raw candidates by town/flat type.
         List<BlockCandidateView> rawCandidates = resaleTransactionRepository.findCandidateBlocks(
                 preferredFlatType,
                 preferredTowns,
                 townFilterDisabled);
 
-        // 2. Do the math filtering safely in Java!
+        // 2. Apply budget and lease filters in-memory.
         return rawCandidates.stream()
-                .filter(c -> c.getAverageResalePrice() <= maxBudget)
+            .filter(c -> c.getAverageResalePrice() >= minBudgetBound)
+                .filter(c -> c.getAverageResalePrice() <= maxBudgetBound)
                 .filter(c -> c.getAverageRemainingLease() >= minLeaseYears)
                 .collect(Collectors.toList());
     }
@@ -498,6 +507,14 @@ public class RecommendationEngine {
      * Lab 3: Encapsulation & Input Validation
      */
     private void validateStructuralConstraints(StructuralConstraints constraints) {
+        if (constraints.getMinBudget() < 0 || constraints.getMaxBudget() < 0) {
+            throw new IllegalArgumentException("Budget values must be non-negative.");
+        }
+
+        if (constraints.getMaxBudget() > 0 && constraints.getMinBudget() > constraints.getMaxBudget()) {
+            throw new IllegalArgumentException("Budget range is invalid: minBudget cannot exceed maxBudget.");
+        }
+
         // Validate flat type if provided
         if (constraints.getPreferredFlatType() != null && !constraints.getPreferredFlatType().isEmpty()) {
             if (!HDBDataConstants.isValidFlatType(constraints.getPreferredFlatType())) {

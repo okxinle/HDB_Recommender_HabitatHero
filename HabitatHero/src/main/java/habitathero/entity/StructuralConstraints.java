@@ -3,6 +3,7 @@ import java.util.List;
 
 public class StructuralConstraints {
 
+    private double       minBudget;
     private double       maxBudget;
     private List<String> preferredTowns;
     private String       preferredFlatType;
@@ -12,10 +13,12 @@ public class StructuralConstraints {
 
     public StructuralConstraints() {}
 
-    public StructuralConstraints(double maxBudget,
+    public StructuralConstraints(double minBudget,
+                                 double maxBudget,
                                  List<String> preferredTowns,
                                  String preferredFlatType,
                                  int minLeaseYears) {
+        this.minBudget        = Math.max(0.0, minBudget);
         this.maxBudget        = maxBudget;
         this.preferredTowns   = preferredTowns;
         this.preferredFlatType= preferredFlatType;
@@ -24,6 +27,7 @@ public class StructuralConstraints {
 
     // ── Getters ───────────────────────────────────────────────────────────────
 
+    public double       getMinBudget()         { return minBudget; }
     public double       getMaxBudget()         { return maxBudget; }
     public List<String> getPreferredTowns()    { return preferredTowns; }
     public String       getPreferredFlatType() { return preferredFlatType; }
@@ -31,6 +35,7 @@ public class StructuralConstraints {
 
     // ── Setters ───────────────────────────────────────────────────────────────
 
+    public void setMinBudget(double minBudget)                   { this.minBudget         = Math.max(0.0, minBudget); }
     public void setMaxBudget(double maxBudget)                   { this.maxBudget         = maxBudget; }
     public void setPreferredTowns(List<String> preferredTowns)   { this.preferredTowns    = preferredTowns; }
     public void setPreferredFlatType(String preferredFlatType)   { this.preferredFlatType = preferredFlatType; }
@@ -38,7 +43,8 @@ public class StructuralConstraints {
 
     @Override
     public String toString() {
-        return "StructuralConstraints{maxBudget=" + maxBudget
+        return "StructuralConstraints{minBudget=" + minBudget
+            + ", maxBudget=" + maxBudget
                 + ", preferredTowns=" + preferredTowns
                 + ", preferredFlatType='" + preferredFlatType + "'"
                 + ", minLeaseYears=" + minLeaseYears + "}";

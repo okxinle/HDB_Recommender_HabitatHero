@@ -49,6 +49,7 @@ const buildBackendPayload = (formData, preferredTowns) => {
   return {
     userId: getCurrentUserId(),
     structuralConstraints: {
+      minBudget: Math.min(minBudget, maxBudget),
       maxBudget: Math.max(minBudget, maxBudget),
       preferredTowns,
       preferredFlatType: formData.structuralConstraints.preferredFlatType,
