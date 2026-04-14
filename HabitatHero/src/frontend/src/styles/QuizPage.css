@@ -3,6 +3,7 @@
   max-width: 1280px;
   margin: 0 auto;
   padding: 36px 32px 48px;
+  box-sizing: border-box;
   font-family: "Poppins", sans-serif;
   color: #212121;
 }
@@ -1035,7 +1036,7 @@
     padding-right: 18px;
   }
 
-  .summary-row,
+  .summary-list .summary-row,
   .summary-row-factor,
   .summary-row--pill-right,
   .commuter-status-row {
@@ -1063,7 +1064,7 @@
     gap: 16px;
   }
 
-  .summary-row {
+  .summary-list .summary-row {
     grid-template-columns: 1fr;
     gap: 6px;
     padding: 10px 0;
