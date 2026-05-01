@@ -1,4 +1,4 @@
-# SC2006-TCE2-G24
+# Habitat Hero 🏠👨‍👩‍👧‍👦
 
 ## Run Locally (Windows)
 
