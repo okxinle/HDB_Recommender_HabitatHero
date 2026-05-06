@@ -1150,14 +1150,6 @@ const createAmenityIcon = (key) => {
 
   const hasFutureRiskPolygons = futureRiskPolygons.length > 0;
 
-  const viewRiskCopy = !hasFutureRiskPolygons
-    ? 'No mapped future development polygons were found for this block radius.'
-    : viewExposureScore !== null && viewExposureScore >= 70
-      ? 'High exposure to nearby future development pressure.'
-      : viewExposureScore !== null && viewExposureScore >= 40
-        ? 'Moderate exposure to nearby future development pressure.'
-        : 'Lower exposure to nearby future development pressure.';
-
   const nearestDistanceText = Number.isFinite(Number(nearestFutureDevelopment?.distance_meters))
     ? `${Math.round(Number(nearestFutureDevelopment.distance_meters))} m`
     : null;

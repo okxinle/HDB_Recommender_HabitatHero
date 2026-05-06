@@ -1,0 +1,11 @@
+{
+  "installCommand": "cd HabitatHero/src/frontend && npm install",
+  "buildCommand": "cd HabitatHero/src/frontend && npm run build",
+  "outputDirectory": "HabitatHero/src/frontend/build",
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}

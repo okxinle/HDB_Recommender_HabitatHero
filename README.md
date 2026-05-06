@@ -31,6 +31,11 @@ Notes:
 2. `npm install`
 3. `npm start`
 
+### Vercel deployment
+1. Point the Vercel project at the repository root.
+2. Let Vercel use the root-level `vercel.json` so it builds `HabitatHero/src/frontend` and rewrites all SPA routes to `index.html`.
+3. If you change the frontend folder name later, update the paths in `vercel.json`.
+
 ## Python dependencies
 Use [HabitatHero/requirements.txt](HabitatHero/requirements.txt) for Python package dependencies.
 A requirements.txt file should include all direct and indirect Python package dependencies needed for a project, typically with specific version numbers to ensure reproducibility. It is used to share projects and manage dependencies, usually created via `pip freeze > requirements.txt`.
